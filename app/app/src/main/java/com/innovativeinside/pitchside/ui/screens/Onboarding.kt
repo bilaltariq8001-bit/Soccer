@@ -51,12 +51,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.innovativeinside.pitchside.AlertLevel
-import com.innovativeinside.pitchside.AppViewModel
-import com.innovativeinside.pitchside.FollowKind
-import com.innovativeinside.pitchside.LocalApp
-import com.innovativeinside.pitchside.Persona
-import com.innovativeinside.pitchside.WatchStyle
+import com.innovativeinside.pitchside.data.prefs.AlertLevel
+import com.innovativeinside.pitchside.data.prefs.FollowKind
+import com.innovativeinside.pitchside.ui.LocalApp
+import com.innovativeinside.pitchside.ui.LocalPrefs
+import com.innovativeinside.pitchside.data.prefs.PrefsReducer
+import com.innovativeinside.pitchside.data.model.Languages
+import com.innovativeinside.pitchside.data.model.Status
+import com.innovativeinside.pitchside.data.model.Team
+import com.innovativeinside.pitchside.ui.components.StateContent
+import com.innovativeinside.pitchside.ui.vm.OnboardingTeamsViewModel
+import com.innovativeinside.pitchside.ui.vm.BuildHomeViewModel
+import com.innovativeinside.pitchside.ui.vm.StepState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.innovativeinside.pitchside.data.prefs.Persona
+import com.innovativeinside.pitchside.data.prefs.WatchStyle
 import com.innovativeinside.pitchside.ui.components.BackButton
 import com.innovativeinside.pitchside.ui.components.Chip
 import com.innovativeinside.pitchside.ui.components.Crest
@@ -143,13 +153,13 @@ fun WelcomeScreen(onStart: () -> Unit, onRestore: () -> Unit) {
         PcCard(Modifier.widthIn(max = 520.dp).fillMaxWidth(), shape = PcShape.Hero, border = Pc.BorderStrong) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    com.innovativeinside.pitchside.ui.components.StatusBadge(com.innovativeinside.pitchside.data.Status.Live, "74'")
+                    com.innovativeinside.pitchside.ui.components.StatusBadge(Status.Live, "74'")
                     Text("Premier Division", style = PcType.Meta)
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(com.innovativeinside.pitchside.data.FakeRepository.ng, 36.dp); Text("Northgate", style = PcType.Label.copy(fontSize = 14.sp), maxLines = 1) }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ng", "Northgate", "NG", 0xFF1F6F6B), 36.dp); Text("Northgate", style = PcType.Label.copy(fontSize = 14.sp), maxLines = 1) }
                     Text("2 – 1", style = PcType.ScoreL)
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(com.innovativeinside.pitchside.data.FakeRepository.ru, 36.dp); Text("Riverside", style = PcType.Label.copy(fontSize = 14.sp), maxLines = 1) }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ru", "Riverside", "RU", 0xFF7A3FBF), 36.dp); Text("Riverside", style = PcType.Label.copy(fontSize = 14.sp), maxLines = 1) }
                 }
                 Text("Riverside need one goal to stay level with the leaders.", style = PcType.BodySmall.copy(color = Pc.Text))
             }
@@ -168,65 +178,71 @@ fun WelcomeScreen(onStart: () -> Unit, onRestore: () -> Unit) {
 @Composable
 fun LanguageScreen(onBack: () -> Unit, onNext: () -> Unit) {
     val app = LocalApp.current
+    val prefs = LocalPrefs.current
     var query by remember { mutableStateOf("") }
-    val langs = app.repo.languages().filter { query.isBlank() || it.native.contains(query, true) || it.english.contains(query, true) }
+    val langs = Languages.all.filter { query.isBlank() || it.native.contains(query, true) || it.english.contains(query, true) }
     OnbScaffold(1, "Choose your language", "Scores, alerts and Match Briefs will be written in it. Change it any time in Settings.", onBack, null, "Continue", onNext) {
         SearchField(query, { query = it }, "Search languages")
         Spacer(Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            langs.forEach { l -> OptionCard(l.native, l.english, app.language == l.native, { app.chooseLanguage(l.native) }) }
+            langs.forEach { l -> OptionCard(l.native, l.english, prefs.language == l.code, { app.setLanguage(l.code) }) }
             if (langs.isEmpty()) Text("No language matches \"$query\".", style = PcType.BodySmall)
         }
     }
 }
 
 @Composable
-fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit) {
+fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit, vm: OnboardingTeamsViewModel = viewModel(factory = OnboardingTeamsViewModel.Factory)) {
     val app = LocalApp.current
+    val prefs = LocalPrefs.current
+    val state by vm.state.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
-    val teams = app.repo.allTeams().filter { query.isBlank() || it.name.contains(query, true) }
-    val bigOnly = app.followKind == FollowKind.BigOnly
+    val bigOnly = prefs.followKind == FollowKind.BigOnly
+    val limit = com.innovativeinside.pitchside.data.prefs.UserPrefs.FREE_TEAM_LIMIT
     OnbScaffold(
-        2, "Who do you follow?", "Pick what you like. We will build your home around it.", onBack, onNext,
-        if (bigOnly) "Continue" else "Continue · ${app.followedTeams.size} selected", onNext,
-        secondary = "Free: follow up to 5 teams. Change any time.", onSecondary = {},
+        2, "Who do you follow?", "Pick what you like. We'll build your home around it.", onBack, onNext,
+        if (bigOnly) "Continue" else "Continue · ${prefs.teams.size} selected", onNext,
+        secondary = "Free: follow up to $limit teams. Change any time.", onSecondary = {},
     ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // Chips scroll horizontally on narrow screens
-        }
         com.innovativeinside.pitchside.ui.components.ChipRow(
-            FollowKind.entries.map { it.label }, app.followKind.label,
-            { label -> app.followKind = FollowKind.entries.first { it.label == label } }, contentPadding = 0.dp,
+            FollowKind.entries.map { it.label }, prefs.followKind.label,
+            { label -> app.setFollowKind(FollowKind.entries.first { it.label == label }) }, contentPadding = 0.dp,
         )
         Spacer(Modifier.height(16.dp))
         if (!bigOnly) {
             SearchField(query, { query = it }, "Search clubs")
             Spacer(Modifier.height(20.dp))
-            Text(if (query.isBlank()) "POPULAR NEAR YOU" else "RESULTS", style = PcType.Overline.copy(color = Pc.Text3))
+            Text(if (query.isBlank()) "POPULAR" else "RESULTS", style = PcType.Overline.copy(color = Pc.Text3))
             Spacer(Modifier.height(12.dp))
-            teams.chunked(3).forEach { row ->
-                Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { t ->
-                        val on = t.id in app.followedTeams
-                        Column(
-                            Modifier.weight(1f).height(112.dp).clip(PcShape.Card).background(if (on) Pc.Raised else Pc.Surface)
-                                .border(if (on) 1.5.dp else 1.dp, if (on) Pc.Lime else Pc.Border, PcShape.Card)
-                                .pcClickable(PcShape.Card, if (on) "Unfollow ${t.name}" else "Follow ${t.name}") { app.toggleFollow(t.id) },
-                            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                        ) {
-                            Box {
-                                Crest(t, 48.dp)
-                                if (on) Box(Modifier.align(Alignment.TopEnd).size(18.dp).clip(CircleShape).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(12.dp)) }
+            StateContent(state, vm::retry) { all ->
+                val teams = all.filter { query.isBlank() || it.name.contains(query, true) }
+                Column {
+                    if (teams.isEmpty()) Text("No club matches \"$query\".", style = PcType.BodySmall)
+                    teams.chunked(3).forEach { row ->
+                        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            row.forEach { t ->
+                                val on = t.id in prefs.teams
+                                Column(
+                                    Modifier.weight(1f).height(112.dp).clip(PcShape.Card).background(if (on) Pc.Raised else Pc.Surface)
+                                        .border(if (on) 1.5.dp else 1.dp, if (on) Pc.Lime else Pc.Border, PcShape.Card)
+                                        .pcClickable(PcShape.Card, if (on) "Unfollow ${t.name}" else "Follow ${t.name}") { app.toggleTeam(t.id, t.name) },
+                                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                                ) {
+                                    Box {
+                                        Crest(t, 48.dp)
+                                        if (on) Box(Modifier.align(Alignment.TopEnd).size(18.dp).clip(CircleShape).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(12.dp)) }
+                                    }
+                                    Spacer(Modifier.height(10.dp))
+                                    Text(t.name, style = PcType.Label.copy(fontSize = 13.sp), maxLines = 1)
+                                }
                             }
-                            Spacer(Modifier.height(10.dp))
-                            Text(t.name, style = PcType.Label.copy(fontSize = 13.sp), maxLines = 1)
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
-                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         } else {
-            PcCard(Modifier.fillMaxWidth()) { Text("We will show the biggest matches each day. You can follow teams later from Favorites.", style = PcType.BodySmall, modifier = Modifier.padding(16.dp)) }
+            PcCard(Modifier.fillMaxWidth()) { Text("We'll show the biggest matches each day. You can follow teams later from Favorites.", style = PcType.BodySmall, modifier = Modifier.padding(16.dp)) }
         }
     }
 }
@@ -234,11 +250,12 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit) {
 @Composable
 fun WatchScreen(onBack: () -> Unit, onNext: () -> Unit) {
     val app = LocalApp.current
+    val prefs = LocalPrefs.current
     OnbScaffold(3, "How do you usually watch?", "This sets your spoiler and alert defaults.", onBack, onNext, "Continue", onNext) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OptionCard(WatchStyle.Live.title, WatchStyle.Live.desc, app.watchStyle == WatchStyle.Live, { app.watchStyle = WatchStyle.Live }, Icons.Outlined.Bolt)
-            OptionCard(WatchStyle.Later.title, WatchStyle.Later.desc, app.watchStyle == WatchStyle.Later, { app.watchStyle = WatchStyle.Later }, Icons.Outlined.VisibilityOff)
-            OptionCard(WatchStyle.Check.title, WatchStyle.Check.desc, app.watchStyle == WatchStyle.Check, { app.watchStyle = WatchStyle.Check }, Icons.Outlined.CalendarMonth)
+            OptionCard(WatchStyle.Live.title, WatchStyle.Live.desc, prefs.watchStyle == WatchStyle.Live, { app.setWatchStyle(WatchStyle.Live) }, Icons.Outlined.Bolt)
+            OptionCard(WatchStyle.Later.title, WatchStyle.Later.desc, prefs.watchStyle == WatchStyle.Later, { app.setWatchStyle(WatchStyle.Later) }, Icons.Outlined.VisibilityOff)
+            OptionCard(WatchStyle.Check.title, WatchStyle.Check.desc, prefs.watchStyle == WatchStyle.Check, { app.setWatchStyle(WatchStyle.Check) }, Icons.Outlined.CalendarMonth)
         }
         Spacer(Modifier.height(16.dp))
         Text("You can change this, and pick which teams are shielded, in Settings.", style = PcType.Meta.copy(color = Pc.Text2))
@@ -248,22 +265,23 @@ fun WatchScreen(onBack: () -> Unit, onNext: () -> Unit) {
 @Composable
 fun AlertsScreen(onBack: () -> Unit, onNext: () -> Unit) {
     val app = LocalApp.current
+    val prefs = LocalPrefs.current
     var rationale by remember { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { onNext() }
     OnbScaffold(
         4, "What should we alert you about?", "Only for the teams you follow. Mute any team in one tap.", onBack, onNext,
-        if (app.alertLevel == AlertLevel.Off) "Continue" else "Turn on alerts",
-        { if (app.alertLevel == AlertLevel.Off) onNext() else rationale = true },
-        secondary = if (app.alertLevel == AlertLevel.Off) null else "Not now", onSecondary = { app.alertLevel = AlertLevel.Off; onNext() },
+        if (prefs.alertLevel == AlertLevel.Off) "Continue" else "Turn on alerts",
+        { if (prefs.alertLevel == AlertLevel.Off) onNext() else rationale = true },
+        secondary = if (prefs.alertLevel == AlertLevel.Off) null else "Not now", onSecondary = { app.setAlertLevel(AlertLevel.Off); onNext() },
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AlertLevel.entries.forEach { lvl -> OptionCard(lvl.label, lvl.desc, app.alertLevel == lvl, { app.alertLevel = lvl }) }
+            AlertLevel.entries.forEach { lvl -> OptionCard(lvl.label, lvl.desc, prefs.alertLevel == lvl, { app.setAlertLevel(lvl) }) }
         }
         Spacer(Modifier.height(16.dp))
         PcCard(Modifier.fillMaxWidth()) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text("Quiet hours", style = PcType.Label.copy(fontSize = 15.sp)); Text("23:00 – 07:00, alerts wait until morning", style = PcType.Meta.copy(color = Pc.Text2)) }
-                PcSwitch(app.quietHours) { app.quietHours = it }
+                PcSwitch(prefs.quietHours, app::setQuietHours)
             }
         }
     }
@@ -288,7 +306,7 @@ private fun personaIcon(p: Persona): ImageVector = when (p) {
 @Composable
 fun PersonaScreen(onBack: () -> Unit, onNext: () -> Unit) {
     val app = LocalApp.current
-    val p = app.persona()
+    val p = PrefsReducer.persona(LocalPrefs.current)
     OnbScaffold(5, "", "", onBack, null, "Build my home", onNext) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Spacer(Modifier.height(12.dp))
@@ -309,48 +327,41 @@ fun PersonaScreen(onBack: () -> Unit, onNext: () -> Unit) {
                 }
             }
         }
-        TextAction("Not you? Change style", { app.followKind = FollowKind.Clubs; app.watchStyle = WatchStyle.Live; onBack() }, Modifier.fillMaxWidth())
+        TextAction("Not you? Change style", { app.setFollowKind(FollowKind.Clubs); app.setWatchStyle(WatchStyle.Live); onBack() }, Modifier.fillMaxWidth())
     }
 }
 
 @Composable
-fun BuildingScreen(onDone: () -> Unit) {
-    val app = LocalApp.current
-    val steps = listOf(
-        "Language set to ${app.language}", "Preferences saved", "Subscribing to alerts for ${app.followedTeams.size} teams",
-        "Loading today's fixtures", "Preparing your Match Briefs",
-    )
-    var done by remember { mutableIntStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (done < steps.size) { delay(650); done++ }
-        app.completeOnboarding()
-        delay(300)
-        onDone()
-    }
+fun BuildingScreen(onDone: () -> Unit, vm: BuildHomeViewModel = viewModel(factory = BuildHomeViewModel.Factory)) {
+    val steps by vm.steps.collectAsStateWithLifecycle()
+    val finished by vm.finished.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.start() }
+    LaunchedEffect(finished) { if (finished) { delay(400); onDone() } }
+    val done = steps.count { it.state == StepState.Done || it.state == StepState.Skipped }
     OnbScaffold(
-        TOTAL_STEPS, "Setting up your home", "Real steps, not a fake loader. Usually under 10 seconds.", null, null, "Open the app", { app.completeOnboarding(); onDone() },
+        TOTAL_STEPS, "Setting up your home", "Saving your choices and loading today's football.", null, null,
+        if (finished) "Open the app" else "Working…", { if (finished) onDone() },
     ) {
         PcCard(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 steps.forEachIndexed { i, s ->
                     Row(Modifier.fillMaxWidth().heightIn(min = 60.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        when {
-                            i < done -> Box(Modifier.size(28.dp).clip(CircleShape).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(16.dp)) }
-                            i == done -> androidx.compose.material3.CircularProgressIndicator(color = Pc.Lime, trackColor = Pc.Border, strokeWidth = 3.dp, modifier = Modifier.size(28.dp))
-                            else -> Box(Modifier.size(28.dp).clip(CircleShape).border(2.dp, Pc.Border, CircleShape))
+                        when (s.state) {
+                            StepState.Done -> Box(Modifier.size(28.dp).clip(CircleShape).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(16.dp)) }
+                            StepState.Skipped -> Box(Modifier.size(28.dp).clip(CircleShape).background(Pc.AmberTint), contentAlignment = Alignment.Center) { Text("!", color = Pc.Amber, fontWeight = FontWeight.ExtraBold) }
+                            StepState.Running -> androidx.compose.material3.CircularProgressIndicator(color = Pc.Lime, trackColor = Pc.Border, strokeWidth = 3.dp, modifier = Modifier.size(28.dp))
+                            StepState.Waiting -> Box(Modifier.size(28.dp).clip(CircleShape).border(2.dp, Pc.Border, CircleShape))
                         }
-                        Text(s, style = PcType.Body.copy(fontSize = 15.sp, color = if (i <= done) Pc.Text else Pc.Text2, fontWeight = if (i == done) FontWeight.Bold else FontWeight.Medium))
+                        Column {
+                            Text(s.label, style = PcType.Body.copy(fontSize = 15.sp, color = if (s.state != StepState.Waiting) Pc.Text else Pc.Text2, fontWeight = if (s.state == StepState.Running) FontWeight.Bold else FontWeight.Medium))
+                            if (s.state == StepState.Skipped) Text("Offline. This loads when you're connected.", style = PcType.Meta.copy(color = Pc.Amber))
+                        }
                     }
                     if (i < steps.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
                 }
             }
         }
         Spacer(Modifier.height(24.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Step ${(done + 1).coerceAtMost(steps.size)} of ${steps.size}", style = PcType.Meta.copy(color = Pc.Text2))
-            Text("${(done * 100) / steps.size}%", style = PcType.Meta.copy(color = Pc.Text2))
-        }
-        Spacer(Modifier.height(8.dp))
         Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(Pc.Border)) {
             Box(Modifier.fillMaxWidth(done / steps.size.toFloat()).height(8.dp).clip(CircleShape).background(Pc.Lime))
         }
