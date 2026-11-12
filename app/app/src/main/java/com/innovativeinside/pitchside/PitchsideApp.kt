@@ -2,7 +2,7 @@ package com.innovativeinside.pitchside
 
 import android.app.Application
 
-class PitchsideApp : Application() {
+open class PitchsideApp : Application() {
     lateinit var container: AppContainer
         private set
 

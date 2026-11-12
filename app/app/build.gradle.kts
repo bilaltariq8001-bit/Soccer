@@ -46,6 +46,11 @@ android {
         unitTests {
             isIncludeAndroidResources = true
             isReturnDefaultValues = true
+            all {
+                // Conscrypt has no native build for every host (e.g. linux-aarch64); the tests don't need TLS.
+                it.systemProperty("robolectric.conscryptMode", "OFF")
+                it.maxHeapSize = "2g"
+            }
         }
     }
     lint {

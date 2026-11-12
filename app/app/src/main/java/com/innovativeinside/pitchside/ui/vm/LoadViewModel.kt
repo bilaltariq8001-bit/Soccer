@@ -39,10 +39,12 @@ abstract class LoadViewModel<T> : ViewModel() {
 
     fun load(refresh: Boolean = false) {
         loadJob?.cancel()
+        pollJob?.cancel()
+        // State changes synchronously, so the UI shows the spinner or skeleton in the same frame as the tap.
+        val hadData = _state.value is UiState.Success
+        if (refresh && hadData) _refreshing.value = true else _state.value = UiState.Loading
+        _refreshError.value = null
         loadJob = viewModelScope.launch {
-            val hadData = _state.value is UiState.Success
-            if (refresh && hadData) _refreshing.value = true else _state.value = UiState.Loading
-            _refreshError.value = null
             val result = fetch(refresh)
             val next = result.toUiState(::isEmpty)
             if (next is UiState.Error && hadData && refresh) _refreshError.value = next.error else _state.value = next

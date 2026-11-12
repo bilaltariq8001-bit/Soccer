@@ -59,8 +59,8 @@ class NewsViewModel(private val repo: FootballRepository) : ViewModel() {
 
     private fun reload(pull: Boolean = false) {
         job?.cancel()
+        _state.update { it.copy(loading = !pull || it.items.isEmpty(), refreshing = pull, error = null, loadMoreError = null) }
         job = viewModelScope.launch {
-            _state.update { it.copy(loading = !pull || it.items.isEmpty(), refreshing = pull, error = null, loadMoreError = null) }
             repo.news(_state.value.category, null)
                 .onSuccess { page -> _state.update { it.copy(items = page.items, nextCursor = page.nextCursor, loading = false, refreshing = false) } }
                 .onFailure { e -> _state.update { it.copy(loading = false, refreshing = false, error = AppError.from(e)) } }
@@ -70,8 +70,8 @@ class NewsViewModel(private val repo: FootballRepository) : ViewModel() {
     fun loadMore() {
         val s = _state.value
         if (s.loading || s.loadingMore || s.nextCursor == null) return
+        _state.update { it.copy(loadingMore = true, loadMoreError = null) }
         job = viewModelScope.launch {
-            _state.update { it.copy(loadingMore = true, loadMoreError = null) }
             repo.news(s.category, s.nextCursor)
                 .onSuccess { page -> _state.update { it.copy(items = (it.items + page.items).distinctBy { n -> n.id }, nextCursor = page.nextCursor, loadingMore = false) } }
                 .onFailure { e -> _state.update { it.copy(loadingMore = false, loadMoreError = AppError.from(e)) } }
