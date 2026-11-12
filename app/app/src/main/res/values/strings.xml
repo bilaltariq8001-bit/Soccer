@@ -2,4 +2,52 @@
 <resources>
     <!-- Working name, change before release. -->
     <string name="app_name">Pitchside</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_matches">Matches</string>
+    <string name="nav_leagues">Leagues</string>
+    <string name="nav_news">News</string>
+    <string name="nav_favorites">Favorites</string>
+
+    <!-- Shared actions -->
+    <string name="action_retry">Try again</string>
+    <string name="action_back">Back</string>
+    <string name="action_search">Search</string>
+    <string name="action_ask">Ask Pitchside</string>
+    <string name="action_follow">Follow</string>
+    <string name="action_following">Following</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_exit">Exit</string>
+    <string name="action_load_more">Load more</string>
+
+    <!-- States -->
+    <string name="state_empty_title">Nothing here yet</string>
+    <string name="state_empty_body">New items appear here as soon as they are available.</string>
+    <string name="error_offline_title">You\'re offline</string>
+    <string name="error_timeout_title">That took too long</string>
+    <string name="error_auth_title">Sign in needed</string>
+    <string name="error_notfound_title">Not found</string>
+    <string name="error_generic_title">Something went wrong</string>
+    <string name="offline_banner">Offline. Showing saved scores.</string>
+    <string name="refresh_failed">Couldn\'t refresh. Showing the last update.</string>
+
+    <!-- Exit -->
+    <string name="exit_title">Leave Pitchside?</string>
+    <string name="exit_body">Your follows and settings are saved.</string>
+
+    <!-- Auth -->
+    <string name="auth_sign_in">Sign in</string>
+    <string name="auth_sign_up">Create account</string>
+    <string name="auth_reset">Reset password</string>
+    <string name="auth_email">Email</string>
+    <string name="auth_password">Password</string>
+    <string name="auth_confirm">Confirm password</string>
+    <string name="auth_name">Name</string>
+    <string name="auth_forgot">Forgot password?</string>
+    <string name="auth_no_account">New here? Create an account</string>
+    <string name="auth_have_account">Already have an account? Sign in</string>
+    <string name="auth_reset_sent">If an account uses that email, a reset link is on its way.</string>
+    <string name="auth_sign_out">Sign out</string>
+    <string name="auth_why">An account backs up your follows, alerts and Spoiler Shield. Everything else works without one.</string>
 </resources>

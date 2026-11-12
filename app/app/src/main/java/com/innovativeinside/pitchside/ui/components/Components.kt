@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -68,7 +69,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -77,10 +80,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.innovativeinside.pitchside.data.Match
-import com.innovativeinside.pitchside.data.StatRow
-import com.innovativeinside.pitchside.data.Status
-import com.innovativeinside.pitchside.data.Team
+import com.innovativeinside.pitchside.data.model.Match
+import com.innovativeinside.pitchside.data.model.StatRow
+import com.innovativeinside.pitchside.data.model.Status
+import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.ui.theme.Pc
 import com.innovativeinside.pitchside.ui.theme.PcShape
 import com.innovativeinside.pitchside.ui.theme.PcType
@@ -115,7 +118,8 @@ fun PcCard(
 
 @Composable
 fun Crest(team: Team, size: Dp = 24.dp) {
-    Box(Modifier.size(size).clip(CircleShape).background(Color(team.color)), contentAlignment = Alignment.Center) {
+    // Decorative: the team name is always next to it, so TalkBack skips the monogram.
+    Box(Modifier.size(size).clip(CircleShape).background(Color(team.color)).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
         Text(team.short, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * 0.36f).sp, maxLines = 1)
     }
 }
@@ -192,7 +196,7 @@ private fun TeamScoreRow(team: Team, score: Int?, hidden: Boolean, leading: Bool
         )
         when {
             hidden -> Box(Modifier.size(width = 28.dp, height = 20.dp).clip(RoundedCornerShape(6.dp)).background(Pc.Border))
-            score != null -> ScoreText(score.toString(), bold = leading || true)
+            score != null -> ScoreText(score.toString(), bold = leading)
             else -> Text("–", color = Pc.Text3, fontSize = 22.sp, modifier = Modifier.widthIn(min = 20.dp), textAlign = TextAlign.End)
         }
     }
@@ -202,13 +206,16 @@ private fun TeamScoreRow(team: Team, score: Int?, hidden: Boolean, leading: Bool
 
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, loading: Boolean = false) {
-    val bg = if (enabled) Pc.Lime else Pc.Raised
-    val fg = if (enabled) Pc.OnLime else Pc.Text3
+    val bg = if (enabled || loading) Pc.Lime else Pc.Raised
+    val fg = if (enabled || loading) Pc.OnLime else Pc.Text3
     Box(
-        modifier.heightIn(min = 52.dp).clip(PcShape.Control).background(bg).let { if (enabled && !loading) it.pcClickable(PcShape.Control, onClick = onClick) else it }
+        modifier.heightIn(min = 52.dp).clip(PcShape.Control).background(bg).let { if (enabled && !loading) it.pcClickable(PcShape.Control, onClick = onClick) else it.semantics { disabled() } }
             .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(if (loading) "Loading…" else text, color = fg, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
+    ) {
+        if (loading) androidx.compose.material3.CircularProgressIndicator(color = fg, strokeWidth = 2.5.dp, modifier = Modifier.size(22.dp).semantics { contentDescription = "Working" })
+        else Text(text, color = fg, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp)
+    }
 }
 
 @Composable
@@ -372,17 +379,6 @@ fun FormChip(letter: Char) {
 
 // ---- States ----
 
-@Composable
-fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, actionLabel: String? = null, onAction: () -> Unit = {}) {
-    PcCard(modifier.fillMaxWidth(), border = Pc.Border) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = PcType.Subhead)
-            Text(body, style = PcType.BodySmall)
-            if (actionLabel != null) { Spacer(Modifier.height(4.dp)); PrimaryButton(actionLabel, onAction) }
-        }
-    }
-}
-
 enum class BannerKind { Info, Success, Warning, Error }
 
 @Composable
@@ -435,7 +431,7 @@ val navItems = listOf(
 )
 
 @Composable
-fun BottomNav(current: String?, onNavigate: (String) -> Unit) {
+fun BottomNav(current: String?, onNavigate: (String) -> Unit, badges: Map<String, Int> = emptyMap()) {
     Column(Modifier.background(Pc.Nav).navigationBarsPadding()) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
         Row(Modifier.fillMaxWidth().background(Pc.Nav).padding(horizontal = 8.dp, vertical = 6.dp)) {
@@ -445,7 +441,11 @@ fun BottomNav(current: String?, onNavigate: (String) -> Unit) {
                     Modifier.weight(1f).heightIn(min = 56.dp).pcClickable(PcShape.Control, role = Role.Tab) { onNavigate(item.route) }.semantics { selected = on },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
-                    Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
+                    Box {
+                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
+                        val n = badges[item.route] ?: 0
+                        if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = 12.dp, y = (-6).dp))
+                    }
                     Text(item.label, color = if (on) Pc.Lime else Pc.Text2, fontSize = 12.sp, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold)
                 }
             }
@@ -454,7 +454,7 @@ fun BottomNav(current: String?, onNavigate: (String) -> Unit) {
 }
 
 @Composable
-fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, wide: Boolean) {
+fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, wide: Boolean, badges: Map<String, Int> = emptyMap()) {
     Row(Modifier.fillMaxHeight()) {
         Column(
             Modifier.fillMaxHeight().width(if (wide) 248.dp else 88.dp).background(Pc.Nav).padding(horizontal = if (wide) 16.dp else 8.dp, vertical = 24.dp),
@@ -471,7 +471,12 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
                         .background(if (on) Pc.LimeTint else Color.Transparent).padding(horizontal = 12.dp).semantics { selected = on },
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = if (wide) Arrangement.spacedBy(12.dp) else Arrangement.Center,
                 ) {
-                    Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
+                    Box {
+                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
+                        val n = badges[item.route] ?: 0
+                        if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = 12.dp, y = (-6).dp))
+                    }
+                    if (!wide) Spacer(Modifier.width(0.dp))
                     if (wide) Text(item.label, color = if (on) Pc.Lime else Pc.Text2, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 15.sp)
                 }
             }
@@ -486,4 +491,15 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
         }
         Box(Modifier.fillMaxHeight().width(1.dp).background(Pc.Border))
     }
+}
+
+
+/** Small live-count bubble on the Matches tab, like a notification count. */
+@Composable
+fun LiveCountBadge(count: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier.heightIn(min = 16.dp).widthIn(min = 16.dp).clip(CircleShape).background(Pc.Live).padding(horizontal = 4.dp)
+            .semantics { contentDescription = "$count live" },
+        contentAlignment = Alignment.Center,
+    ) { Text(if (count > 9) "9+" else count.toString(), color = Pc.Bg, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }
 }
