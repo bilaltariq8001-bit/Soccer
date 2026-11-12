@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Working name, change before release. -->
+    <string name="app_name">Pitchside</string>
+</resources>

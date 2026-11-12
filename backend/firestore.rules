@@ -1,0 +1,67 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Set by a server function after a verified Play purchase, never by the client.
+    function isPro() {
+      return signedIn() && request.auth.token.pro == true;
+    }
+
+    // Football data is written only by Cloud Functions (the Admin SDK ignores these rules).
+    match /leagues/{id} { allow read: if signedIn(); allow write: if false; }
+    match /teams/{id} { allow read: if signedIn(); allow write: if false; }
+    match /standings/{id} { allow read: if signedIn(); allow write: if false; }
+    match /scorers/{id} { allow read: if signedIn(); allow write: if false; }
+    match /liveIndex/{id} { allow read: if signedIn(); allow write: if false; }
+    match /news/{id} { allow read: if signedIn(); allow write: if false; }
+
+    match /fixtures/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+      match /{sub=**} {
+        allow read: if signedIn();
+        allow write: if false;
+      }
+    }
+
+    // Per-user preferences. Only known fields, and the follow list is capped (5 free, 200 Pro).
+    function validUser(d) {
+      return d.keys().hasOnly(['language', 'persona', 'follows', 'alertLevel', 'quietHours', 'spoilerShield', 'detailed', 'theme', 'onboardedAt', 'updatedAt'])
+        && (!('language' in d) || (d.language is string && d.language.size() <= 40))
+        && (!('follows' in d) || (d.follows is map
+              && (!('teams' in d.follows) || (d.follows.teams is list && d.follows.teams.size() <= (isPro() ? 200 : 5)))
+              && (!('leagues' in d.follows) || (d.follows.leagues is list && d.follows.leagues.size() <= 100))
+              && (!('players' in d.follows) || (d.follows.players is list && d.follows.players.size() <= 100))));
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validUser(request.resource.data);
+      allow update: if isOwner(uid) && validUser(request.resource.data);
+      allow delete: if isOwner(uid);
+
+      // UX counter for the Ask limit. The hard limit is Firebase AI Logic's per-user rate limit plus App Check.
+      match /aiUsage/{day} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && request.resource.data.keys().hasOnly(['count']) && request.resource.data.count == 1;
+        allow update: if isOwner(uid) && request.resource.data.keys().hasOnly(['count'])
+          && request.resource.data.count == resource.data.count + 1
+          && request.resource.data.count <= (isPro() ? 50 : 5);
+      }
+    }
+
+    // Operational data (api usage, dedupe, dirty flags) is private to the server.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
