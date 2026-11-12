@@ -134,10 +134,11 @@ fun timeAgo(ms: Long, now: Long = System.currentTimeMillis()): String {
     }
 }
 
-private val dayFmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
-private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
-fun formatDay(ms: Long): String = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(dayFmt)
-fun formatKickoff(ms: Long): String = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).let { "${it.format(dayFmt)} · ${it.format(timeFmt)}" }
+// Built per call so a locale change while the app runs is picked up.
+private fun dayFmt() = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
+private fun timeFmt() = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+fun formatDay(ms: Long): String = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(dayFmt())
+fun formatKickoff(ms: Long): String = Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).let { "${it.format(dayFmt())} · ${it.format(timeFmt())}" }
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) =

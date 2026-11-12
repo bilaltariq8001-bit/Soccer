@@ -150,12 +150,12 @@ fun MatchesContent(
     }
 }
 
-private val longDay = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
+private fun longDay() = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
 fun dayLabel(d: LocalDate, today: LocalDate): String = when (d) {
     today -> "Today"
     today.minusDays(1) -> "Yesterday"
     today.plusDays(1) -> "Tomorrow"
-    else -> d.format(longDay)
+    else -> d.format(longDay())
 }
 
 @Preview(name = "Matches · success", showBackground = true, backgroundColor = 0xFF07111F)

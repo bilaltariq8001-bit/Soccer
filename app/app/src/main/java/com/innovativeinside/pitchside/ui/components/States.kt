@@ -106,6 +106,7 @@ fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, actio
     StateCard(icon, title, body, modifier, actionLabel, onAction)
 
 /** Skeleton list shown on first load (no spinners on content screens). */
+@Suppress("ModifierParameter")
 @Composable
 fun ListSkeleton(rows: Int = 4, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
