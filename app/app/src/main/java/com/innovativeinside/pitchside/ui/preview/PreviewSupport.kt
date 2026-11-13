@@ -15,9 +15,11 @@ import com.innovativeinside.pitchside.data.auth.AuthRepository
 import com.innovativeinside.pitchside.data.auth.InMemoryAuthRepository
 import com.innovativeinside.pitchside.data.mock.MockBehavior
 import com.innovativeinside.pitchside.data.mock.MockFootballApi
+import com.innovativeinside.pitchside.data.mock.MockNewsFeedSource
 import com.innovativeinside.pitchside.data.model.League
 import com.innovativeinside.pitchside.data.model.Match
 import com.innovativeinside.pitchside.data.model.NewsCategory
+import com.innovativeinside.pitchside.data.model.NewsEdition
 import com.innovativeinside.pitchside.data.model.NewsItem
 import com.innovativeinside.pitchside.data.model.StandingRow
 import com.innovativeinside.pitchside.data.model.Status
@@ -43,7 +45,9 @@ class InMemoryContainer(
     override val prefs: PrefsRepository = InMemoryPrefsRepository(initialPrefs)
     override val auth: AuthRepository = InMemoryAuthRepository(clock)
     override val mockBehavior: MockBehavior = MockBehavior().apply { this.latencyMs = latencyMs }
-    override val football: FootballRepository = DefaultFootballRepository(MockFootballApi(clock, mockBehavior), dispatchers, clock)
+    override val football: FootballRepository = DefaultFootballRepository(
+        MockFootballApi(clock, mockBehavior), dispatchers, clock, newsSource = MockNewsFeedSource(clock, mockBehavior),
+    )
 }
 
 /** Wraps a preview in the theme and the locals every screen expects. */
@@ -72,8 +76,18 @@ object PreviewData {
     val matches = listOf(live, upcoming, finished)
 
     val table = listOf(ng, ru, hc, rr).mapIndexed { i, t -> StandingRow(i + 1, t, 9, 7 - i, 1, 1 + i, 20 - i * 2, 8 + i, 12 - i * 3, 22 - i * 3, "WWDWL") }
-    val news = listOf(NewsItem("n1", NewsCategory.Reports, "Northgate edge Riverside in a six-goal thriller", "Two late goals settle it.", "Body", "Pitchside Desk", NOW - 720_000, 4, null))
+    val news = listOf(
+        NewsItem("fr-01kxeqw25b8q", NewsCategory.Reports, "France - Espagne : « On a peur de personne », Warren Zaïre-Emery affiche les ambitions des Bleus avant la demi",
+            "La conf de presse de Warren Zaïre-Emery avant la demi-finale France - Espagne.", "", "90min", NOW - 3 * 3_600_000, 1,
+            "https://www.90min.com/fr/france-espagne-on-a-peur-de-personne-warren-zaire-emery-affiche-les-ambitions-des-bleus-avant-la-demi",
+            imageUrl = null, imageCaption = "France Press Conference - FIFA World Cup 2026 | Stacy Revere/GettyImages", edition = NewsEdition.France, author = "Ilies Peeters", language = "fr"),
+        NewsItem("it-sample", NewsCategory.Reports, "Serie A, le pagelle della giornata: chi sale e chi scende", "Voti e giudizi dopo l'ultimo turno.", "", "90min", NOW - 26 * 3_600_000, 1,
+            "https://www.90min.com/it", edition = NewsEdition.Italy, author = "Redazione", language = "it"),
+        NewsItem("es-sample", NewsCategory.Reports, "LaLiga: las claves de la jornada en cinco datos", "Lo que dejó el fin de semana.", "", "90min", NOW - 4 * 86_400_000L, 1,
+            "https://www.90min.com/es", edition = NewsEdition.Spain, author = "Redacción", language = "es"),
+    )
     val leagues = listOf(League("pd", "Premier Division", "PD", "Northland", 8, "2026/27", "Round 9"), League("cc", "Continental Cup", "CC", "International", 16, "2026/27", "Round of 16"))
 
-    val home = com.innovativeinside.pitchside.ui.vm.HomeData(matches, news, table, leagues)
+    val scorers = listOf(com.innovativeinside.pitchside.data.model.Scorer(1, "ng-9", "Leo Marsh", ng, 18, 4))
+    val home = com.innovativeinside.pitchside.ui.vm.HomeData(matches, news, table, leagues, tableLeague = leagues.first(), scorers = scorers, upcoming = listOf(upcoming))
 }

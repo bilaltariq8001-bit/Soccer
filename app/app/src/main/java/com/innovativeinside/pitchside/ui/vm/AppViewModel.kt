@@ -46,6 +46,11 @@ class AppViewModel(private val c: AppContainer) : ViewModel() {
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    /** Competition chip selected on Home; the Matches tab shares it. Null is "All". */
+    private val _competition = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    val competition: StateFlow<String?> = _competition
+    fun setCompetition(leagueId: String?) { _competition.value = leagueId }
+
     private val _events = Channel<AppEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
@@ -118,6 +123,11 @@ class AppViewModel(private val c: AppContainer) : ViewModel() {
     fun signOut() = viewModelScope.launch { c.auth.signOut(); say("Signed out") }
 
     fun message(text: String) = say(text)
+
+    // Search history (DataStore, local only)
+    fun addRecentSearch(q: String) = update { PrefsReducer.addRecentSearch(it, q) }
+    fun removeRecentSearch(q: String) = update { PrefsReducer.removeRecentSearch(it, q) }
+    fun clearRecentSearches() = update(PrefsReducer::clearRecentSearches)
 
     companion object {
         val Factory = containerFactory { c, _ -> AppViewModel(c) }
