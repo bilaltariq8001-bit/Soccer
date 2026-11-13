@@ -54,7 +54,9 @@ fun <T> StateContent(
     empty: @Composable () -> Unit = { EmptyState(stringResource(R.string.state_empty_title), stringResource(R.string.state_empty_body)) },
     content: @Composable (T) -> Unit,
 ) {
-    Box(modifier) {
+    // A Column, not a Box: screen bodies emit several siblings (header, tabs, sections) and a Box
+    // would draw them on top of each other.
+    Column(modifier) {
         when (state) {
             UiState.Loading -> Box(Modifier.testTag("state_loading")) { loading() }
             UiState.Empty -> Box(Modifier.testTag("state_empty")) { empty() }
