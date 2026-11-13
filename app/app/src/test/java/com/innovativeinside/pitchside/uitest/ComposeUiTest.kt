@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
@@ -114,32 +115,33 @@ class AppNavigationTest {
     private fun waitText(t: String) = rule.waitUntil(10_000) { rule.onAllNodesWithText(t, substring = true).fetchSemanticsNodes().isNotEmpty() }
 
     @Test fun launchHomeThenTabsAndMatchDetail() {
-        waitText("live now")
-        rule.onNodeWithText("Latest news").assertExists()
+        waitText("Live now")
+        rule.onNodeWithTag("live_hero").assertExists()
+        rule.onNodeWithText("Football today").assertExists()
 
-        rule.onNodeWithText("Matches", useUnmergedTree = true).performClick()
+        rule.onNodeWithTag("nav_matches").performClick()
         waitText("Yesterday")
         rule.onNodeWithText("Live").performClick()
         waitText("Premier Division")
 
-        rule.onNodeWithText("Leagues", useUnmergedTree = true).performClick()
-        waitText("Top-rated players")
-        rule.onNodeWithText("Premier Division").performClick()
+        rule.onNodeWithTag("nav_leagues").performClick()
         waitText("Top scorers")
         rule.onNodeWithText("Top scorers").performSemanticsAction(SemanticsActions.OnClick)
         waitText("Leo Marsh")
+        rule.onNodeWithContentDescription("Open Premier Division").performClick()
+        waitText("Teams")
         rule.activity.onBackPressedDispatcher.onBackPressed()
-        waitText("Top-rated players")
+        waitText("Tables, fixtures and top scorers".uppercase())
 
-        rule.onNodeWithText("News", useUnmergedTree = true).performClick()
-        waitText("Reports, transfers and analysis")
-        rule.onNodeWithText("Favorites", useUnmergedTree = true).performClick()
+        rule.onNodeWithTag("nav_news").performClick()
+        waitText("FROM 90MIN")
+        rule.onNodeWithTag("nav_following").performClick()
         waitText("free follows")
-        rule.onNodeWithText("Northgate").assertExists()
+        assertTrue(rule.onAllNodesWithText("Northgate").fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test fun backOnHomeAsksBeforeExit() {
-        waitText("live now")
+        waitText("Live now")
         rule.activity.onBackPressedDispatcher.onBackPressed()
         waitText("Leave Pitchside?")
         rule.onNodeWithText("Cancel").performClick()
@@ -169,6 +171,6 @@ class OnboardingFlowTest {
         rule.onNodeWithText("Not now").performClick()
         waitText("Build my home")
         rule.onNodeWithText("Build my home").performClick()
-        waitText("live now")
+        waitText("Live now")
     }
 }

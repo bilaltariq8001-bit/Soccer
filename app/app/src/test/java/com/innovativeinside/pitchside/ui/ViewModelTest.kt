@@ -159,7 +159,8 @@ class ViewModelTest {
         }
     }
 
-    @Test fun newsPaginationAndCategory() = runTest(main.dispatcher) {
+    /** Without a feed source the News tab falls back to the API's paged /v1/news (mock pages of 4). */
+    @Test fun newsPaginationAndOffline() = runTest(main.dispatcher) {
         val vm = NewsViewModel(repo)
         advanceTimeBy(5_000)
         assertEquals(4, vm.state.value.items.size)
@@ -171,9 +172,6 @@ class ViewModelTest {
         assertTrue(vm.state.value.endReached)
         vm.loadMore() // no-op at the end
         assertFalse(vm.state.value.loadingMore)
-        vm.setCategory(com.innovativeinside.pitchside.data.model.NewsCategory.Transfers)
-        advanceTimeBy(5_000)
-        assertTrue(vm.state.value.items.all { it.category == com.innovativeinside.pitchside.data.model.NewsCategory.Transfers })
         behavior.offline = true
         vm.refresh()
         advanceTimeBy(5_000)
