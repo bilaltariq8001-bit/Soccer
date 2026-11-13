@@ -6,7 +6,7 @@ import com.innovativeinside.pitchside.AppContainer
 import com.innovativeinside.pitchside.core.AppError
 import com.innovativeinside.pitchside.core.Validators
 import com.innovativeinside.pitchside.data.auth.AuthRepository
-import com.innovativeinside.pitchside.data.model.NewsCategory
+import com.innovativeinside.pitchside.data.model.NewsEdition
 import com.innovativeinside.pitchside.data.model.NewsItem
 import com.innovativeinside.pitchside.data.model.SearchResults
 import com.innovativeinside.pitchside.data.prefs.PrefsReducer
@@ -33,7 +33,8 @@ import kotlinx.coroutines.launch
 // ---------------- News (paginated) ----------------
 
 data class NewsState(
-    val category: NewsCategory? = null,
+    /** Null is "All": every edition merged, newest first. */
+    val edition: NewsEdition? = null,
     val items: List<NewsItem> = emptyList(),
     val loading: Boolean = true,
     val loadingMore: Boolean = false,
@@ -45,6 +46,7 @@ data class NewsState(
     val endReached: Boolean get() = !loading && nextCursor == null
 }
 
+/** News tab: 90min headlines by edition (France, Italy, Spain, Brazil), paged as the list scrolls. */
 class NewsViewModel(private val repo: FootballRepository) : ViewModel() {
     private val _state = MutableStateFlow(NewsState())
     val state: StateFlow<NewsState> = _state.asStateFlow()
@@ -52,16 +54,16 @@ class NewsViewModel(private val repo: FootballRepository) : ViewModel() {
 
     init { reload() }
 
-    fun setCategory(c: NewsCategory?) { if (c != _state.value.category) { _state.value = NewsState(category = c); reload() } }
+    fun setEdition(e: NewsEdition?) { if (e != _state.value.edition) { _state.value = NewsState(edition = e); reload() } }
 
     fun refresh() = reload(pull = true)
-    fun retry() = reload()
+    fun retry() = reload(pull = false, force = true)
 
-    private fun reload(pull: Boolean = false) {
+    private fun reload(pull: Boolean = false, force: Boolean = false) {
         job?.cancel()
         _state.update { it.copy(loading = !pull || it.items.isEmpty(), refreshing = pull, error = null, loadMoreError = null) }
         job = viewModelScope.launch {
-            repo.news(_state.value.category, null)
+            repo.headlines(_state.value.edition, null, refresh = pull || force)
                 .onSuccess { page -> _state.update { it.copy(items = page.items, nextCursor = page.nextCursor, loading = false, refreshing = false) } }
                 .onFailure { e -> _state.update { it.copy(loading = false, refreshing = false, error = AppError.from(e)) } }
         }
@@ -72,7 +74,7 @@ class NewsViewModel(private val repo: FootballRepository) : ViewModel() {
         if (s.loading || s.loadingMore || s.nextCursor == null) return
         _state.update { it.copy(loadingMore = true, loadMoreError = null) }
         job = viewModelScope.launch {
-            repo.news(s.category, s.nextCursor)
+            repo.headlines(s.edition, s.nextCursor)
                 .onSuccess { page -> _state.update { it.copy(items = (it.items + page.items).distinctBy { n -> n.id }, nextCursor = page.nextCursor, loadingMore = false) } }
                 .onFailure { e -> _state.update { it.copy(loadingMore = false, loadMoreError = AppError.from(e)) } }
         }
@@ -87,7 +89,7 @@ sealed interface SearchState {
     data object Idle : SearchState
     data object Loading : SearchState
     data class Empty(val query: String) : SearchState
-    data class Results(val query: String, val results: SearchResults) : SearchState
+    data class Results(val query: String, val results: SearchResults, val matches: List<com.innovativeinside.pitchside.data.model.Match> = emptyList()) : SearchState
     data class Error(val query: String, val error: AppError) : SearchState
 }
 
@@ -95,7 +97,12 @@ enum class SearchTab { All, Teams, Leagues, Players }
 
 /** Live search: debounced, latest query wins (older requests are cancelled by flatMapLatest). */
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
-class SearchViewModel(private val repo: FootballRepository, debounceMs: Long = 300) : ViewModel() {
+class SearchViewModel(
+    private val repo: FootballRepository,
+    debounceMs: Long = 300,
+    /** Today's matches, searched locally by club and competition name (the search API has no matches). */
+    private val todayMatches: suspend () -> List<com.innovativeinside.pitchside.data.model.Match> = { emptyList() },
+) : ViewModel() {
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
     private val _tab = MutableStateFlow(SearchTab.All)
@@ -111,7 +118,10 @@ class SearchViewModel(private val repo: FootballRepository, debounceMs: Long = 3
             if (q.length < 2) flow { emit(SearchState.Idle) }
             else flow {
                 val r = repo.search(q)
-                emit(r.fold({ if (it.isEmpty) SearchState.Empty(q) else SearchState.Results(q, it) }, { SearchState.Error(q, AppError.from(it)) }))
+                val ms = runCatching { todayMatches() }.getOrDefault(emptyList()).filter {
+                    it.home.name.contains(q, true) || it.away.name.contains(q, true) || it.leagueName.contains(q, true)
+                }
+                emit(r.fold({ if (it.isEmpty && ms.isEmpty()) SearchState.Empty(q) else SearchState.Results(q, it, ms) }, { SearchState.Error(q, AppError.from(it)) }))
             }.onStart { emit(SearchState.Loading) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState.Idle)
@@ -120,7 +130,9 @@ class SearchViewModel(private val repo: FootballRepository, debounceMs: Long = 3
     fun setTab(t: SearchTab) { _tab.value = t }
     fun retry() { retryTick.update { it + 1 } }
 
-    companion object { val Factory = containerFactory { c, _ -> SearchViewModel(c.football) } }
+    companion object {
+        val Factory = containerFactory { c, _ -> SearchViewModel(c.football) { c.football.matchesOn(c.clock.today()).getOrDefault(emptyList()) } }
+    }
 }
 
 // ---------------- Ask ----------------

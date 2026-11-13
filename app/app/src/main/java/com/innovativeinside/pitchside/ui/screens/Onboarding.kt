@@ -50,7 +50,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.innovativeinside.pitchside.data.prefs.AlertLevel
 import com.innovativeinside.pitchside.data.prefs.FollowKind
 import com.innovativeinside.pitchside.ui.LocalApp
@@ -108,9 +107,9 @@ private fun OnbScaffold(
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).widthIn(max = 560.dp)) {
             if (title.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                Text(title, style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
+                Text(title, style = PcType.Title)
                 Spacer(Modifier.height(8.dp))
-                Text(subtitle, style = PcType.BodyMuted.copy(fontSize = 15.sp, lineHeight = 22.sp))
+                Text(subtitle, style = PcType.BodyMuted)
                 Spacer(Modifier.height(24.dp))
             }
             content()
@@ -134,7 +133,7 @@ private fun OptionCard(title: String, desc: String, selected: Boolean, onClick: 
         if (icon != null) Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Outline), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (selected) Pc.Accent else Pc.Text2) }
         Column(Modifier.weight(1f)) {
             Text(title, style = PcType.Subtitle)
-            Text(desc, style = PcType.BodyMuted.copy(fontSize = 13.sp, lineHeight = 18.sp))
+            Text(desc, style = PcType.Caption)
         }
         Box(Modifier.size(24.dp).clip(CircleShape).background(if (selected) Pc.Accent else Color.Transparent).border(1.5.dp, if (selected) Pc.Accent else Pc.OutlineStrong, CircleShape), contentAlignment = Alignment.Center) {
             if (selected) Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(16.dp))
@@ -157,21 +156,21 @@ fun WelcomeScreen(onStart: () -> Unit, onRestore: () -> Unit) {
                     Text("Premier Division", style = PcType.Caption)
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ng", "Northgate", "NG", 0xFF1F6F6B), 36.dp); Text("Northgate", style = PcType.Label.copy(fontSize = 14.sp), maxLines = 1) }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ng", "Northgate", "NG", 0xFF1F6F6B), 36.dp); Text("Northgate", style = PcType.LabelStrong, maxLines = 1) }
                     Text("2 – 1", style = PcType.ScoreCompact)
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ru", "Riverside", "RU", 0xFF7A3FBF), 36.dp); Text("Riverside", style = PcType.Label.copy(fontSize = 14.sp), maxLines = 1) }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ru", "Riverside", "RU", 0xFF7A3FBF), 36.dp); Text("Riverside", style = PcType.LabelStrong, maxLines = 1) }
                 }
                 Text("Riverside need one goal to stay level with the leaders.", style = PcType.BodyMuted.copy(color = Pc.Text))
             }
         }
         Spacer(Modifier.weight(1f))
-        Text("Every match,\nexplained.", style = PcType.Title.copy(fontSize = 38.sp, lineHeight = 42.sp))
+        Text("Every match,\nexplained.", style = PcType.Display)
         Spacer(Modifier.height(12.dp))
-        Text("Live scores, smart alerts and a short brief on every game, in your language.", style = PcType.BodyMuted.copy(fontSize = 16.sp, lineHeight = 24.sp))
+        Text("Live scores, smart alerts and a short brief on every game, in your language.", style = PcType.BodyMuted)
         Spacer(Modifier.height(28.dp))
         PrimaryButton("Get started", onStart, Modifier.fillMaxWidth())
         TextAction("I already have an account", onRestore, Modifier.fillMaxWidth(), color = Pc.Text)
-        Text("By continuing you accept the Terms and Privacy Policy.", style = PcType.Caption.copy(color = Pc.Text2), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
+        Text("By continuing you accept the Terms and Privacy Policy.", style = PcType.Caption, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp))
     }
 }
 
@@ -233,7 +232,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit, vm: OnboardingTeamsViewM
                                         if (on) Box(Modifier.align(Alignment.TopEnd).size(18.dp).clip(CircleShape).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(12.dp)) }
                                     }
                                     Spacer(Modifier.height(10.dp))
-                                    Text(t.name, style = PcType.Label.copy(fontSize = 13.sp), maxLines = 1)
+                                    Text(t.name, style = PcType.Label, maxLines = 1)
                                 }
                             }
                             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -258,7 +257,7 @@ fun WatchScreen(onBack: () -> Unit, onNext: () -> Unit) {
             OptionCard(WatchStyle.Check.title, WatchStyle.Check.desc, prefs.watchStyle == WatchStyle.Check, { app.setWatchStyle(WatchStyle.Check) }, Icons.Outlined.CalendarMonth)
         }
         Spacer(Modifier.height(16.dp))
-        Text("You can change this, and pick which teams are shielded, in Settings.", style = PcType.Caption.copy(color = Pc.Text2))
+        Text("You can change this, and pick which teams are shielded, in Settings.", style = PcType.Caption)
     }
 }
 
@@ -280,7 +279,7 @@ fun AlertsScreen(onBack: () -> Unit, onNext: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         PcCard(Modifier.fillMaxWidth()) {
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("Quiet hours", style = PcType.Label.copy(fontSize = 15.sp)); Text("23:00 – 07:00, alerts wait until morning", style = PcType.Caption.copy(color = Pc.Text2)) }
+                Column(Modifier.weight(1f)) { Text("Quiet hours", style = PcType.BodyStrong); Text("23:00 – 07:00, alerts wait until morning", style = PcType.Caption) }
                 PcSwitch(prefs.quietHours, app::setQuietHours)
             }
         }
@@ -312,8 +311,8 @@ fun PersonaScreen(onBack: () -> Unit, onNext: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Box(Modifier.size(96.dp).clip(PcShape.Hero).background(Pc.SurfaceVariant).border(1.5.dp, Pc.Accent, PcShape.Hero), contentAlignment = Alignment.Center) { Icon(personaIcon(p), null, tint = Pc.Accent, modifier = Modifier.size(44.dp)) }
             Text("YOUR STYLE", style = PcType.Overline.copy(color = Pc.Text2))
-            Text(p.title, style = PcType.Title.copy(fontSize = 34.sp, lineHeight = 38.sp), textAlign = TextAlign.Center)
-            Text(p.tagline, style = PcType.BodyMuted.copy(fontSize = 16.sp))
+            Text(p.title, style = PcType.Display, textAlign = TextAlign.Center)
+            Text(p.tagline, style = PcType.BodyMuted)
         }
         Spacer(Modifier.height(24.dp))
         PcCard(Modifier.fillMaxWidth()) {
@@ -321,7 +320,7 @@ fun PersonaScreen(onBack: () -> Unit, onNext: () -> Unit) {
                 p.bullets.forEachIndexed { i, b ->
                     Row(Modifier.padding(vertical = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
                         Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(16.dp)) }
-                        Text(b, style = PcType.Body.copy(fontSize = 15.sp, lineHeight = 22.sp))
+                        Text(b, style = PcType.Body)
                     }
                     if (i < p.bullets.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
                 }
@@ -353,7 +352,7 @@ fun BuildingScreen(onDone: () -> Unit, vm: BuildHomeViewModel = viewModel(factor
                             StepState.Waiting -> Box(Modifier.size(28.dp).clip(CircleShape).border(2.dp, Pc.Outline, CircleShape))
                         }
                         Column {
-                            Text(s.label, style = PcType.Body.copy(fontSize = 15.sp, color = if (s.state != StepState.Waiting) Pc.Text else Pc.Text2, fontWeight = if (s.state == StepState.Running) FontWeight.Bold else FontWeight.Medium))
+                            Text(s.label, style = PcType.Body.copy(color = if (s.state != StepState.Waiting) Pc.Text else Pc.Text2, fontWeight = if (s.state == StepState.Running) FontWeight.Bold else FontWeight.Medium))
                             if (s.state == StepState.Skipped) Text("Offline. This loads when you're connected.", style = PcType.Caption.copy(color = Pc.Warning))
                         }
                     }

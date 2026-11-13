@@ -39,7 +39,10 @@ import androidx.navigation.navDeepLink
 import com.innovativeinside.pitchside.R
 import com.innovativeinside.pitchside.data.prefs.UserPrefs
 import com.innovativeinside.pitchside.ui.components.BannerKind
-import com.innovativeinside.pitchside.ui.components.BottomNav
+import com.innovativeinside.pitchside.ui.components.BottomNavBar
+import com.innovativeinside.pitchside.ui.components.OfflineBanner
+import com.innovativeinside.pitchside.ui.screens.NotificationsScreen
+import com.innovativeinside.pitchside.ui.theme.PcSpace
 import com.innovativeinside.pitchside.ui.components.InfoBanner
 import com.innovativeinside.pitchside.ui.components.PcDialog
 import com.innovativeinside.pitchside.ui.components.SideRail
@@ -105,6 +108,7 @@ object Routes {
     const val Settings = "settings"
     const val Auth = "auth/{mode}"
     const val Account = "account"
+    const val Notifications = "notifications"
 
     fun match(id: String) = "match/$id"
     fun lineup(id: String) = "lineup/$id"
@@ -194,13 +198,13 @@ fun AppRoot(app: AppViewModel, prefs: UserPrefs) {
 
                     // Tabs
                     composable(Routes.Home) {
-                        HomeRoute(HomeActions(openMatch, openSearch, { nav.navigate(Routes.Ask) }, { nav.goTab(Routes.News) }, openArticle, openLeague, openTeam, { nav.goTab(Routes.Matches) }))
+                        HomeRoute(HomeActions(openMatch, openSearch, { nav.navigate(Routes.Ask) }, { nav.goTab(Routes.News) }, openArticle, openLeague, openTeam, { nav.goTab(Routes.Matches) }, { nav.navigate(Routes.Notifications) }, openPlayer))
                     }
                     composable(Routes.Matches) { MatchesRoute(openMatch, openLeague, openSearch) }
-                    composable(Routes.Leagues) { LeaguesRoute(openLeague, openPlayer, openSearch) }
+                    composable(Routes.Leagues) { LeaguesRoute(openLeague, openPlayer, openSearch, openTeam, openMatch) }
                     composable(Routes.News) { NewsRoute(openArticle) }
                     composable(Routes.Following) {
-                        FavoritesRoute(FavoritesNav(openSearch, { nav.navigate(Routes.Settings) }, openTeam, openLeague, openPlayer, { nav.navigate(Routes.Paywall) }))
+                        FavoritesRoute(FavoritesNav(openSearch, { nav.navigate(Routes.Settings) }, openTeam, openLeague, openPlayer, { nav.navigate(Routes.Paywall) }, openMatch))
                     }
 
                     // Details
@@ -212,7 +216,8 @@ fun AppRoot(app: AppViewModel, prefs: UserPrefs) {
                     composable(Routes.Team, idArg, deepLinks = listOf(navDeepLink { uriPattern = "${Routes.DEEP_LINK}team/{id}" })) { TeamRoute(back, openMatch, openTeam, openPlayer) }
                     composable(Routes.Player, idArg) { PlayerRoute(back, openTeam) }
                     composable(Routes.Article, idArg) { ArticleRoute(back) }
-                    composable(Routes.Search) { SearchRoute(back, openTeam, openLeague, openPlayer) }
+                    composable(Routes.Search) { SearchRoute(back, openTeam, openLeague, openPlayer, openMatch) }
+                    composable(Routes.Notifications) { NotificationsScreen(back) { nav.navigate(Routes.Settings) } }
                     composable(Routes.Ask) { AskRoute(back, openPaywall = { nav.navigate(Routes.Paywall) }) }
                     composable(Routes.Paywall) { PaywallScreen(back) }
                     composable(Routes.Settings) {
@@ -231,10 +236,10 @@ fun AppRoot(app: AppViewModel, prefs: UserPrefs) {
                         AccountRoute(back) { nav.navigate(Routes.auth(AuthMode.SignIn)) { popUpTo(Routes.Account) { inclusive = true } } }
                     }
                 }
-                toast?.let { t -> Box(Modifier.align(Alignment.BottomCenter).padding(16.dp).testTag("toast")) { InfoBanner(t, BannerKind.Success) } }
+                toast?.let { t -> Box(Modifier.align(Alignment.BottomCenter).padding(PcSpace.md).testTag("toast")) { InfoBanner(t, BannerKind.Success) } }
             }
-            if (!online) InfoBanner(stringResource(R.string.offline_banner), BannerKind.Warning, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            if (showNav && width == WidthClass.Compact) BottomNav(route, { nav.goTab(it) }, badges) else Spacer(Modifier.navigationBarsPadding())
+            if (!online) OfflineBanner(Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs).testTag("offline_banner"))
+            if (showNav && width == WidthClass.Compact) BottomNavBar(route, { nav.goTab(it) }, badges) else Spacer(Modifier.navigationBarsPadding())
         }
     }
     if (exitDialog) PcDialog(

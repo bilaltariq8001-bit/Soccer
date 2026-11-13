@@ -60,7 +60,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.innovativeinside.pitchside.BuildConfig
@@ -116,7 +115,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
     Column(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BackButton(back)
-            Column(Modifier.weight(1f)) { Text(stringResource(R.string.action_ask), style = PcType.Subtitle); Text("Answers from match data", style = PcType.Caption.copy(color = Pc.Text2)) }
+            Column(Modifier.weight(1f)) { Text(stringResource(R.string.action_ask), style = PcType.Subtitle); Text("Answers from match data", style = PcType.Caption) }
             Box(Modifier.heightIn(min = 32.dp).clip(PcShape.Chip).background(Pc.SurfaceVariant).border(1.dp, Pc.Outline, PcShape.Chip).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Text("${s.left} of ${s.limit} left today", style = PcType.Caption.copy(color = Pc.Text))
             }
@@ -137,7 +136,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                         Modifier.widthIn(max = 340.dp).clip(bubble).background(if (m.fromUser) Pc.SurfaceVariant else Pc.Surface)
                             .border(1.dp, if (m.failed) Pc.Error else Pc.Outline, bubble).padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
-                        Text(m.text, style = PcType.Body.copy(fontSize = 15.sp, lineHeight = 22.sp, color = if (m.failed) Pc.Error else Pc.Text))
+                        Text(m.text, style = PcType.Body.copy(color = if (m.failed) Pc.Error else Pc.Text))
                         if (m.failed) TextAction(stringResource(R.string.action_retry), onRetry)
                     }
                 }
@@ -155,7 +154,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                     modifier = Modifier.weight(1f).height(52.dp).testTag("ask_input"),
                     decorationBox = { inner ->
                         Box(Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, if (s.inputError != null) Pc.Error else Pc.Outline, PcShape.Control).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterStart) {
-                            if (s.input.isEmpty()) Text("Ask about a match or team", style = PcType.Body.copy(color = Pc.Text2, fontSize = 15.sp), maxLines = 1)
+                            if (s.input.isEmpty()) Text("Ask about a match or team", style = PcType.BodyMuted, maxLines = 1)
                             inner()
                         }
                     },
@@ -165,7 +164,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                 }
             }
             if (s.inputError != null) Text(s.inputError, style = PcType.Caption, color = Pc.Error)
-            Text("AI-generated from match data. It can make mistakes.", style = PcType.Caption.copy(color = Pc.Text2))
+            Text("AI-generated from match data. It can make mistakes.", style = PcType.Caption)
         }
     }
 }
@@ -186,13 +185,13 @@ fun PaywallScreen(onClose: () -> Unit) {
         }
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(56.dp).clip(PcShape.Hero).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent, modifier = Modifier.size(28.dp)) }
-            Text("Pitchside Pro", style = PcType.Title.copy(fontSize = 34.sp, lineHeight = 38.sp))
-            Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more insight.", style = PcType.BodyMuted.copy(fontSize = 16.sp))
+            Text("Pitchside Pro", style = PcType.Display)
+            Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more insight.", style = PcType.BodyMuted)
             Spacer(Modifier.height(8.dp))
             listOf("No ads anywhere", "${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} Ask questions a day", "Deeper Match Briefs", "Follow unlimited teams").forEach {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 32.dp)) {
                     Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(14.dp)) }
-                    Text(it, style = PcType.Body.copy(fontSize = 15.sp))
+                    Text(it, style = PcType.Body)
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -203,13 +202,13 @@ fun PaywallScreen(onClose: () -> Unit) {
                         .pcClickable(PcShape.Card, role = Role.RadioButton) { plan = i }.padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) { Text(name + if (i == 0) "  ·  Best value" else "", style = PcType.Subtitle.copy(fontSize = 16.sp)); Text(sub, style = PcType.BodyMuted.copy(fontSize = 13.sp)) }
+                    Column(Modifier.weight(1f)) { Text(name + if (i == 0) "  ·  Best value" else "", style = PcType.BodyStrong); Text(sub, style = PcType.Caption) }
                     Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) Pc.Accent else Color.Transparent).border(1.5.dp, if (on) Pc.Accent else Pc.OutlineStrong, CircleShape), contentAlignment = Alignment.Center) { if (on) Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(16.dp)) }
                 }
             }
             Spacer(Modifier.height(8.dp))
             PrimaryButton(if (plan == 0) "Start free trial" else "Continue", { info = true }, Modifier.fillMaxWidth())
-            Text("Prices show from Google Play once billing is connected. Cancel any time in Google Play.", style = PcType.Caption.copy(color = Pc.Text2))
+            Text("Prices show from Google Play once billing is connected. Cancel any time in Google Play.", style = PcType.Caption)
         }
     }
     if (info) PcDialog(
@@ -241,10 +240,10 @@ fun SettingsScreen(nav: SettingsNav) {
             val s = session
             PcCard(Modifier.fillMaxWidth(), onClick = if (s != null) nav.openAccount else nav.openAuth) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(44.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text((s?.displayName?.firstOrNull() ?: 'G').uppercase(), style = PcType.Label.copy(fontSize = 16.sp)) }
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text((s?.displayName?.firstOrNull() ?: 'G').uppercase(), style = PcType.BodyStrong) }
                     Column(Modifier.weight(1f)) {
-                        Text(s?.displayName ?: "Guest", style = PcType.Label.copy(fontSize = 15.sp))
-                        Text(s?.email ?: "Sign in to back up your follows", style = PcType.Caption.copy(color = Pc.Text2))
+                        Text(s?.displayName ?: "Guest", style = PcType.BodyStrong)
+                        Text(s?.email ?: "Sign in to back up your follows", style = PcType.Caption)
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                 }
@@ -252,7 +251,7 @@ fun SettingsScreen(nav: SettingsNav) {
             if (!prefs.isPro) PcCard(Modifier.fillMaxWidth(), border = Pc.OutlineStrong, onClick = nav.openPaywall) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent) }
-                    Column(Modifier.weight(1f)) { Text("Go Pro", style = PcType.Label.copy(fontSize = 15.sp)); Text("No ads, more Ask questions, unlimited follows", style = PcType.Caption.copy(color = Pc.Text2)) }
+                    Column(Modifier.weight(1f)) { Text("Go Pro", style = PcType.BodyStrong); Text("No ads, more Ask questions, unlimited follows", style = PcType.Caption) }
                     Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                 }
             }
@@ -291,10 +290,10 @@ fun SettingsScreen(nav: SettingsNav) {
     }
     if (langSheet) PcSheet({ langSheet = false }) {
         Text("App language", style = PcType.Subtitle)
-        Text("Match Briefs and Ask answers use this language. Screens are in English for now.", style = PcType.Caption.copy(color = Pc.Text2))
+        Text("Match Briefs and Ask answers use this language. Screens are in English for now.", style = PcType.Caption)
         Languages.all.forEach { l ->
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).pcClickable(PcShape.Control) { app.setLanguage(l.code); langSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${l.native} · ${l.english}", style = PcType.Body.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
+                Text("${l.native} · ${l.english}", style = PcType.Body, modifier = Modifier.weight(1f))
                 if (prefs.language == l.code) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Accent)
             }
         }
@@ -303,7 +302,7 @@ fun SettingsScreen(nav: SettingsNav) {
         Text("Default alert level", style = PcType.Subtitle)
         AlertLevel.entries.forEach { lvl ->
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).pcClickable(PcShape.Control) { app.setAlertLevel(lvl); alertSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text(lvl.label, style = PcType.Label.copy(fontSize = 15.sp)); Text(lvl.desc, style = PcType.Caption.copy(color = Pc.Text2)) }
+                Column(Modifier.weight(1f)) { Text(lvl.label, style = PcType.BodyStrong); Text(lvl.desc, style = PcType.Caption) }
                 if (prefs.alertLevel == lvl) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Accent)
             }
         }
@@ -330,8 +329,8 @@ private fun SettingRow(title: String, value: String? = null, onClick: (() -> Uni
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-            if (value != null && trailing != null) Text(value, style = PcType.Caption.copy(color = Pc.Text2))
+            Text(title, style = PcType.BodyStrong)
+            if (value != null && trailing != null) Text(value, style = PcType.Caption)
         }
         when {
             trailing != null -> trailing()
@@ -367,7 +366,7 @@ fun AuthContent(
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
                 when (f.mode) { AuthMode.SignIn -> stringResource(R.string.auth_sign_in); AuthMode.SignUp -> stringResource(R.string.auth_sign_up); AuthMode.Reset -> stringResource(R.string.auth_reset) },
-                style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp),
+                style = PcType.Title,
             )
             Text(if (f.mode == AuthMode.Reset) "We'll email you a link to choose a new password." else stringResource(R.string.auth_why), style = PcType.BodyMuted)
             if (f.formError != null) InfoBanner(f.formError, BannerKind.Error, Modifier.testTag("auth_form_error"))

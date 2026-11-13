@@ -64,11 +64,14 @@ data class UserPrefs(
     val askUsed: Int = 0,
     val isPro: Boolean = false,
     val persona: Persona? = null,
+    /** Last searches, newest first (local only). */
+    val recentSearches: List<String> = emptyList(),
 ) {
     companion object {
         const val FREE_TEAM_LIMIT = 5
         const val FREE_ASK_LIMIT = 5
         const val PRO_ASK_LIMIT = 50
+        const val RECENT_SEARCH_LIMIT = 8
     }
 }
 
@@ -117,6 +120,17 @@ object PrefsReducer {
             teamAlerts = p.teams.associateWith { level },
         )
     }
+
+    /** Adds a search to the front of the recent list (case-insensitive de-dup, capped). */
+    fun addRecentSearch(p: UserPrefs, query: String): UserPrefs {
+        val q = query.trim()
+        if (q.length < 2) return p
+        val list = (listOf(q) + p.recentSearches.filterNot { it.equals(q, ignoreCase = true) }).take(UserPrefs.RECENT_SEARCH_LIMIT)
+        return p.copy(recentSearches = list)
+    }
+
+    fun removeRecentSearch(p: UserPrefs, query: String) = p.copy(recentSearches = p.recentSearches.filterNot { it.equals(query, ignoreCase = true) })
+    fun clearRecentSearches(p: UserPrefs) = p.copy(recentSearches = emptyList())
 
     fun askLimit(p: UserPrefs) = if (p.isPro) UserPrefs.PRO_ASK_LIMIT else UserPrefs.FREE_ASK_LIMIT
 
