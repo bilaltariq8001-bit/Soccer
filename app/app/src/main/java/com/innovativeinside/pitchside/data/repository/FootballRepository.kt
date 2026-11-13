@@ -8,6 +8,7 @@ import com.innovativeinside.pitchside.data.model.Match
 import com.innovativeinside.pitchside.data.model.MatchEvent
 import com.innovativeinside.pitchside.data.model.MatchLineups
 import com.innovativeinside.pitchside.data.model.NewsCategory
+import com.innovativeinside.pitchside.data.model.NewsEdition
 import com.innovativeinside.pitchside.data.model.NewsItem
 import com.innovativeinside.pitchside.data.model.PlayerProfile
 import com.innovativeinside.pitchside.data.model.PlayerSummary
@@ -19,6 +20,7 @@ import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.data.model.TeamDetail
 import com.innovativeinside.pitchside.data.remote.FootballApi
 import com.innovativeinside.pitchside.data.remote.Mappers
+import com.innovativeinside.pitchside.data.news.NewsFeedSource
 import com.innovativeinside.pitchside.data.remote.dto.AskRequest
 import java.time.Instant
 import java.time.LocalDate
@@ -59,6 +61,11 @@ interface FootballRepository {
     suspend fun player(id: String, refresh: Boolean = false): Result<PlayerProfile>
     suspend fun topPlayers(refresh: Boolean = false): Result<List<PlayerSummary>>
     suspend fun news(category: NewsCategory?, cursor: String? = null): Result<NewsPage>
+    /**
+     * Headlines from the news feed source (90min RSS), newest first. [edition] null merges every edition.
+     * Paged client-side: [cursor] is the offset returned as [NewsPage.nextCursor].
+     */
+    suspend fun headlines(edition: NewsEdition?, cursor: String? = null, refresh: Boolean = false): Result<NewsPage>
     suspend fun article(id: String): Result<NewsItem>
     suspend fun search(query: String): Result<SearchResults>
     suspend fun ask(question: String, language: String): Result<String>
@@ -74,7 +81,14 @@ class DefaultFootballRepository(
     private val clock: AppClock,
     private val ttlMs: Long = 60_000,
     private val liveTtlMs: Long = 20_000,
+    /** Where headlines come from. Null falls back to the Pitchside API's /v1/news (mock data). */
+    private val newsSource: NewsFeedSource? = null,
+    private val newsTtlMs: Long = 10 * 60_000,
+    private val newsPageSize: Int = 20,
 ) : FootballRepository {
+
+    /** Every feed story seen this session, so the article screen opens without another download. */
+    private val stories = ConcurrentHashMap<String, NewsItem>()
 
     private data class Entry(val value: Any, val atMs: Long)
     private val cache = ConcurrentHashMap<String, Entry>()
@@ -162,7 +176,41 @@ class DefaultFootballRepository(
         NewsPage(page.items.map(Mappers::news), page.nextCursor)
     }
 
-    override suspend fun article(id: String) = cached("article:$id", false) { Mappers.news(api.article(id)) }
+    private suspend fun edition(e: NewsEdition, refresh: Boolean): Result<List<NewsItem>> {
+        val src = newsSource ?: return Result.success(emptyList())
+        return cached("feed:${e.code}", refresh, newsTtlMs) { src.fetch(e).also { list -> list.forEach { stories[it.id] = it } } }
+    }
+
+    override suspend fun headlines(edition: NewsEdition?, cursor: String?, refresh: Boolean): Result<NewsPage> {
+        if (newsSource == null) return news(null, cursor)
+        val all: Result<List<NewsItem>> = if (edition != null) {
+            edition(edition, refresh)
+        } else {
+            // One edition failing (or being slow to recover) should not blank the "All" view.
+            val results = coroutineScope { NewsEdition.entries.map { e -> async { edition(e, refresh) } }.map { it.await() } }
+            val ok = results.filter { it.isSuccess }
+            if (ok.isEmpty()) Result.failure(results.first().exceptionOrNull() ?: AppError.Unknown())
+            else Result.success(ok.flatMap { it.getOrThrow() }.sortedByDescending { it.publishedMs })
+        }
+        return all.map { list ->
+            val start = cursor?.toIntOrNull()?.coerceIn(0, list.size) ?: 0
+            val end = (start + newsPageSize).coerceAtMost(list.size)
+            NewsPage(list.subList(start, end).toList(), if (end < list.size) end.toString() else null)
+        }
+    }
+
+    override suspend fun article(id: String): Result<NewsItem> {
+        stories[id]?.let { return Result.success(it) }
+        // Feed ids are "<edition>-<guid>": after process death, reload that edition and look again.
+        val edition = NewsEdition.fromCode(id.substringBefore('-', ""))
+        if (newsSource != null && edition != null) {
+            return edition(edition, refresh = false).fold(
+                { list -> list.firstOrNull { it.id == id }?.let { Result.success(it) } ?: Result.failure(AppError.NotFound("This story")) },
+                { Result.failure(it) },
+            )
+        }
+        return cached("article:$id", false) { Mappers.news(api.article(id)) }
+    }
 
     override suspend fun search(query: String): Result<SearchResults> {
         val q = query.trim()

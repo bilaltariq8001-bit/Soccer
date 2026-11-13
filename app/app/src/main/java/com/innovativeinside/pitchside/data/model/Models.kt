@@ -83,10 +83,36 @@ data class NewsItem(
     val source: String,
     val publishedMs: Long,
     val readMinutes: Int,
+    /** Link to the full story on the publisher's site (RSS items always have one). */
     val url: String?,
-)
+    /** Lead image (RSS media:thumbnail). Null for stories without one. */
+    val imageUrl: String? = null,
+    /** Credit line shipped with the image ("Caption | Photographer/Agency"). */
+    val imageCaption: String? = null,
+    /** Which 90min edition the story comes from; null for stories from the Pitchside API. */
+    val edition: NewsEdition? = null,
+    val author: String? = null,
+    /** BCP-47 language of the story ("fr", "it", "es", "pt-BR"). */
+    val language: String? = null,
+) {
+    /** The kicker shown above the headline: the edition for feed stories, otherwise the category. */
+    val kicker: String get() = edition?.label ?: category.label
+}
 
 enum class NewsCategory(val label: String) { Reports("Match reports"), Transfers("Transfers"), Analysis("Analysis") }
+
+/** The 90min RSS editions the News tab offers. [path] is relative to https://www.90min.com/. */
+enum class NewsEdition(val code: String, val label: String, val language: String, val path: String) {
+    France("fr", "France", "fr", "fr/feed"),
+    Italy("it", "Italy", "it", "it/feed"),
+    Spain("es", "Spain", "es", "es/feed"),
+    Brazil("br", "Brazil", "pt-BR", "pt-BR/feed"),
+    ;
+
+    companion object {
+        fun fromCode(code: String): NewsEdition? = entries.firstOrNull { it.code == code }
+    }
+}
 
 data class PlayerSummary(
     val id: String,

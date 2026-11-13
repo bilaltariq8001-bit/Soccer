@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.Pitchside" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/pitchside_splash_stage</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
     </style>
 
     <!-- Launch theme: the system splash shows the brand mark on the deep-green stage until preferences
@@ -15,7 +15,7 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_pitchside_splash_mark</item>
         <item name="windowSplashScreenAnimationDuration">500</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
         <item name="postSplashScreenTheme">@style/Theme.Pitchside</item>
     </style>
 </resources>

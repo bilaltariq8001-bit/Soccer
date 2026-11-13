@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="pitchside_window_background">#0C0F0D</color>
     <color name="pitchside_splash_stage">#17432F</color>
     <color name="pitchside_splash_ink">#F2F4F1</color>
     <color name="pitchside_splash_background_glow">#1F503A</color>

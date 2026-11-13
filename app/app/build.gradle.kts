@@ -14,8 +14,8 @@ android {
         applicationId = "com.innovativeinside.pitchside"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Base URL of the Pitchside REST gateway (see API_CONTRACTS.md). Empty means the app runs on the
@@ -79,6 +79,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.datastore.preferences)
     implementation(libs.splashscreen)
+    // Coil: async image loading with memory/disk cache and downsampling for the 90min news photos.
+    implementation(libs.coil.compose)
     debugImplementation(libs.compose.ui.tooling)
     debugImplementation(libs.compose.ui.test.manifest)
 

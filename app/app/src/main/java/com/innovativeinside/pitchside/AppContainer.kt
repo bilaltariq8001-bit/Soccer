@@ -13,6 +13,7 @@ import com.innovativeinside.pitchside.data.auth.KeystoreCipher
 import com.innovativeinside.pitchside.data.auth.LocalAuthRepository
 import com.innovativeinside.pitchside.data.mock.MockBehavior
 import com.innovativeinside.pitchside.data.mock.MockFootballApi
+import com.innovativeinside.pitchside.data.news.NinetyMinNewsSource
 import com.innovativeinside.pitchside.data.prefs.DataStorePrefsRepository
 import com.innovativeinside.pitchside.data.prefs.PrefsRepository
 import com.innovativeinside.pitchside.data.remote.FootballApi
@@ -51,5 +52,6 @@ class DefaultAppContainer(context: Context) : AppContainer {
         clientVersion = "android/${BuildConfig.VERSION_NAME}",
     )
 
-    override val football: FootballRepository = DefaultFootballRepository(api, dispatchers, clock)
+    // News always comes from the public 90min RSS feeds, also when the rest of the app runs on mock data.
+    override val football: FootballRepository = DefaultFootballRepository(api, dispatchers, clock, newsSource = NinetyMinNewsSource())
 }

@@ -19,7 +19,6 @@
     <string name="action_following">Following</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_exit">Exit</string>
-    <string name="action_load_more">Load more</string>
 
     <!-- States -->
     <string name="state_empty_title">Nothing here yet</string>
