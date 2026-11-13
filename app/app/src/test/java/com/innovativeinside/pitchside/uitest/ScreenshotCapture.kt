@@ -6,10 +6,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onRoot
+import androidx.activity.ComponentActivity
+import android.graphics.Canvas
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.innovativeinside.pitchside.core.UiState
 import com.innovativeinside.pitchside.data.model.EventKind
@@ -49,7 +48,7 @@ class ScreenshotCapture {
     @get:Rule(order = 0) val gate = TestRule { base, _ ->
         object : Statement() { override fun evaluate() { assumeTrue("set PITCHSIDE_SHOTS to render", !out.isNullOrBlank()); base.evaluate() } }
     }
-    @get:Rule(order = 1) val rule = createComposeRule()
+    @get:Rule(order = 1) val rule = createAndroidComposeRule<ComponentActivity>()
 
     private fun shot(name: String, dark: Boolean, content: @Composable () -> Unit) {
         rule.setContent {
@@ -58,7 +57,10 @@ class ScreenshotCapture {
             }
         }
         rule.waitForIdle()
-        val bmp = rule.onRoot().captureToImage().asAndroidBitmap()
+        // Software draw of the window (captureToImage's redraw wait times out on slow emulated hosts).
+        val view = rule.activity.window.decorView
+        val bmp = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        rule.runOnUiThread { view.draw(Canvas(bmp)) }
         File(out!!).mkdirs()
         File(out, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
     }

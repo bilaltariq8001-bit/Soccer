@@ -1,5 +1,34 @@
 # Test report
 
+## v0.3.0 redesign run (2026-11-13)
+Linux aarch64 sandbox (JDK 17.0.21, Android SDK 35, Gradle 8.10.2, AGP 8.7.3). No emulator or device.
+
+| Command | Result |
+|---|---|
+| `./gradlew :app:assembleDebug` | ✅ BUILD SUCCESSFUL, versionName 0.3.0, copied to `Pitchside-0.3.0-debug.apk` |
+| `./gradlew :app:testDebugUnitTest` | ✅ 87 tests, 0 failures, 5 skipped (the opt-in `ScreenshotCapture` renders) |
+| `./gradlew :app:lintDebug` | ✅ 0 errors, 2 warnings (`DataExtractionRules` and `ObsoleteSdkInt`, both pre-existing) |
+| Screenshots | See "Visual check" below |
+
+New and changed suites:
+
+| Suite | Tests | Covers |
+|---|---|---|
+| `NinetyMinNewsTest` (Robolectric, real feed fixture `test/resources/fixtures/90min_fr_sample.xml`, first 5 items of the FR feed) | 3 | ids, titles, author, language, edition, RFC 822 dates, image URL + caption, utm removal, `&#34;`/`&#39;` decoding, newest-first order, clean ellipsis; CDATA + double-encoded entities + missing fields; text and CDN-size helpers |
+| `NinetyMinNewsSourceTest` (MockWebServer) | 3 | Edition path (`/pt-BR/feed`), parse; 404 → NotFound, 503 → Server, HTML page → Parse; server down → Network |
+| `NewsRepositoryTest` | 6 | "All" merges editions newest first, pages of 20, one download per edition; edition filter, refresh and 10-min TTL; one edition failing vs all failing; article from cache and after process death (only that edition reloads); fallback to `/v1/news` and the old category contract; `NewsViewModel` editions, paging and error |
+| `HomeLogicTest` | 7 | Hero ranking (followed → closest → most goals → earliest), promotion only while live, next kickoff, live progress from labels, competition/status filters and counts, spoken match descriptions, countdown and honest news dates, recent searches |
+| `RedesignUiTest` (Robolectric Compose) | 5 | Home with 0 live (quiet card, no hero), 1 live (hero, no mini row, opens match), 3 live (live count, followed team leads, tapping a mini tile promotes it); News list (edition chips, lead + compact, open article); News error retry |
+| `ScreenshotCapture` (opt-in) | 5 | Renders Home light/dark, News, Match detail light/dark to PNG when `PITCHSIDE_SHOTS=<dir>` is set (Robolectric native graphics) |
+| `ViewModelTest` | updated | News test now covers paging + offline (categories moved to `NewsRepositoryTest`) |
+| `AppNavigationTest` | updated | Uses nav test tags (`nav_matches` …) because "Matches" is now also a Home section title; Leagues tab shows the table inline (Top scorers → Leo Marsh → full league page → back) |
+
+Run the screenshot renders on an x86_64 Linux or macOS machine: `PITCHSIDE_SHOTS=/tmp/shots ./gradlew :app:testDebugUnitTest --tests '*ScreenshotCapture*'`.
+
+---
+
+# Previous run (v0.2.0)
+
 Run on 2026-11-12 in a Linux aarch64 sandbox (JDK 17.0.21, Android SDK 35, Gradle 8.10.2, AGP 8.7.3). No emulator or device was available.
 
 ## Results

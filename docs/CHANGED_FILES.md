@@ -41,3 +41,27 @@ All paths under `app/app/src/` unless noted. Package root `com/innovativeinside/
 
 ## Docs (new, `docs/`)
 TASK_LIST, COMPETITOR_FEATURE_MAP, FEATURE_GAP_ANALYSIS, FIX_PLAN, DESIGN_SYSTEM, API_CONTRACTS, PROGRESS_LOG, CHECKPOINTS, QA_CHECKLIST, TEST_REPORT, CHANGED_FILES, FINAL_REPORT; root `README.md` rewritten.
+
+## Redesign v0.3.0 (2026-11-13)
+| File | Why |
+|---|---|
+| `app/gradle/libs.versions.toml`, `app/app/build.gradle.kts` | Coil 2.7.0 (`coil-compose`), version 0.3.0 (code 3) |
+| `DESIGN.md` | Rewritten for the v3 token system |
+| `main/res/font/*` | Manrope + Barlow Condensed (already on the branch, same files as `main`) |
+| `main/res/values/colors.xml`, `values-night/colors.xml`, `values/themes.xml`, `drawable/ic_pitchside_splash_mark.xml`, `drawable/ic_launcher_foreground.xml`, `values/ic_launcher_background.xml`, `values/strings.xml` | Splash ported from `main` and recoloured; launch theme; launcher colours; splash tagline |
+| `…/MainActivity.kt`, `…/ui/screens/AnimatedSplashScreen.kt` | Animated intro over the composed app (from `main`), kept prefs-gated system splash |
+| `…/ui/theme/Theme.kt` | New token layer: colours (light/dark), type roles with tabular numerals, spacing, shapes |
+| `…/data/model/Models.kt` | `NewsItem` image/caption/edition/author/language, `NewsEdition` |
+| `…/data/news/NinetyMinNews.kt` (new) | `NewsFeedSource`, 90min RSS source + parser, text and image helpers |
+| `…/data/mock/MockNewsFeedSource.kt` (new) | Offline news for previews and tests |
+| `…/data/repository/FootballRepository.kt`, `…/AppContainer.kt` | `headlines()` with cache/merge/paging, feed-backed `article()`, wiring |
+| `…/data/prefs/UserPrefs.kt` | Recent searches + reducer functions |
+| `…/ui/vm/*` | Hero ranking/selection, next kickoff, filters and counts, competition state, hero stats, News by edition, Leagues selected competition, Search matches, Favorites today |
+| `…/ui/components/Components.kt`, `States.kt`, `Overlays.kt`, `Fields.kt` | Restyled foundation components, segmented control with counts, shimmer, offline banner, reduced motion |
+| `…/ui/components/Navigation.kt`, `MatchComponents.kt`, `BentoTiles.kt`, `NewsComponents.kt` (new) | Top bar, bottom nav, crest, live badge, live/mini tiles, match row, rail item, bento tiles, news cards |
+| `…/ui/screens/*` | Every screen redesigned (see `docs/REDESIGN_REPORT.md`); new `NotificationsScreen.kt` |
+| `…/ui/AppRoot.kt` | Notifications route, new bottom bar, offline banner |
+| `…/ui/preview/PreviewSupport.kt` | 90min-style preview stories, scorers, upcoming |
+| `test/…/data/NinetyMinNewsTest.kt`, `NewsRepositoryTest.kt`, `test/…/ui/HomeLogicTest.kt`, `test/…/uitest/RedesignUiTest.kt`, `ScreenshotCapture.kt`, `test/resources/fixtures/90min_fr_sample.xml` (new) | Parser, source, repository, hero logic, Compose tests, opt-in screenshots, real feed fixture |
+| `test/…/ui/ViewModelTest.kt`, `test/…/uitest/ComposeUiTest.kt` | Updated for the new UI (nav test tags, section names, Leagues inline table) |
+| `docs/REDESIGN_REPORT.md` (new), `docs/REDESIGN_AUDIT.md`, `docs/TEST_REPORT.md`, `README.md` | Reports |

@@ -228,7 +228,7 @@ fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit,
 @Composable
 fun LeagueBadge(short: String, size: Int = 40) {
     Box(Modifier.size(size.dp).clip(PcShape.Small).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
-        Text(short.take(3), style = if (size >= 48) PcType.BodyStrong else PcType.Micro.copy(fontSize = PcType.Caption.fontSize), color = Pc.Accent, maxLines = 1)
+        Text(short.take(3), style = if (size >= 48) PcType.BodyStrong else PcType.Overline.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Pc.Accent, maxLines = 1)
     }
 }
 
