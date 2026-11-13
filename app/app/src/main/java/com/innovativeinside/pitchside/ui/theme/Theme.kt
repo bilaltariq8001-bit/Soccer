@@ -30,25 +30,28 @@ class PcColors(
     val text: Color, val text2: Color, val text3: Color,
     val lime: Color, val onLime: Color, val limeTint: Color, val limeTintSoft: Color,
     val live: Color, val liveTint: Color, val amber: Color, val amberTint: Color, val red: Color, val redTint: Color, val neutral: Color,
+    val pitch: Color, val onPitch: Color, val pitchLine: Color,
 )
 
 val DarkPc = PcColors(
-    bg = Color(0xFF07111F), surface = Color(0xFF0D1B2E), raised = Color(0xFF12263D), nav = Color(0xFF0A1626),
-    border = Color(0xFF1B3150), borderStrong = Color(0xFF24405F),
-    text = Color(0xFFF5F1E8), text2 = Color(0xFFA9B7CC), text3 = Color(0xFF8496AF),
-    lime = Color(0xFFB7F34A), onLime = Color(0xFF07111F), limeTint = Color(0x1FB7F34A), limeTintSoft = Color(0x14B7F34A),
-    live = Color(0xFF4DD8FF), liveTint = Color(0x244DD8FF), amber = Color(0xFFFFC857), amberTint = Color(0x24FFC857),
-    red = Color(0xFFFF6B6B), redTint = Color(0x2EFF6B6B), neutral = Color(0xFF5B6E8C),
+    bg = Color(0xFF101A16), surface = Color(0xFF18251F), raised = Color(0xFF22332A), nav = Color(0xFF131F19),
+    border = Color(0xFF2A3D32), borderStrong = Color(0xFF3A5143),
+    text = Color(0xFFF4F1E7), text2 = Color(0xFFB7C2B6), text3 = Color(0xFF96A498),
+    lime = Color(0xFFC8F06A), onLime = Color(0xFF172414), limeTint = Color(0x28C8F06A), limeTintSoft = Color(0x18C8F06A),
+    live = Color(0xFFFF806B), liveTint = Color(0x28FF806B), amber = Color(0xFFFFCC74), amberTint = Color(0x24FFCC74),
+    red = Color(0xFFFF746D), redTint = Color(0x2EFF746D), neutral = Color(0xFF718477),
+    pitch = Color(0xFF193B2D), onPitch = Color(0xFFF5F4E9), pitchLine = Color(0xFF496C56),
 )
 
 /** Accent and status colours are darkened so text and icons keep 4.5:1 contrast on white surfaces. */
 val LightPc = PcColors(
-    bg = Color(0xFFF6F7F9), surface = Color(0xFFFFFFFF), raised = Color(0xFFEDF0F5), nav = Color(0xFFFFFFFF),
-    border = Color(0xFFDCE2EB), borderStrong = Color(0xFFC3CDDA),
-    text = Color(0xFF0E1420), text2 = Color(0xFF4A5668), text3 = Color(0xFF5F6B7D),
-    lime = Color(0xFF4B7A00), onLime = Color(0xFFFFFFFF), limeTint = Color(0x1F4B7A00), limeTintSoft = Color(0x144B7A00),
-    live = Color(0xFF00779A), liveTint = Color(0x1F00779A), amber = Color(0xFF8A5A00), amberTint = Color(0x1F8A5A00),
-    red = Color(0xFFC73A2D), redTint = Color(0x1FC73A2D), neutral = Color(0xFF8A97AB),
+    bg = Color(0xFFF4F3EC), surface = Color(0xFFFFFEF8), raised = Color(0xFFE9EBDD), nav = Color(0xFFFFFEF8),
+    border = Color(0xFFD9DED1), borderStrong = Color(0xFFBBC6B6),
+    text = Color(0xFF17211B), text2 = Color(0xFF4D5B50), text3 = Color(0xFF5A6A5D),
+    lime = Color(0xFF416D27), onLime = Color(0xFFFFFFFF), limeTint = Color(0x1F416D27), limeTintSoft = Color(0x12416D27),
+    live = Color(0xFFC74735), liveTint = Color(0x1FC74735), amber = Color(0xFF875B00), amberTint = Color(0x1F875B00),
+    red = Color(0xFFB63E32), redTint = Color(0x1FB63E32), neutral = Color(0xFF809083),
+    pitch = Color(0xFF214731), onPitch = Color(0xFFFFFFFF), pitchLine = Color(0xFF719176),
 )
 
 val LocalPc = staticCompositionLocalOf { DarkPc }
@@ -75,14 +78,27 @@ object Pc {
     val Red: Color @Composable @ReadOnlyComposable get() = LocalPc.current.red
     val RedTint: Color @Composable @ReadOnlyComposable get() = LocalPc.current.redTint
     val Neutral: Color @Composable @ReadOnlyComposable get() = LocalPc.current.neutral
+    val Pitch: Color @Composable @ReadOnlyComposable get() = LocalPc.current.pitch
+    val OnPitch: Color @Composable @ReadOnlyComposable get() = LocalPc.current.onPitch
+    val PitchLine: Color @Composable @ReadOnlyComposable get() = LocalPc.current.pitchLine
 }
 
 object PcShape {
-    val Chip = RoundedCornerShape(12.dp)
+    val Chip = RoundedCornerShape(10.dp)
     val Control = RoundedCornerShape(14.dp)
-    val Card = RoundedCornerShape(16.dp)
-    val Hero = RoundedCornerShape(20.dp)
+    val Card = RoundedCornerShape(18.dp)
+    val Hero = RoundedCornerShape(24.dp)
     val Badge = RoundedCornerShape(8.dp)
+}
+
+object PcSpace {
+    val xxs = 4.dp
+    val xs = 8.dp
+    val sm = 12.dp
+    val md = 16.dp
+    val lg = 24.dp
+    val xl = 32.dp
+    val section = 28.dp
 }
 
 /** Bundled fonts: Manrope (variable weight) for text, Barlow Condensed for scores. Both are SIL OFL licensed. */
@@ -120,9 +136,9 @@ object PcType {
 fun PitchsideTheme(dark: Boolean = true, content: @Composable () -> Unit) {
     val c = if (dark) DarkPc else LightPc
     val scheme = if (dark) {
-        darkColorScheme(primary = c.lime, onPrimary = c.onLime, background = c.bg, onBackground = c.text, surface = c.surface, onSurface = c.text, surfaceVariant = c.raised, onSurfaceVariant = c.text2, outline = c.border, error = c.red)
+        darkColorScheme(primary = c.lime, onPrimary = c.onLime, primaryContainer = c.limeTint, onPrimaryContainer = c.text, secondary = c.live, onSecondary = c.bg, secondaryContainer = c.liveTint, onSecondaryContainer = c.text, tertiary = c.amber, onTertiary = c.bg, tertiaryContainer = c.amberTint, onTertiaryContainer = c.text, background = c.bg, onBackground = c.text, surface = c.surface, onSurface = c.text, surfaceVariant = c.raised, onSurfaceVariant = c.text2, outline = c.borderStrong, outlineVariant = c.border, error = c.red)
     } else {
-        lightColorScheme(primary = c.lime, onPrimary = c.onLime, background = c.bg, onBackground = c.text, surface = c.surface, onSurface = c.text, surfaceVariant = c.raised, onSurfaceVariant = c.text2, outline = c.border, error = c.red)
+        lightColorScheme(primary = c.lime, onPrimary = c.onLime, primaryContainer = c.limeTint, onPrimaryContainer = c.text, secondary = c.live, onSecondary = Color.White, secondaryContainer = c.liveTint, onSecondaryContainer = c.text, tertiary = c.amber, onTertiary = Color.White, tertiaryContainer = c.amberTint, onTertiaryContainer = c.text, background = c.bg, onBackground = c.text, surface = c.surface, onSurface = c.text, surfaceVariant = c.raised, onSurfaceVariant = c.text2, outline = c.borderStrong, outlineVariant = c.border, error = c.red)
     }
     CompositionLocalProvider(LocalPc provides c) {
         MaterialTheme(

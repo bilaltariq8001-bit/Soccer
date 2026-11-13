@@ -136,26 +136,29 @@ fun MatchScreen(matchId: String, onBack: () -> Unit, openLineup: (String) -> Uni
             }
             IconAction(if (alertsOn) Icons.Filled.Notifications else Icons.Outlined.Notifications, if (alertsOn) "Match alerts on" else "Match alerts off", { alertsOn = !alertsOn }, tint = if (alertsOn) Pc.Lime else Pc.Text2)
         }
-        PcCard(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(), shape = PcShape.Hero) {
-            Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        PcCard(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(), shape = PcShape.Hero, container = Pc.Pitch, border = Pc.PitchLine) {
+            Column(Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) { Crest(match.home, 60.dp); Text(match.home.name, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) { Crest(match.home, 60.dp); Text(match.home.name, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = Pc.OnPitch), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (hidden) {
-                            Text("– –", style = PcType.ScoreXL.copy(fontSize = 56.sp, lineHeight = 56.sp, color = Pc.Text3))
+                            Text("– –", style = PcType.ScoreXL.copy(fontSize = 56.sp, lineHeight = 56.sp, color = Pc.OnPitch.copy(alpha = 0.7f)))
                             TextAction("Reveal score", { app.reveal(match.id) })
                         } else {
-                            Text(if (match.homeScore != null) "${match.homeScore} – ${match.awayScore}" else match.label, style = if (match.homeScore != null) PcType.ScoreXL.copy(fontSize = 56.sp, lineHeight = 56.sp) else PcType.ScoreL)
-                            StatusBadge(match.status, match.label)
+                            Text(if (match.homeScore != null) "${match.homeScore} – ${match.awayScore}" else match.label, style = if (match.homeScore != null) PcType.ScoreXL.copy(fontSize = 60.sp, lineHeight = 62.sp, color = Pc.OnPitch) else PcType.ScoreL.copy(color = Pc.OnPitch))
+                            Row(Modifier.clip(PcShape.Badge).background(if (match.status == Status.Live) Pc.LiveTint else Pc.OnPitch.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (match.status == Status.Live) Box(Modifier.size(7.dp).clip(CircleShape).background(Pc.Live))
+                                Text(if (match.status == Status.Live) "LIVE  ${match.label}" else match.label, style = PcType.Meta, color = if (match.status == Status.Live) Pc.Live else Pc.OnPitch, fontWeight = FontWeight.ExtraBold)
+                            }
                         }
                     }
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) { Crest(match.away, 60.dp); Text(match.away.name, style = PcType.Label.copy(fontSize = 15.sp, color = Pc.Text2), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) { Crest(match.away, 60.dp); Text(match.away.name, style = PcType.Label.copy(fontSize = 15.sp, color = Pc.OnPitch.copy(alpha = 0.84f)), maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 if (!hidden && match.homeScore != null) {
                     val events = app.repo.events(match.id).filter { it.kind == EventKind.Goal }.sortedBy { it.minute.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(events.filter { it.isHome }.joinToString(", ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.Text2), modifier = Modifier.weight(1f))
-                        Text(events.filter { !it.isHome }.joinToString(", ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.Text2), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                        Text(events.filter { it.isHome }.joinToString(", ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.OnPitch.copy(alpha = 0.76f)), modifier = Modifier.weight(1f))
+                        Text(events.filter { !it.isHome }.joinToString(", ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.OnPitch.copy(alpha = 0.76f)), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                     }
                 }
             }

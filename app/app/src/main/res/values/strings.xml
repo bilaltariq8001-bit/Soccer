@@ -2,4 +2,5 @@
 <resources>
     <!-- Working name, change before release. -->
     <string name="app_name">Pitchside</string>
+    <string name="splash_tagline">Football news  /  Live matches</string>
 </resources>

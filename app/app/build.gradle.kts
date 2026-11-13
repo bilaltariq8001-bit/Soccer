@@ -39,6 +39,7 @@ dependencies {
     val bom = platform(libs.compose.bom)
     implementation(bom)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)

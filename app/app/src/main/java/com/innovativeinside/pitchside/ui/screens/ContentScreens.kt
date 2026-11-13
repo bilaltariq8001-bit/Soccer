@@ -153,24 +153,25 @@ fun NewsScreen() {
     var cat by rememberSaveable { mutableStateOf("All") }
     val items = app.repo.news().filter { cat == "All" || it.category == cat }
     Screen {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
-                Text("News", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
+        Column(Modifier.padding(start = 20.dp, end = 16.dp, top = 22.dp, bottom = 4.dp)) {
+            Text("THE TOUCHLINE", style = PcType.Overline.copy(color = Pc.Lime))
+            Text("Football, in focus.", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
             Text("Reports, transfers and analysis", style = PcType.BodySmall)
         }
         Spacer(Modifier.height(16.dp))
         ChipRow(listOf("All", "Match reports", "Transfers", "Analysis"), cat, { cat = it })
         Spacer(Modifier.height(16.dp))
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (items.isEmpty()) {
                 EmptyState("No stories yet", "New stories in this section appear here as soon as they are published.", actionLabel = "Show all news", onAction = { cat = "All" })
             } else {
                 val f = items.first()
-                PcCard(Modifier.fillMaxWidth(), shape = PcShape.Hero, onClick = {}) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Overline(f.category)
-                            Text(f.title, style = PcType.Title.copy(fontSize = 26.sp, lineHeight = 32.sp))
-                            Text(f.dek, style = PcType.BodySmall)
-                            Text(f.meta, style = PcType.Meta)
+                PcCard(Modifier.fillMaxWidth(), shape = PcShape.Hero, container = Pc.Raised, onClick = {}) {
+                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Overline(f.category, color = Pc.Lime)
+                        Text(f.title, style = PcType.Title.copy(fontSize = 27.sp, lineHeight = 33.sp))
+                        Text(f.dek, style = PcType.BodySmall.copy(fontSize = 16.sp, lineHeight = 24.sp, color = Pc.Text))
+                        Text(f.meta, style = PcType.Meta)
                     }
                 }
                 Spacer(Modifier.height(4.dp))

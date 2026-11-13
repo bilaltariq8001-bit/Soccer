@@ -373,9 +373,9 @@ fun SettingsScreen(onBack: () -> Unit, openPaywall: () -> Unit, onReset: () -> U
                 }
             }
             SettingsGroup("App") {
-                SettingRow("Match Brief detail") { Box(Modifier.width(180.dp)) { SegmentedTabs(listOf("Simple", "Detailed"), if (app.detailed) 1 else 0, { app.detailed = it == 1 }) } }
+                SettingRow("Match Brief detail", expandedTrailing = true) { Box(Modifier.fillMaxWidth()) { SegmentedTabs(listOf("Simple", "Detailed"), if (app.detailed) 1 else 0, { app.detailed = it == 1 }) } }
                 SettingRow("Language", value = app.language, onClick = { langSheet = true })
-                SettingRow("Theme") { Box(Modifier.width(220.dp)) { SegmentedTabs(listOf("System", "Light", "Dark"), listOf("System", "Light", "Dark").indexOf(app.themeChoice).coerceAtLeast(0), { app.themeChoice = listOf("System", "Light", "Dark")[it] }) } }
+                SettingRow("Theme", expandedTrailing = true) { Box(Modifier.fillMaxWidth()) { SegmentedTabs(listOf("System", "Light", "Dark"), listOf("System", "Light", "Dark").indexOf(app.themeChoice).coerceAtLeast(0), { app.themeChoice = listOf("System", "Light", "Dark")[it] }) } }
             }
             SettingsGroup("About") {
                 SettingRow("Privacy Policy"); SettingRow("Terms of Service"); SettingRow("Version", value = "0.1.0")
@@ -413,7 +413,24 @@ private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SettingRow(title: String, value: String? = null, onClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null) {
+private fun SettingRow(
+    title: String,
+    value: String? = null,
+    onClick: (() -> Unit)? = null,
+    expandedTrailing: Boolean = false,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    if (expandedTrailing && trailing != null) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(title, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
+            trailing()
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+        return
+    }
     Row(
         Modifier.fillMaxWidth().heightIn(min = 56.dp).let { if (onClick != null) it.pcClickable(PcShape.Control, onClick = onClick) else it }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
