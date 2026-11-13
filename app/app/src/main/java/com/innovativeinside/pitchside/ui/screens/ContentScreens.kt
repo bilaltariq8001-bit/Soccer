@@ -63,7 +63,7 @@ fun LeagueScreen(openPlayer: (String) -> Unit) {
             Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Surface).border(1.dp, Pc.Border, PcShape.Control), contentAlignment = Alignment.Center) { Text("PD", color = Pc.Lime, fontWeight = FontWeight.ExtraBold) }
             Column(Modifier.weight(1f)) {
                 Text("Premier Division", style = PcType.Title.copy(fontSize = 24.sp, lineHeight = 28.sp))
-                Text("Season 2026/27 · Round 9 of 34", style = PcType.BodySmall.copy(fontSize = 13.sp))
+                Text("Season 2026/27 / Round 9 of 34", style = PcType.BodySmall)
             }
             IconAction(if (followed) Icons.Filled.Star else Icons.Outlined.StarBorder, if (followed) "Following league" else "Follow league", { followed = !followed }, tint = if (followed) Pc.Lime else Pc.Text2, filled = true)
         }
@@ -96,8 +96,8 @@ fun LeagueScreen(openPlayer: (String) -> Unit) {
                                             if (fav) Icon(Icons.Filled.Star, "Your club", tint = Pc.Lime, modifier = Modifier.size(14.dp))
                                         }
                                         Text(r.played.toString(), style = PcType.BodySmall, modifier = Modifier.width(24.dp), textAlign = TextAlign.Center)
-                                        Text("${r.won}-${r.drawn}-${r.lost}", style = PcType.BodySmall.copy(fontSize = 13.sp), modifier = Modifier.width(56.dp), textAlign = TextAlign.Center)
-                                        Text(if (r.goalDiff > 0) "+${r.goalDiff}" else r.goalDiff.toString(), style = PcType.BodySmall.copy(fontSize = 13.sp, color = if (r.goalDiff < 0) Pc.Red else Pc.Text2), modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
+                                        Text("${r.won}-${r.drawn}-${r.lost}", style = PcType.BodySmall, modifier = Modifier.width(56.dp), textAlign = TextAlign.Center)
+                                        Text(if (r.goalDiff > 0) "+${r.goalDiff}" else r.goalDiff.toString(), style = PcType.BodySmall.copy(color = if (r.goalDiff < 0) Pc.Red else Pc.Text2), modifier = Modifier.width(32.dp), textAlign = TextAlign.Center)
                                         Text(r.points.toString(), style = PcType.ScoreM, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
                                     }
                                 }
@@ -127,7 +127,7 @@ fun LeagueScreen(openPlayer: (String) -> Unit) {
                         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text(s.rank.toString(), style = PcType.Label.copy(color = Pc.Text2), modifier = Modifier.width(20.dp))
                             Box(Modifier.size(40.dp).clip(CircleShape).background(Color(s.team.color)), contentAlignment = Alignment.Center) { Text(s.name.split(" ").map { it.first() }.joinToString(""), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) }
-                            Column(Modifier.weight(1f)) { Text(s.name, style = PcType.Label.copy(fontSize = 15.sp)); Text(s.team.name, style = PcType.BodySmall.copy(fontSize = 13.sp)) }
+                            Column(Modifier.weight(1f)) { Text(s.name, style = PcType.Label.copy(fontSize = 15.sp)); Text(s.team.name, style = PcType.BodySmall) }
                             Text(s.goals.toString(), style = PcType.ScoreL.copy(fontSize = 32.sp))
                         }
                     }
@@ -154,7 +154,7 @@ fun NewsScreen() {
     val items = app.repo.news().filter { cat == "All" || it.category == cat }
     Screen {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
-            Text("News", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
+                Text("News", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
             Text("Reports, transfers and analysis", style = PcType.BodySmall)
         }
         Spacer(Modifier.height(16.dp))
@@ -166,14 +166,11 @@ fun NewsScreen() {
             } else {
                 val f = items.first()
                 PcCard(Modifier.fillMaxWidth(), shape = PcShape.Hero, onClick = {}) {
-                    Column {
-                        PhotoPlaceholder(Modifier.fillMaxWidth().height(190.dp), "Photo placeholder")
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Overline(f.category.uppercase())
-                            Text(f.title, style = PcType.Headline.copy(fontSize = 22.sp, lineHeight = 28.sp))
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Overline(f.category)
+                            Text(f.title, style = PcType.Title.copy(fontSize = 26.sp, lineHeight = 32.sp))
                             Text(f.dek, style = PcType.BodySmall)
                             Text(f.meta, style = PcType.Meta)
-                        }
                     }
                 }
                 Spacer(Modifier.height(4.dp))
@@ -203,7 +200,7 @@ fun PlayerScreen(playerId: String, onBack: () -> Unit) {
             Box(Modifier.size(80.dp).clip(PcShape.Hero).background(Color(p.team.color)), contentAlignment = Alignment.Center) { Text(p.initials, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 28.sp) }
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(p.name, style = PcType.Title)
-                Text("${p.position} · ${p.team.name} · #${p.number}", style = PcType.BodySmall)
+                Text("${p.position} / ${p.team.name} / #${p.number}", style = PcType.BodySmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf("Age ${p.age}", "${p.heightCm} cm", "${p.foot} foot").forEach { Tag(it) } }
             }
         }
@@ -217,7 +214,7 @@ fun PlayerScreen(playerId: String, onBack: () -> Unit) {
                         StatTile(p.goals.toString(), "Goals", Modifier.weight(1f)); StatTile(p.assists.toString(), "Assists", Modifier.weight(1f))
                         StatTile(p.rating.toString(), "Rating", Modifier.weight(1f), Pc.Lime); StatTile(p.matches.toString(), "Matches", Modifier.weight(1f))
                     }
-                    BriefCard(p.scoutingNote, title = "SCOUTING NOTE", updated = "", compactMeta = false)
+                    BriefCard(p.scoutingNote, title = "Scouting note", updated = "", compactMeta = false)
                     PcCard(Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("Last 5 ratings", style = PcType.Subhead)
@@ -242,8 +239,8 @@ fun PlayerScreen(playerId: String, onBack: () -> Unit) {
                         p.career.forEachIndexed { i, c ->
                             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Box(Modifier.size(12.dp).clip(CircleShape).background(if (c.current) Pc.Lime else Pc.BorderStrong))
-                                Column(Modifier.weight(1f)) { Text(c.club, style = PcType.Label.copy(fontSize = 15.sp)); Text(c.years, style = PcType.BodySmall.copy(fontSize = 13.sp)) }
-                                Column(horizontalAlignment = Alignment.End) { Text("${c.apps} apps", style = PcType.BodySmall.copy(fontSize = 13.sp)); Text("${c.goals} goals", style = PcType.Label.copy(color = Pc.Lime, fontSize = 13.sp)) }
+                                Column(Modifier.weight(1f)) { Text(c.club, style = PcType.Label.copy(fontSize = 15.sp)); Text(c.years, style = PcType.BodySmall) }
+                                Column(horizontalAlignment = Alignment.End) { Text("${c.apps} apps", style = PcType.BodySmall); Text("${c.goals} goals", style = PcType.Label.copy(color = Pc.Lime)) }
                             }
                             if (i < p.career.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
                         }

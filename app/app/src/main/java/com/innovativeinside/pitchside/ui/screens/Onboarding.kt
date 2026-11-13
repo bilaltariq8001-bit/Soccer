@@ -124,7 +124,7 @@ private fun OptionCard(title: String, desc: String, selected: Boolean, onClick: 
         if (icon != null) Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Border), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (selected) Pc.Lime else Pc.Text2) }
         Column(Modifier.weight(1f)) {
             Text(title, style = PcType.Subhead)
-            Text(desc, style = PcType.BodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp))
+            Text(desc, style = PcType.BodySmall)
         }
         Box(Modifier.size(24.dp).clip(CircleShape).background(if (selected) Pc.Lime else Color.Transparent).border(1.5.dp, if (selected) Pc.Lime else Pc.BorderStrong, CircleShape), contentAlignment = Alignment.Center) {
             if (selected) Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(16.dp))
@@ -188,7 +188,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit) {
     val bigOnly = app.followKind == FollowKind.BigOnly
     OnbScaffold(
         2, "Who do you follow?", "Pick what you like. We will build your home around it.", onBack, onNext,
-        if (bigOnly) "Continue" else "Continue · ${app.followedTeams.size} selected", onNext,
+        if (bigOnly) "Continue" else "Continue, ${app.followedTeams.size} selected", onNext,
         secondary = "Free: follow up to 5 teams. Change any time.", onSecondary = {},
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -202,7 +202,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit) {
         if (!bigOnly) {
             SearchField(query, { query = it }, "Search clubs")
             Spacer(Modifier.height(20.dp))
-            Text(if (query.isBlank()) "POPULAR NEAR YOU" else "RESULTS", style = PcType.Overline.copy(color = Pc.Text3))
+            Text(if (query.isBlank()) "Popular near you" else "Results", style = PcType.Overline.copy(color = Pc.Text2))
             Spacer(Modifier.height(12.dp))
             teams.chunked(3).forEach { row ->
                 Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -219,7 +219,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit) {
                                 if (on) Box(Modifier.align(Alignment.TopEnd).size(18.dp).clip(CircleShape).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(12.dp)) }
                             }
                             Spacer(Modifier.height(10.dp))
-                            Text(t.name, style = PcType.Label.copy(fontSize = 13.sp), maxLines = 1)
+                            Text(t.name, style = PcType.Label, maxLines = 1)
                         }
                     }
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -293,7 +293,7 @@ fun PersonaScreen(onBack: () -> Unit, onNext: () -> Unit) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Spacer(Modifier.height(12.dp))
             Box(Modifier.size(96.dp).clip(PcShape.Hero).background(Pc.Raised).border(1.5.dp, Pc.Lime, PcShape.Hero), contentAlignment = Alignment.Center) { Icon(personaIcon(p), null, tint = Pc.Lime, modifier = Modifier.size(44.dp)) }
-            Text("YOUR STYLE", style = PcType.Overline.copy(color = Pc.Text2))
+            Text("Your style", style = PcType.Overline.copy(color = Pc.Text2))
             Text(p.title, style = PcType.Title.copy(fontSize = 34.sp, lineHeight = 38.sp), textAlign = TextAlign.Center)
             Text(p.tagline, style = PcType.BodySmall.copy(fontSize = 16.sp))
         }

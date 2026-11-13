@@ -129,12 +129,12 @@ fun StatusBadge(status: Status, label: String, modifier: Modifier = Modifier) {
         Status.Postponed -> Pc.AmberTint to Pc.Amber
     }
     val text = when (status) {
-        Status.Live -> "LIVE $label"
+        Status.Live -> "Live $label"
         Status.Finished -> "Full time"
         else -> label
     }
     Row(
-        modifier.height(24.dp).clip(PcShape.Badge).background(bg).padding(horizontal = 8.dp),
+        modifier.heightIn(min = 28.dp).clip(PcShape.Badge).background(bg).padding(horizontal = 9.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         when (status) {
@@ -192,7 +192,7 @@ private fun TeamScoreRow(team: Team, score: Int?, hidden: Boolean, leading: Bool
         )
         when {
             hidden -> Box(Modifier.size(width = 28.dp, height = 20.dp).clip(RoundedCornerShape(6.dp)).background(Pc.Border))
-            score != null -> ScoreText(score.toString(), bold = leading || true)
+            score != null -> ScoreText(score.toString(), bold = true)
             else -> Text("–", color = Pc.Text3, fontSize = 22.sp, modifier = Modifier.widthIn(min = 20.dp), textAlign = TextAlign.End)
         }
     }
@@ -317,7 +317,12 @@ fun SectionHeader(title: String, action: String? = null, onAction: () -> Unit = 
 }
 
 @Composable
-fun Overline(text: String, modifier: Modifier = Modifier, color: Color = Pc.Lime) = Text(text, style = PcType.Overline, color = color, modifier = modifier)
+fun Overline(text: String, modifier: Modifier = Modifier, color: Color = Pc.Text2) = Text(
+    text.lowercase().replaceFirstChar { it.titlecase() },
+    style = PcType.Overline,
+    color = color,
+    modifier = modifier,
+)
 
 @Composable
 fun PhotoPlaceholder(modifier: Modifier = Modifier, label: String = "Photo") {
@@ -327,7 +332,7 @@ fun PhotoPlaceholder(modifier: Modifier = Modifier, label: String = "Photo") {
 }
 
 @Composable
-fun BriefCard(text: String, modifier: Modifier = Modifier, title: String = "MATCH BRIEF · LIVE", updated: String = "2 min ago", compactMeta: Boolean = false) {
+fun BriefCard(text: String, modifier: Modifier = Modifier, title: String = "Live match brief", updated: String = "2 min ago", compactMeta: Boolean = false) {
     PcCard(modifier, border = Pc.Lime.copy(alpha = 0.45f)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -446,7 +451,7 @@ fun BottomNav(current: String?, onNavigate: (String) -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
-                    Text(item.label, color = if (on) Pc.Lime else Pc.Text2, fontSize = 12.sp, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold)
+                    Text(item.label, color = if (on) Pc.Lime else Pc.Text2, fontSize = 13.sp, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold)
                 }
             }
         }

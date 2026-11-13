@@ -66,19 +66,13 @@ fun greeting(): String {
 @Composable
 fun NewsRow(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     PcCard(modifier.fillMaxWidth(), onClick = onClick) {
-        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PhotoPlaceholder(Modifier.size96x72())
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Overline(item.category.uppercase())
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Overline(item.category)
                 Text(item.title, style = PcType.Subhead.copy(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold))
                 Text(item.meta, style = PcType.Meta)
-            }
         }
     }
 }
-
-private fun Modifier.size96x72(): Modifier = this.then(Modifier.width96().height(72.dp))
-private fun Modifier.width96(): Modifier = this.then(Modifier.widthIn(min = 96.dp, max = 96.dp))
 
 @Composable
 fun StandingsPreview(rows: List<StandingRow>, followedIds: Set<String>, onClick: () -> Unit, count: Int = 3) {

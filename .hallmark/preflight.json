@@ -1,0 +1,12 @@
+{
+  "scanned": "2026-11-12",
+  "findings": {
+    "framework": "Native Android with Kotlin and Jetpack Compose (app/app/build.gradle.kts:1-6; app/app/src/main/java/com/innovativeinside/pitchside/ui/AppRoot.kt:108)",
+    "fonts": "Bundled Manrope text and Barlow Condensed score faces (app/app/src/main/java/com/innovativeinside/pitchside/ui/theme/Theme.kt:78-89)",
+    "palette": "Pitchside dark navy and lime tokens with light theme variants (app/app/src/main/java/com/innovativeinside/pitchside/ui/theme/Theme.kt:34-58)",
+    "motion": "Compose animations; existing match loading skeleton uses an infinite alpha pulse (app/app/src/main/java/com/innovativeinside/pitchside/ui/components/Components.kt:406-411)",
+    "spacing": "Compose dp spacing and shared screen max-width containers (app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/ScreenBase.kt:51-59)"
+  },
+  "preserve": ["Pitchside palette", "Manrope and Barlow Condensed", "routes and navigation", "screen content and app wiring"],
+  "introduce": ["14sp minimum secondary copy", "sentence-case labels", "more consistent match and news hierarchy", "text-first news cards without empty photo placeholders"]
+}

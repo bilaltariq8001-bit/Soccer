@@ -85,7 +85,7 @@ fun HomeScreen(actions: HomeActions) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(greeting(), style = PcType.Title.copy(fontSize = 28.sp, lineHeight = 34.sp))
-                Text("${all.count { it.status == Status.Live }} live now · ${all.size} matches today", style = PcType.BodySmall)
+                Text("${all.count { it.status == Status.Live }} live now, ${all.size} matches today", style = PcType.BodySmall)
             }
             IconAction(Icons.Outlined.AutoAwesome, "Ask Pitchside", actions.openAsk, tint = Pc.Lime, filled = true)
             Spacer(Modifier.width(4.dp))
@@ -143,7 +143,7 @@ private fun MatchesSection(
             loading -> repeat(3) { MatchCardSkeleton() }
             shown.isEmpty() -> EmptyState(
                 title = when (tab) { 0 -> "No live matches in $league"; 1 -> "Nothing scheduled in $league"; else -> "No finished matches in $league" },
-                body = when (tab) { 0 -> "Next kickoff 20:45 · Harbor City v Redmont."; 1 -> "New fixtures appear as soon as they are announced."; else -> "Results show here once a match ends." },
+                body = when (tab) { 0 -> "Next kickoff 20:45, Harbor City v Redmont."; 1 -> "New fixtures appear as soon as they are announced."; else -> "Results show here once a match ends." },
                 actionLabel = if (league != "All") "Show all competitions" else null, onAction = onResetLeague,
             )
             else -> shown.forEach { m -> MatchCard(m, app.isHidden(m), { actions.openMatch(m.id) }, { app.reveal(m.id) }) }
@@ -159,7 +159,7 @@ fun ShieldBanner(modifier: Modifier = Modifier, onCaughtUp: () -> Unit) {
                 Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.VisibilityOff, null, tint = Pc.Lime) }
                 Column {
                     Text("Spoiler Shield is on", style = PcType.Subhead)
-                    Text("Scores for your shielded teams are hidden. Alerts are held.", style = PcType.BodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp))
+                    Text("Scores for your shielded teams are hidden. Alerts are held.", style = PcType.BodySmall)
                 }
             }
             PrimaryButton("I'm caught up", onCaughtUp, Modifier.fillMaxWidth())
@@ -174,7 +174,7 @@ fun HeroMatch(match: Match, hidden: Boolean, onClick: () -> Unit, onReveal: () -
     PcCard(modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = desc }, shape = PcShape.Hero, onClick = onClick) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${match.league} · ${match.venue}", style = PcType.BodySmall.copy(fontSize = 13.sp), modifier = Modifier.weight(1f))
+                Text("${match.league} / ${match.venue}", style = PcType.BodySmall, modifier = Modifier.weight(1f))
                 StatusBadge(match.status, match.label)
             }
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {

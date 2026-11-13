@@ -1,3 +1,6 @@
+/* Hallmark · checked: 2026-11-12 · genre: modern-minimal (inferred) · shape: app screen · redesign: full
+ * pre-emit critique: P4 H4 E3 S5 R4 V4 · weakest: E, small screen details; raised shared text sizes and badge height
+ * floor: Compose app · theme: existing Pitchside brand · scope: app · built: the project · v2.0.0 */
 package com.innovativeinside.pitchside.ui.theme
 
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -103,10 +106,10 @@ object PcType {
     val Headline: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, lineHeight = 26.sp, color = Pc.Text)
     val Subhead: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Bold, fontSize = 17.sp, lineHeight = 22.sp, color = Pc.Text)
     val Body: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 24.sp, color = Pc.Text)
-    val BodySmall: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, color = Pc.Text2)
-    val Label: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 18.sp, color = Pc.Text)
-    val Meta: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp, color = Pc.Text3)
-    val Overline: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.8.sp, color = Pc.Lime)
+    val BodySmall: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 22.sp, color = Pc.Text2)
+    val Label: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Bold, fontSize = 14.sp, lineHeight = 20.sp, color = Pc.Text)
+    val Meta: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp, color = Pc.Text3)
+    val Overline: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 20.sp, color = Pc.Text2)
     val ScoreXL: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 72.sp, lineHeight = 72.sp, color = Pc.Text)
     val ScoreL: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 44.sp, lineHeight = 44.sp, color = Pc.Text)
     val ScoreM: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 28.sp, color = Pc.Text)

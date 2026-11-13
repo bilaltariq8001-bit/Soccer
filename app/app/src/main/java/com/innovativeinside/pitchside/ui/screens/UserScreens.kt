@@ -142,7 +142,7 @@ fun FollowingScreen(openSearch: () -> Unit, openPaywall: () -> Unit, openSetting
                     else PcCard(Modifier.fillMaxWidth(), onClick = { openPlayer(p.id) }) {
                         Row(Modifier.padding(12.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Box(Modifier.size(40.dp).clip(CircleShape).background(Color(p.team.color)), contentAlignment = Alignment.Center) { Text(p.initials, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) }
-                            Column(Modifier.weight(1f)) { Text(p.name, style = PcType.Label.copy(fontSize = 15.sp)); Text("${p.position} · ${p.team.name}", style = PcType.Meta.copy(color = Pc.Text2)) }
+                            Column(Modifier.weight(1f)) { Text(p.name, style = PcType.Label.copy(fontSize = 15.sp)); Text("${p.position}, ${p.team.name}", style = PcType.Meta.copy(color = Pc.Text2)) }
                             Text("${p.goals} goals", style = PcType.Label.copy(color = Pc.Lime))
                         }
                     }
@@ -179,14 +179,14 @@ fun SearchScreen(onBack: () -> Unit, openPaywall: () -> Unit, openPlayer: (Strin
         Spacer(Modifier.height(16.dp))
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (query.isBlank()) {
-                Text("TRENDING", style = PcType.Overline.copy(color = Pc.Text3))
+                Text("Trending", style = PcType.Overline.copy(color = Pc.Text2))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf("Northgate", "Riverside", "Harbor").forEach { Chip(it, false, { query = it }) } }
                 EmptyState("Search everything", "Find a team, a league or a player. Results appear as you type.")
             } else if (teams.isEmpty() && leagues.isEmpty() && player == null) {
                 EmptyState("No results for \"$query\"", "Check the spelling or try a team or league name.", actionLabel = "Clear search", onAction = { query = "" })
             } else {
                 if ((tab == 0 || tab == 1) && teams.isNotEmpty()) {
-                    Text("TEAMS", style = PcType.Overline.copy(color = Pc.Text3))
+                    Text("Teams", style = PcType.Overline.copy(color = Pc.Text2))
                     teams.forEach { t ->
                         val on = t.id in app.followedTeams
                         ResultRow({ Crest(t, 40.dp) }, t.name, "Premier Division", on, onToggle = {
@@ -195,16 +195,16 @@ fun SearchScreen(onBack: () -> Unit, openPaywall: () -> Unit, openPlayer: (Strin
                     }
                 }
                 if ((tab == 0 || tab == 2) && leagues.isNotEmpty()) {
-                    Text("LEAGUES", style = PcType.Overline.copy(color = Pc.Text3))
+                    Text("Leagues", style = PcType.Overline.copy(color = Pc.Text2))
                     leagues.forEach { l ->
                         val on = l.id in app.followedLeagues
                         ResultRow({ Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) { Text(l.short, color = Pc.Lime, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) } }, l.name, "${l.teams} teams", on, onToggle = { if (on) app.followedLeagues.remove(l.id) else app.followedLeagues.add(l.id) })
                     }
                 }
                 if ((tab == 0 || tab == 3) && player != null) {
-                    Text("PLAYERS", style = PcType.Overline.copy(color = Pc.Text3))
+                    Text("Players", style = PcType.Overline.copy(color = Pc.Text2))
                     val on = player.id in app.followedPlayers
-                    ResultRow({ Box(Modifier.size(40.dp).clip(CircleShape).background(Color(player.team.color)), contentAlignment = Alignment.Center) { Text(player.initials, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) } }, player.name, "${player.position} · ${player.team.name}", on, onToggle = { if (on) app.followedPlayers.remove(player.id) else app.followedPlayers.add(player.id) }, onOpen = { openPlayer(player.id) })
+                    ResultRow({ Box(Modifier.size(40.dp).clip(CircleShape).background(Color(player.team.color)), contentAlignment = Alignment.Center) { Text(player.initials, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) } }, player.name, "${player.position}, ${player.team.name}", on, onToggle = { if (on) app.followedPlayers.remove(player.id) else app.followedPlayers.add(player.id) }, onOpen = { openPlayer(player.id) })
                 }
             }
         }
@@ -319,7 +319,7 @@ fun PaywallScreen(onClose: () -> Unit) {
                 }
             }
             Spacer(Modifier.height(8.dp))
-            listOf("Yearly" to "[PRICE] per year · 7-day free trial", "Monthly" to "[PRICE] per month", "Lifetime" to "[PRICE] one time").forEachIndexed { i, (name, sub) ->
+            listOf("Yearly" to "[PRICE] per year, 7-day free trial", "Monthly" to "[PRICE] per month", "Lifetime" to "[PRICE] one time").forEachIndexed { i, (name, sub) ->
                 val on = plan == i
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 68.dp).clip(PcShape.Card).background(if (on) Pc.Raised else Pc.Surface).border(if (on) 1.5.dp else 1.dp, if (on) Pc.Lime else Pc.Border, PcShape.Card)
@@ -327,7 +327,7 @@ fun PaywallScreen(onClose: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(name + if (i == 0) "  ·  Best value" else "", style = PcType.Subhead.copy(fontSize = 16.sp)); Text(sub, style = PcType.BodySmall.copy(fontSize = 13.sp))
+                        Text(name + if (i == 0) " (Best value)" else "", style = PcType.Subhead.copy(fontSize = 16.sp)); Text(sub, style = PcType.BodySmall)
                     }
                     Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) Pc.Lime else Color.Transparent).border(1.5.dp, if (on) Pc.Lime else Pc.BorderStrong, CircleShape), contentAlignment = Alignment.Center) { if (on) Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(16.dp)) }
                 }
@@ -365,19 +365,19 @@ fun SettingsScreen(onBack: () -> Unit, openPaywall: () -> Unit, onReset: () -> U
                     Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                 }
             }
-            SettingsGroup("ALERTS AND SPOILERS") {
+            SettingsGroup("Alerts and spoilers") {
                 SettingRow("Default alert level", value = app.alertLevel.label, onClick = { alertSheet = true })
                 SettingRow("Quiet hours", "23:00 – 07:00") { PcSwitch(app.quietHours) { app.quietHours = it } }
                 SettingRow("Spoiler Shield", "${app.shielded.size} teams shielded") {
                     PcSwitch(app.shielded.isNotEmpty()) { on -> if (on) { app.shielded.clear(); app.shielded.addAll(app.followedTeams) } else app.shielded.clear() }
                 }
             }
-            SettingsGroup("APP") {
+            SettingsGroup("App") {
                 SettingRow("Match Brief detail") { Box(Modifier.width(180.dp)) { SegmentedTabs(listOf("Simple", "Detailed"), if (app.detailed) 1 else 0, { app.detailed = it == 1 }) } }
                 SettingRow("Language", value = app.language, onClick = { langSheet = true })
                 SettingRow("Theme") { Box(Modifier.width(220.dp)) { SegmentedTabs(listOf("System", "Light", "Dark"), listOf("System", "Light", "Dark").indexOf(app.themeChoice).coerceAtLeast(0), { app.themeChoice = listOf("System", "Light", "Dark")[it] }) } }
             }
-            SettingsGroup("ABOUT") {
+            SettingsGroup("About") {
                 SettingRow("Privacy Policy"); SettingRow("Terms of Service"); SettingRow("Version", value = "0.1.0")
             }
             SecondaryButton("Reset app data", { reset = true }, Modifier.fillMaxWidth(), danger = true)
@@ -387,7 +387,7 @@ fun SettingsScreen(onBack: () -> Unit, openPaywall: () -> Unit, onReset: () -> U
         Text("App language", style = PcType.Headline)
         app.repo.languages().forEach { l ->
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).pcClickable(PcShape.Control) { app.chooseLanguage(l.native); langSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${l.native} · ${l.english}", style = PcType.Body.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
+                Text("${l.native} (${l.english})", style = PcType.Body.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
                 if (app.language == l.native) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Lime)
             }
         }
@@ -407,7 +407,7 @@ fun SettingsScreen(onBack: () -> Unit, openPaywall: () -> Unit, onReset: () -> U
 @Composable
 private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = PcType.Overline.copy(color = Pc.Text3), modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+        Text(title, style = PcType.Overline.copy(color = Pc.Text2), modifier = Modifier.padding(start = 4.dp, top = 8.dp))
         PcCard(Modifier.fillMaxWidth()) { Column { content() } }
     }
 }

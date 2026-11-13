@@ -132,7 +132,7 @@ fun MatchScreen(matchId: String, onBack: () -> Unit, openLineup: (String) -> Uni
             BackButton(onBack)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(match.league, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold))
-                Text("${match.round} · ${match.venue}", style = PcType.Meta.copy(color = Pc.Text2))
+                Text("${match.round} / ${match.venue}", style = PcType.Meta.copy(color = Pc.Text2))
             }
             IconAction(if (alertsOn) Icons.Filled.Notifications else Icons.Outlined.Notifications, if (alertsOn) "Match alerts on" else "Match alerts off", { alertsOn = !alertsOn }, tint = if (alertsOn) Pc.Lime else Pc.Text2)
         }
@@ -154,8 +154,8 @@ fun MatchScreen(matchId: String, onBack: () -> Unit, openLineup: (String) -> Uni
                 if (!hidden && match.homeScore != null) {
                     val events = app.repo.events(match.id).filter { it.kind == EventKind.Goal }.sortedBy { it.minute.filter { c -> c.isDigit() }.toIntOrNull() ?: 0 }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(events.filter { it.isHome }.joinToString(" · ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.Text2), modifier = Modifier.weight(1f))
-                        Text(events.filter { !it.isHome }.joinToString(" · ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.Text2), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                        Text(events.filter { it.isHome }.joinToString(", ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.Text2), modifier = Modifier.weight(1f))
+                        Text(events.filter { !it.isHome }.joinToString(", ") { it.title.removePrefix("Goal · ") + " " + it.minute }, style = PcType.Meta.copy(color = Pc.Text2), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -181,10 +181,10 @@ private fun OverviewTab(match: Match, hidden: Boolean, onStats: () -> Unit) {
         EmptyState("Brief hidden by Spoiler Shield", "Reveal the score to see the Match Brief, timeline and stats.", actionLabel = "Reveal score", onAction = { app.reveal(match.id) })
         return
     }
-    BriefCard(match.brief, title = if (match.status == Status.Live) "MATCH BRIEF · LIVE" else "MATCH BRIEF")
+    BriefCard(match.brief, title = if (match.status == Status.Live) "Live match brief" else "Match brief")
     PcCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-            InfoLine("Kickoff", if (match.status == Status.Upcoming) match.label else "19:00 · Thu 29 Oct")
+            InfoLine("Kickoff", if (match.status == Status.Upcoming) match.label else "19:00, Thu 29 Oct")
             InfoLine("Venue", match.venue)
             Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Form (last 5)", style = PcType.BodySmall, modifier = Modifier.weight(1f))
@@ -260,7 +260,7 @@ private fun LineupsTab(match: Match, openLineup: (String) -> Unit) {
             val l = app.repo.lineup(match.id, home)
             PcCard(Modifier.weight(1f)) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("${if (home) match.home.name else match.away.name} · ${l.formation}", style = PcType.Label.copy(color = if (home) Pc.Lime else Pc.Text2))
+                    Text("${if (home) match.home.name else match.away.name} / ${l.formation}", style = PcType.Label.copy(color = if (home) Pc.Lime else Pc.Text2))
                     l.starters.sortedBy { it.number }.forEach { p ->
                         Row(Modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(p.number.toString(), style = PcType.Label.copy(color = Pc.Text3), modifier = Modifier.width(22.dp)); Text(p.name, style = PcType.Label.copy(fontWeight = FontWeight.SemiBold))
@@ -313,7 +313,7 @@ fun LineupScreen(matchId: String, onBack: () -> Unit) {
             Spacer(Modifier.width(48.dp))
         }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SegmentedTabs(listOf("${match.home.name} · ${app.repo.lineup(match.id, true).formation}", "${match.away.name} · ${app.repo.lineup(match.id, false).formation}"), if (home) 0 else 1, { home = it == 0 })
+            SegmentedTabs(listOf("${match.home.name} (${app.repo.lineup(match.id, true).formation})", "${match.away.name} (${app.repo.lineup(match.id, false).formation})"), if (home) 0 else 1, { home = it == 0 })
             BoxWithConstraints(Modifier.fillMaxWidth().height(470.dp).clip(PcShape.Hero).background(Color(0xFF12301F)).border(1.dp, Color(0xFF1E4A31), PcShape.Hero)) {
                 val w = maxWidth
                 val h = maxHeight
@@ -335,12 +335,12 @@ fun LineupScreen(matchId: String, onBack: () -> Unit) {
                         Box(Modifier.size(34.dp).clip(CircleShape).background(if (p.number == 1) Pc.Amber else Color(team.color)).border(2.dp, if (p.scored) Pc.Lime else Color.White, CircleShape), contentAlignment = Alignment.Center) {
                             Text(p.number.toString(), color = if (p.number == 1) Pc.OnLime else Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                         }
-                        Text(p.name, color = Color.White, fontSize = 12.sp, fontWeight = if (p.scored) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+                        Text(p.name, color = Color.White, fontSize = 14.sp, fontWeight = if (p.scored) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
                     }
                 }
             }
-            Text("BENCH · COACH ${l.coach.uppercase()}", style = PcType.Overline.copy(color = Pc.Text2))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { l.bench.forEach { Box(Modifier.heightIn(min = 32.dp).clip(PcShape.Chip).background(Pc.Raised).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text(it, style = PcType.Label.copy(fontSize = 13.sp)) } } }
+            Text("Bench / Coach ${l.coach}", style = PcType.Overline.copy(color = Pc.Text2))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { l.bench.forEach { Box(Modifier.heightIn(min = 36.dp).clip(PcShape.Chip).background(Pc.Raised).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text(it, style = PcType.Label) } } }
         }
     }
 }
