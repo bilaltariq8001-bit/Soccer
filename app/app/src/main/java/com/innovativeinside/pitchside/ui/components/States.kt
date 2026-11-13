@@ -67,7 +67,7 @@ fun ErrorState(error: AppError, onRetry: () -> Unit, modifier: Modifier = Modifi
         icon = icon, title = title, body = error.message,
         actionLabel = if (error.retryable) stringResource(R.string.action_retry) else null, onAction = onRetry,
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Polite },
-        tint = Pc.Red,
+        tint = Pc.Error,
     )
 }
 
@@ -88,13 +88,13 @@ fun StateCard(
     modifier: Modifier = Modifier,
     actionLabel: String? = null,
     onAction: () -> Unit = {},
-    tint: androidx.compose.ui.graphics.Color = Pc.Lime,
+    tint: androidx.compose.ui.graphics.Color = Pc.Accent,
 ) {
     PcCard(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp), horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(44.dp).clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint) }
-            Text(title, style = PcType.Subhead)
-            Text(body, style = PcType.BodySmall)
+            Box(Modifier.size(44.dp).clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint) }
+            Text(title, style = PcType.Subtitle)
+            Text(body, style = PcType.BodyMuted)
             if (actionLabel != null) { Spacer(Modifier.height(4.dp)); PrimaryButton(actionLabel, onAction, Modifier.testTag("retry_button")) }
         }
     }

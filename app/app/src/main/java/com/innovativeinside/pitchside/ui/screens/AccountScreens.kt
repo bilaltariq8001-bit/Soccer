@@ -102,8 +102,8 @@ fun AskRoute(back: () -> Unit, openPaywall: () -> Unit, vm: AskViewModel = viewM
     val s by vm.state.collectAsStateWithLifecycle()
     AskContent(s, back, vm::onInput, vm::send, vm::retryLast)
     if (s.quotaHit) PcSheet(vm::dismissQuota) {
-        Text("You've used today's free questions", style = PcType.Headline)
-        Text("They refresh at midnight. Pro gives you ${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} a day.", style = PcType.BodySmall)
+        Text("You've used today's free questions", style = PcType.Subtitle)
+        Text("They refresh at midnight. Pro gives you ${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} a day.", style = PcType.BodyMuted)
         PrimaryButton("See Pro", { vm.dismissQuota(); openPaywall() }, Modifier.fillMaxWidth())
         TextAction("Maybe later", vm::dismissQuota, Modifier.fillMaxWidth(), color = Pc.Text2)
     }
@@ -116,17 +116,17 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
     Column(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BackButton(back)
-            Column(Modifier.weight(1f)) { Text(stringResource(R.string.action_ask), style = PcType.Headline); Text("Answers from match data", style = PcType.Meta.copy(color = Pc.Text2)) }
-            Box(Modifier.heightIn(min = 32.dp).clip(PcShape.Chip).background(Pc.Raised).border(1.dp, Pc.Border, PcShape.Chip).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                Text("${s.left} of ${s.limit} left today", style = PcType.Meta.copy(color = Pc.Text))
+            Column(Modifier.weight(1f)) { Text(stringResource(R.string.action_ask), style = PcType.Subtitle); Text("Answers from match data", style = PcType.Caption.copy(color = Pc.Text2)) }
+            Box(Modifier.heightIn(min = 32.dp).clip(PcShape.Chip).background(Pc.SurfaceVariant).border(1.dp, Pc.Outline, PcShape.Chip).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Text("${s.left} of ${s.limit} left today", style = PcType.Caption.copy(color = Pc.Text))
             }
         }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (s.messages.isEmpty()) item {
                 PcCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Ask about any match, team or table", style = PcType.Subhead)
-                        Text("Numbers come from match data, never guesses. Try one of these:", style = PcType.BodySmall)
+                        Text("Ask about any match, team or table", style = PcType.Subtitle)
+                        Text("Numbers come from match data, never guesses. Try one of these:", style = PcType.BodyMuted)
                     }
                 }
             }
@@ -134,38 +134,38 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.fromUser) Arrangement.End else Arrangement.Start) {
                     val bubble = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = if (m.fromUser) 20.dp else 6.dp, bottomEnd = if (m.fromUser) 6.dp else 20.dp)
                     Column(
-                        Modifier.widthIn(max = 340.dp).clip(bubble).background(if (m.fromUser) Pc.Raised else Pc.Surface)
-                            .border(1.dp, if (m.failed) Pc.Red else Pc.Border, bubble).padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier.widthIn(max = 340.dp).clip(bubble).background(if (m.fromUser) Pc.SurfaceVariant else Pc.Surface)
+                            .border(1.dp, if (m.failed) Pc.Error else Pc.Outline, bubble).padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
-                        Text(m.text, style = PcType.Body.copy(fontSize = 15.sp, lineHeight = 22.sp, color = if (m.failed) Pc.Red else Pc.Text))
+                        Text(m.text, style = PcType.Body.copy(fontSize = 15.sp, lineHeight = 22.sp, color = if (m.failed) Pc.Error else Pc.Text))
                         if (m.failed) TextAction(stringResource(R.string.action_retry), onRetry)
                     }
                 }
             }
             item {
-                if (s.sending) Text("Thinking…", style = PcType.BodySmall, modifier = Modifier.padding(start = 4.dp).testTag("ask_thinking"))
+                if (s.sending) Text("Thinking…", style = PcType.BodyMuted, modifier = Modifier.padding(start = 4.dp).testTag("ask_thinking"))
                 else FlowChips(listOf("Who leads the table?", "Redmont form", "Who scores most for Northgate?"), "", { onSend(it) }, Modifier.fillMaxWidth())
             }
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicTextField(
-                    s.input, onInput, singleLine = true, textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Lime),
+                    s.input, onInput, singleLine = true, textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Accent),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { onSend(s.input) }),
                     modifier = Modifier.weight(1f).height(52.dp).testTag("ask_input"),
                     decorationBox = { inner ->
-                        Box(Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, if (s.inputError != null) Pc.Red else Pc.Border, PcShape.Control).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterStart) {
+                        Box(Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, if (s.inputError != null) Pc.Error else Pc.Outline, PcShape.Control).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterStart) {
                             if (s.input.isEmpty()) Text("Ask about a match or team", style = PcType.Body.copy(color = Pc.Text2, fontSize = 15.sp), maxLines = 1)
                             inner()
                         }
                     },
                 )
-                Box(Modifier.size(52.dp).clip(PcShape.Control).background(if (s.sending) Pc.Raised else Pc.Lime).pcClickable(PcShape.Control, "Send") { onSend(s.input) }, contentAlignment = Alignment.Center) {
-                    Icon(Icons.AutoMirrored.Outlined.Send, null, tint = if (s.sending) Pc.Text3 else Pc.OnLime)
+                Box(Modifier.size(52.dp).clip(PcShape.Control).background(if (s.sending) Pc.SurfaceVariant else Pc.Accent).pcClickable(PcShape.Control, "Send") { onSend(s.input) }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Outlined.Send, null, tint = if (s.sending) Pc.Text3 else Pc.OnAccent)
                 }
             }
-            if (s.inputError != null) Text(s.inputError, style = PcType.Meta, color = Pc.Red)
-            Text("AI-generated from match data. It can make mistakes.", style = PcType.Meta.copy(color = Pc.Text2))
+            if (s.inputError != null) Text(s.inputError, style = PcType.Caption, color = Pc.Error)
+            Text("AI-generated from match data. It can make mistakes.", style = PcType.Caption.copy(color = Pc.Text2))
         }
     }
 }
@@ -185,13 +185,13 @@ fun PaywallScreen(onClose: () -> Unit) {
             TextAction("Restore purchase", { info = true }, color = Pc.Text2)
         }
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(56.dp).clip(PcShape.Hero).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnLime, modifier = Modifier.size(28.dp)) }
+            Box(Modifier.size(56.dp).clip(PcShape.Hero).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent, modifier = Modifier.size(28.dp)) }
             Text("Pitchside Pro", style = PcType.Title.copy(fontSize = 34.sp, lineHeight = 38.sp))
-            Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more insight.", style = PcType.BodySmall.copy(fontSize = 16.sp))
+            Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more insight.", style = PcType.BodyMuted.copy(fontSize = 16.sp))
             Spacer(Modifier.height(8.dp))
             listOf("No ads anywhere", "${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} Ask questions a day", "Deeper Match Briefs", "Follow unlimited teams").forEach {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 32.dp)) {
-                    Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(14.dp)) }
+                    Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(14.dp)) }
                     Text(it, style = PcType.Body.copy(fontSize = 15.sp))
                 }
             }
@@ -199,17 +199,17 @@ fun PaywallScreen(onClose: () -> Unit) {
             listOf("Yearly" to "7-day free trial, then billed yearly", "Monthly" to "Billed monthly, cancel any time", "Lifetime" to "Pay once").forEachIndexed { i, (name, sub) ->
                 val on = plan == i
                 Row(
-                    Modifier.fillMaxWidth().heightIn(min = 68.dp).clip(PcShape.Card).background(if (on) Pc.Raised else Pc.Surface).border(if (on) 1.5.dp else 1.dp, if (on) Pc.Lime else Pc.Border, PcShape.Card)
+                    Modifier.fillMaxWidth().heightIn(min = 68.dp).clip(PcShape.Card).background(if (on) Pc.SurfaceVariant else Pc.Surface).border(if (on) 1.5.dp else 1.dp, if (on) Pc.Accent else Pc.Outline, PcShape.Card)
                         .pcClickable(PcShape.Card, role = Role.RadioButton) { plan = i }.padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Column(Modifier.weight(1f)) { Text(name + if (i == 0) "  ·  Best value" else "", style = PcType.Subhead.copy(fontSize = 16.sp)); Text(sub, style = PcType.BodySmall.copy(fontSize = 13.sp)) }
-                    Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) Pc.Lime else Color.Transparent).border(1.5.dp, if (on) Pc.Lime else Pc.BorderStrong, CircleShape), contentAlignment = Alignment.Center) { if (on) Icon(Icons.Outlined.Check, null, tint = Pc.OnLime, modifier = Modifier.size(16.dp)) }
+                    Column(Modifier.weight(1f)) { Text(name + if (i == 0) "  ·  Best value" else "", style = PcType.Subtitle.copy(fontSize = 16.sp)); Text(sub, style = PcType.BodyMuted.copy(fontSize = 13.sp)) }
+                    Box(Modifier.size(24.dp).clip(CircleShape).background(if (on) Pc.Accent else Color.Transparent).border(1.5.dp, if (on) Pc.Accent else Pc.OutlineStrong, CircleShape), contentAlignment = Alignment.Center) { if (on) Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(16.dp)) }
                 }
             }
             Spacer(Modifier.height(8.dp))
             PrimaryButton(if (plan == 0) "Start free trial" else "Continue", { info = true }, Modifier.fillMaxWidth())
-            Text("Prices show from Google Play once billing is connected. Cancel any time in Google Play.", style = PcType.Meta.copy(color = Pc.Text2))
+            Text("Prices show from Google Play once billing is connected. Cancel any time in Google Play.", style = PcType.Caption.copy(color = Pc.Text2))
         }
     }
     if (info) PcDialog(
@@ -236,23 +236,23 @@ fun SettingsScreen(nav: SettingsNav) {
     var reset by remember { mutableStateOf(false) }
     var privacy by remember { mutableStateOf(false) }
     Screen {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(nav.back); Text("Settings", style = PcType.Headline) }
+        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(nav.back); Text("Settings", style = PcType.Subtitle) }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val s = session
             PcCard(Modifier.fillMaxWidth(), onClick = if (s != null) nav.openAccount else nav.openAuth) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(44.dp).clip(CircleShape).background(Pc.Raised), contentAlignment = Alignment.Center) { Text((s?.displayName?.firstOrNull() ?: 'G').uppercase(), style = PcType.Label.copy(fontSize = 16.sp)) }
+                    Box(Modifier.size(44.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text((s?.displayName?.firstOrNull() ?: 'G').uppercase(), style = PcType.Label.copy(fontSize = 16.sp)) }
                     Column(Modifier.weight(1f)) {
                         Text(s?.displayName ?: "Guest", style = PcType.Label.copy(fontSize = 15.sp))
-                        Text(s?.email ?: "Sign in to back up your follows", style = PcType.Meta.copy(color = Pc.Text2))
+                        Text(s?.email ?: "Sign in to back up your follows", style = PcType.Caption.copy(color = Pc.Text2))
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                 }
             }
-            if (!prefs.isPro) PcCard(Modifier.fillMaxWidth(), border = Pc.BorderStrong, onClick = nav.openPaywall) {
+            if (!prefs.isPro) PcCard(Modifier.fillMaxWidth(), border = Pc.OutlineStrong, onClick = nav.openPaywall) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Lime), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnLime) }
-                    Column(Modifier.weight(1f)) { Text("Go Pro", style = PcType.Label.copy(fontSize = 15.sp)); Text("No ads, more Ask questions, unlimited follows", style = PcType.Meta.copy(color = Pc.Text2)) }
+                    Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent) }
+                    Column(Modifier.weight(1f)) { Text("Go Pro", style = PcType.Label.copy(fontSize = 15.sp)); Text("No ads, more Ask questions, unlimited follows", style = PcType.Caption.copy(color = Pc.Text2)) }
                     Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                 }
             }
@@ -290,21 +290,21 @@ fun SettingsScreen(nav: SettingsNav) {
         }
     }
     if (langSheet) PcSheet({ langSheet = false }) {
-        Text("App language", style = PcType.Headline)
-        Text("Match Briefs and Ask answers use this language. Screens are in English for now.", style = PcType.Meta.copy(color = Pc.Text2))
+        Text("App language", style = PcType.Subtitle)
+        Text("Match Briefs and Ask answers use this language. Screens are in English for now.", style = PcType.Caption.copy(color = Pc.Text2))
         Languages.all.forEach { l ->
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).pcClickable(PcShape.Control) { app.setLanguage(l.code); langSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${l.native} · ${l.english}", style = PcType.Body.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
-                if (prefs.language == l.code) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Lime)
+                if (prefs.language == l.code) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Accent)
             }
         }
     }
     if (alertSheet) PcSheet({ alertSheet = false }) {
-        Text("Default alert level", style = PcType.Headline)
+        Text("Default alert level", style = PcType.Subtitle)
         AlertLevel.entries.forEach { lvl ->
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).pcClickable(PcShape.Control) { app.setAlertLevel(lvl); alertSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text(lvl.label, style = PcType.Label.copy(fontSize = 15.sp)); Text(lvl.desc, style = PcType.Meta.copy(color = Pc.Text2)) }
-                if (prefs.alertLevel == lvl) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Lime)
+                Column(Modifier.weight(1f)) { Text(lvl.label, style = PcType.Label.copy(fontSize = 15.sp)); Text(lvl.desc, style = PcType.Caption.copy(color = Pc.Text2)) }
+                if (prefs.alertLevel == lvl) Icon(Icons.Outlined.Check, "Selected", tint = Pc.Accent)
             }
         }
     }
@@ -331,15 +331,15 @@ private fun SettingRow(title: String, value: String? = null, onClick: (() -> Uni
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.SemiBold))
-            if (value != null && trailing != null) Text(value, style = PcType.Meta.copy(color = Pc.Text2))
+            if (value != null && trailing != null) Text(value, style = PcType.Caption.copy(color = Pc.Text2))
         }
         when {
             trailing != null -> trailing()
-            value != null -> Text(value, style = PcType.BodySmall)
+            value != null -> Text(value, style = PcType.BodyMuted)
             onClick != null -> Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
         }
     }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
 }
 
 // ---------------- Auth ----------------
@@ -369,13 +369,13 @@ fun AuthContent(
                 when (f.mode) { AuthMode.SignIn -> stringResource(R.string.auth_sign_in); AuthMode.SignUp -> stringResource(R.string.auth_sign_up); AuthMode.Reset -> stringResource(R.string.auth_reset) },
                 style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp),
             )
-            Text(if (f.mode == AuthMode.Reset) "We'll email you a link to choose a new password." else stringResource(R.string.auth_why), style = PcType.BodySmall)
+            Text(if (f.mode == AuthMode.Reset) "We'll email you a link to choose a new password." else stringResource(R.string.auth_why), style = PcType.BodyMuted)
             if (f.formError != null) InfoBanner(f.formError, BannerKind.Error, Modifier.testTag("auth_form_error"))
             if (f.resetSent) {
                 PcCard(Modifier.fillMaxWidth()) {
                     Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.MarkEmailRead, null, tint = Pc.Lime)
-                        Text(stringResource(R.string.auth_reset_sent), style = PcType.BodySmall.copy(color = Pc.Text), modifier = Modifier.testTag("auth_reset_sent"))
+                        Icon(Icons.Outlined.MarkEmailRead, null, tint = Pc.Accent)
+                        Text(stringResource(R.string.auth_reset_sent), style = PcType.BodyMuted.copy(color = Pc.Text), modifier = Modifier.testTag("auth_reset_sent"))
                     }
                 }
                 PrimaryButton("Back to sign in", { onMode(AuthMode.SignIn) }, Modifier.fillMaxWidth())
@@ -414,18 +414,18 @@ fun AccountRoute(back: () -> Unit, requireSignIn: () -> Unit) {
     LaunchedEffect(s) { if (s == null) requireSignIn() }
     if (s == null) return
     Screen(maxWidth = 560) {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(back); Text("Account", style = PcType.Headline) }
+        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(back); Text("Account", style = PcType.Subtitle) }
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             PcCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(s.displayName, style = PcType.Headline)
-                    Text(s.email, style = PcType.BodySmall)
+                    Text(s.displayName, style = PcType.Subtitle)
+                    Text(s.email, style = PcType.BodyMuted)
                 }
             }
             PcCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Backed up with this account", style = PcType.Subhead)
-                    Text("${prefs.teams.size} teams, ${prefs.leagues.size} leagues, ${prefs.players.size} players, alert levels and Spoiler Shield.", style = PcType.BodySmall)
+                    Text("Backed up with this account", style = PcType.Subtitle)
+                    Text("${prefs.teams.size} teams, ${prefs.leagues.size} leagues, ${prefs.players.size} players, alert levels and Spoiler Shield.", style = PcType.BodyMuted)
                 }
             }
             SecondaryButton(stringResource(R.string.auth_sign_out), { signOut = true }, Modifier.fillMaxWidth(), danger = true)

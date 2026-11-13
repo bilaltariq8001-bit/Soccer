@@ -62,7 +62,7 @@ fun PcTextField(
         Text(label, style = PcType.Label)
         BasicTextField(
             value = value, onValueChange = onValueChange, singleLine = true, enabled = enabled,
-            textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Lime),
+            textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Accent),
             keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else keyboardType, imeAction = imeAction),
             keyboardActions = KeyboardActions(onAny = { onIme() }),
             visualTransformation = if (password && !visible) PasswordVisualTransformation() else VisualTransformation.None,
@@ -73,7 +73,7 @@ fun PcTextField(
             decorationBox = { inner ->
                 Row(
                     Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface)
-                        .border(if (error != null) 1.5.dp else 1.dp, if (error != null) Pc.Red else Pc.Border, PcShape.Control)
+                        .border(if (error != null) 1.5.dp else 1.dp, if (error != null) Pc.Error else Pc.Outline, PcShape.Control)
                         .padding(start = 16.dp, end = if (password) 4.dp else 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -88,7 +88,7 @@ fun PcTextField(
                 }
             },
         )
-        if (error != null) Text(error, style = PcType.Meta, color = Pc.Red, modifier = Modifier.testTag("error_$tag"))
+        if (error != null) Text(error, style = PcType.Caption, color = Pc.Error, modifier = Modifier.testTag("error_$tag"))
     }
 }
 
@@ -98,8 +98,8 @@ fun PcTopBar(title: String, onBack: (() -> Unit)?, modifier: Modifier = Modifier
     Row(modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) BackButton(onBack) else Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-            Text(title, style = PcType.Headline, maxLines = 1)
-            if (subtitle != null) Text(subtitle, style = PcType.Meta.copy(color = Pc.Text2), maxLines = 1)
+            Text(title, style = PcType.Subtitle, maxLines = 1)
+            if (subtitle != null) Text(subtitle, style = PcType.Caption.copy(color = Pc.Text2), maxLines = 1)
         }
         actions()
     }

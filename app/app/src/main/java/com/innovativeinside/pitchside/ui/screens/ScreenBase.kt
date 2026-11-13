@@ -142,16 +142,16 @@ fun formatKickoff(ms: Long): String = Instant.ofEpochMilli(ms).atZone(ZoneId.sys
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) =
-    Text(text, style = PcType.Headline, modifier = modifier.semantics { heading() })
+    Text(text, style = PcType.Subtitle, modifier = modifier.semantics { heading() })
 
 @Composable
 fun NewsThumb(category: NewsCategory, modifier: Modifier = Modifier) {
     val (icon, tint) = when (category) {
-        NewsCategory.Reports -> Icons.Outlined.Article to Pc.Lime
-        NewsCategory.Transfers -> Icons.Outlined.SwapHoriz to Pc.Amber
-        NewsCategory.Analysis -> Icons.Outlined.Analytics to Pc.Live
+        NewsCategory.Reports -> Icons.Outlined.Article to Pc.Accent
+        NewsCategory.Transfers -> Icons.Outlined.SwapHoriz to Pc.Warning
+        NewsCategory.Analysis -> Icons.Outlined.Analytics to Pc.LiveText
     }
-    Box(modifier.clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp)) }
+    Box(modifier.clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp)) }
 }
 
 @Composable
@@ -161,8 +161,8 @@ fun NewsRow(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) 
             NewsThumb(item.category, Modifier.size(width = 72.dp, height = 72.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Overline(item.category.label.uppercase())
-                Text(item.title, style = PcType.Subhead.copy(fontSize = 15.sp, lineHeight = 20.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text("${timeAgo(item.publishedMs)} · ${item.readMinutes} min read", style = PcType.Meta)
+                Text(item.title, style = PcType.Subtitle.copy(fontSize = 15.sp, lineHeight = 20.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text("${timeAgo(item.publishedMs)} · ${item.readMinutes} min read", style = PcType.Caption)
             }
         }
     }
@@ -179,9 +179,9 @@ fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit,
             Modifier.fillMaxWidth().heightIn(min = 48.dp).pcClickable(PcShape.Control, if (open) "Collapse $name" else "Expand $name") { open = !open }.padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(name, style = PcType.Subhead, modifier = Modifier.weight(1f).semantics { heading() })
-            Text("${matches.size}", style = PcType.Meta)
-            if (openLeague != null) Text("Table", style = PcType.Label.copy(color = Pc.Lime), modifier = Modifier.pcClickable(PcShape.Chip, "Open $name", onClick = openLeague).padding(horizontal = 8.dp, vertical = 12.dp))
+            Text(name, style = PcType.Subtitle, modifier = Modifier.weight(1f).semantics { heading() })
+            Text("${matches.size}", style = PcType.Caption)
+            if (openLeague != null) Text("Table", style = PcType.Label.copy(color = Pc.Accent), modifier = Modifier.pcClickable(PcShape.Chip, "Open $name", onClick = openLeague).padding(horizontal = 8.dp, vertical = 12.dp))
             Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = Pc.Text2)
         }
         AnimatedVisibility(open) {
@@ -205,20 +205,20 @@ fun StandingsTable(
     val followed = LocalPrefs.current.teams.toSet()
     PcCard(modifier.fillMaxWidth()) {
         Column {
-            Row(Modifier.fillMaxWidth().height(40.dp).background(Pc.Raised).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("#", style = PcType.Meta, modifier = Modifier.width(24.dp), textAlign = TextAlign.Center)
-                Text("Club", style = PcType.Meta, modifier = Modifier.weight(1f).padding(start = 8.dp))
-                Text("P", style = PcType.Meta, modifier = Modifier.width(28.dp), textAlign = TextAlign.Center)
-                if (!compact) Text("W-D-L", style = PcType.Meta, modifier = Modifier.width(60.dp), textAlign = TextAlign.Center)
-                Text("GD", style = PcType.Meta, modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
-                Text("Pts", style = PcType.Meta.copy(color = Pc.Text), modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
+            Row(Modifier.fillMaxWidth().height(40.dp).background(Pc.SurfaceVariant).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("#", style = PcType.Caption, modifier = Modifier.width(24.dp), textAlign = TextAlign.Center)
+                Text("Club", style = PcType.Caption, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                Text("P", style = PcType.Caption, modifier = Modifier.width(28.dp), textAlign = TextAlign.Center)
+                if (!compact) Text("W-D-L", style = PcType.Caption, modifier = Modifier.width(60.dp), textAlign = TextAlign.Center)
+                Text("GD", style = PcType.Caption, modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
+                Text("Pts", style = PcType.Caption.copy(color = Pc.Text), modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
             }
             rows.forEachIndexed { i, r ->
                 val fav = r.team.id in followed
                 val mark = r.team.id in highlight
                 val desc = "${r.rank}, ${r.team.name}, ${r.points} points, played ${r.played}, goal difference ${r.goalDiff}"
                 Column(
-                    Modifier.fillMaxWidth().background(if (fav) Pc.LimeTintSoft else if (mark) Pc.Raised else Color.Transparent)
+                    Modifier.fillMaxWidth().background(if (fav) Pc.AccentContainer else if (mark) Pc.SurfaceVariant else Color.Transparent)
                         .pcClickable(androidx.compose.ui.graphics.RectangleShape, "Open ${r.team.name}") { openTeam(r.team.id) }
                         .semantics(mergeDescendants = true) { contentDescription = desc },
                 ) {
@@ -228,14 +228,14 @@ fun StandingsTable(
                             Crest(r.team, 24.dp)
                             Text(r.team.name, style = PcType.Body.copy(fontSize = 15.sp, fontWeight = if (fav || mark) FontWeight.ExtraBold else FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Text(r.played.toString(), style = PcType.BodySmall, modifier = Modifier.width(28.dp), textAlign = TextAlign.Center)
-                        if (!compact) Text("${r.won}-${r.drawn}-${r.lost}", style = PcType.BodySmall.copy(fontSize = 13.sp), modifier = Modifier.width(60.dp), textAlign = TextAlign.Center)
-                        Text(if (r.goalDiff > 0) "+${r.goalDiff}" else r.goalDiff.toString(), style = PcType.BodySmall.copy(fontSize = 13.sp, color = if (r.goalDiff < 0) Pc.Red else Pc.Text2), modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
-                        Text(r.points.toString(), style = PcType.ScoreS, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
+                        Text(r.played.toString(), style = PcType.BodyMuted, modifier = Modifier.width(28.dp), textAlign = TextAlign.Center)
+                        if (!compact) Text("${r.won}-${r.drawn}-${r.lost}", style = PcType.BodyMuted.copy(fontSize = 13.sp), modifier = Modifier.width(60.dp), textAlign = TextAlign.Center)
+                        Text(if (r.goalDiff > 0) "+${r.goalDiff}" else r.goalDiff.toString(), style = PcType.BodyMuted.copy(fontSize = 13.sp, color = if (r.goalDiff < 0) Pc.Error else Pc.Text2), modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
+                        Text(r.points.toString(), style = PcType.ScoreRow, modifier = Modifier.width(36.dp), textAlign = TextAlign.End)
                     }
                     if (showForm && r.form.isNotEmpty()) Row(Modifier.padding(start = 44.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) { r.form.forEach { FormChip(it) } }
                 }
-                if (i < rows.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+                if (i < rows.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
             }
         }
     }

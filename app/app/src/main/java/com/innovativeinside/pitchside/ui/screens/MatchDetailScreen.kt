@@ -116,12 +116,12 @@ fun MatchContent(state: UiState<MatchDetail>, nav: MatchNav, onRetry: () -> Unit
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             if (match != null) {
                 Text(match.leagueName, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), modifier = Modifier.pcClickable(PcShape.Chip, "Open ${match.leagueName}") { nav.openLeague(match.leagueId) }.padding(horizontal = 6.dp))
-                Text(listOf(match.round, match.venue).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Meta.copy(color = Pc.Text2), maxLines = 1)
+                Text(listOf(match.round, match.venue).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption.copy(color = Pc.Text2), maxLines = 1)
             } else Text("Match", style = PcType.Label)
         }
         if (match != null && match.status != Status.Finished) {
             val on = match.id in prefs.matchAlerts
-            IconAction(if (on) Icons.Filled.Notifications else Icons.Outlined.Notifications, if (on) "Turn off match alerts" else "Turn on match alerts", { app.toggleMatchAlert(match.id) }, tint = if (on) Pc.Lime else Pc.Text2)
+            IconAction(if (on) Icons.Filled.Notifications else Icons.Outlined.Notifications, if (on) "Turn off match alerts" else "Turn on match alerts", { app.toggleMatchAlert(match.id) }, tint = if (on) Pc.Accent else Pc.Text2)
         } else Spacer(Modifier.width(48.dp))
     }
     StateContent(state, onRetry, loading = { DetailSkeleton() }) { d -> MatchBody(d, nav) }
@@ -141,12 +141,12 @@ private fun MatchBody(d: MatchDetail, nav: MatchNav) {
                 TeamHead(match.home, true) { nav.openTeam(match.home.id) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (hidden) {
-                        Text("– –", style = PcType.ScoreXL.copy(fontSize = 56.sp, lineHeight = 56.sp, color = Pc.Text3))
+                        Text("– –", style = PcType.ScoreDisplay.copy(fontSize = 56.sp, lineHeight = 56.sp, color = Pc.Text3))
                         TextAction("Reveal score", { app.reveal(match.id) })
                     } else {
                         Text(
                             if (match.hasScore) "${match.homeScore} – ${match.awayScore}" else match.label,
-                            style = if (match.hasScore) PcType.ScoreXL.copy(fontSize = 56.sp, lineHeight = 56.sp) else PcType.ScoreL,
+                            style = if (match.hasScore) PcType.ScoreDisplay.copy(fontSize = 56.sp, lineHeight = 56.sp) else PcType.ScoreCompact,
                             modifier = Modifier.semantics { contentDescription = if (match.hasScore) "Score ${match.homeScore} to ${match.awayScore}" else "Kicks off ${match.label}" },
                         )
                         StatusBadge(match.status, match.label)
@@ -157,15 +157,15 @@ private fun MatchBody(d: MatchDetail, nav: MatchNav) {
             if (!hidden && match.hasScore) {
                 val goals = d.events.filter { it.kind == EventKind.Goal }.sortedBy { it.minute }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(goals.filter { it.isHome }.joinToString(" · ") { "${it.player.substringAfterLast(' ')} ${it.minuteLabel}" }, style = PcType.Meta.copy(color = Pc.Text2), modifier = Modifier.weight(1f))
-                    Text(goals.filter { !it.isHome }.joinToString(" · ") { "${it.player.substringAfterLast(' ')} ${it.minuteLabel}" }, style = PcType.Meta.copy(color = Pc.Text2), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text(goals.filter { it.isHome }.joinToString(" · ") { "${it.player.substringAfterLast(' ')} ${it.minuteLabel}" }, style = PcType.Caption.copy(color = Pc.Text2), modifier = Modifier.weight(1f))
+                    Text(goals.filter { !it.isHome }.joinToString(" · ") { "${it.player.substringAfterLast(' ')} ${it.minuteLabel}" }, style = PcType.Caption.copy(color = Pc.Text2), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                 }
             }
-            Text(formatKickoff(match.kickoffMs), style = PcType.Meta)
+            Text(formatKickoff(match.kickoffMs), style = PcType.Caption)
         }
     }
     UnderlineTabs(listOf("Brief", "Timeline", "Stats", "Lineups", "Table"), tab, { tab = it })
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         when (tab) {
             0 -> BriefTab(d, hidden, onStats = { tab = 2 }) { app.reveal(match.id) }
@@ -175,7 +175,7 @@ private fun MatchBody(d: MatchDetail, nav: MatchNav) {
             else -> if (d.table.isEmpty()) EmptyState("No table for this competition", "${match.leagueName} is played as a knockout, so there is no league table.", icon = Icons.Outlined.TableChart)
             else {
                 StandingsTable(d.table, nav.openTeam, highlight = setOf(match.home.id, match.away.id), compact = true)
-                Text("Both clubs in this match are highlighted. Tap a club to open it.", style = PcType.Meta)
+                Text("Both clubs in this match are highlighted. Tap a club to open it.", style = PcType.Caption)
             }
         }
     }
@@ -222,10 +222,10 @@ private fun BriefTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, onRev
 @Composable
 private fun InfoLine(label: String, value: String, last: Boolean = false) {
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = PcType.BodySmall, modifier = Modifier.weight(1f))
+        Text(label, style = PcType.BodyMuted, modifier = Modifier.weight(1f))
         Text(value, style = PcType.Label.copy(fontSize = 14.sp), textAlign = TextAlign.End)
     }
-    if (!last) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+    if (!last) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
 }
 
 @Composable
@@ -240,16 +240,16 @@ private fun TimelineTab(d: MatchDetail, hidden: Boolean, onReveal: () -> Unit) {
         return
     }
     Column {
-        d.events.forEach { e -> EventRow(e) ; Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border)) }
+        d.events.forEach { e -> EventRow(e) ; Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline)) }
     }
 }
 
 @Composable
 private fun EventRow(e: MatchEvent) {
     val (icon, tint, title) = when (e.kind) {
-        EventKind.Goal -> Triple(Icons.Outlined.SportsSoccer, Pc.Lime, "Goal")
-        EventKind.YellowCard -> Triple(Icons.Outlined.Style, Pc.Amber, "Yellow card")
-        EventKind.RedCard -> Triple(Icons.Outlined.Style, Pc.Red, "Red card")
+        EventKind.Goal -> Triple(Icons.Outlined.SportsSoccer, Pc.Accent, "Goal")
+        EventKind.YellowCard -> Triple(Icons.Outlined.Style, Pc.Warning, "Yellow card")
+        EventKind.RedCard -> Triple(Icons.Outlined.Style, Pc.Error, "Red card")
         EventKind.Sub -> Triple(Icons.Outlined.SwapVert, Pc.Text2, "Substitution")
     }
     Row(
@@ -258,8 +258,8 @@ private fun EventRow(e: MatchEvent) {
     ) {
         Column(Modifier.weight(1f).padding(end = 8.dp), horizontalAlignment = Alignment.End) { if (e.isHome) EventText("$title · ${e.player}", e.detail, true) }
         Column(Modifier.width(56.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(e.minuteLabel, style = PcType.ScoreS)
-            Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.Raised), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp)) }
+            Text(e.minuteLabel, style = PcType.ScoreRow)
+            Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp)) }
         }
         Column(Modifier.weight(1f).padding(start = 8.dp)) { if (!e.isHome) EventText("$title · ${e.player}", e.detail, false) }
     }
@@ -269,7 +269,7 @@ private fun EventRow(e: MatchEvent) {
 private fun EventText(title: String, sub: String, end: Boolean) {
     Column(horizontalAlignment = if (end) Alignment.End else Alignment.Start) {
         Text(title, style = PcType.Label.copy(fontSize = 14.sp, fontWeight = FontWeight.ExtraBold), textAlign = if (end) TextAlign.End else TextAlign.Start)
-        if (sub.isNotBlank()) Text(sub, style = PcType.Meta.copy(color = Pc.Text2), textAlign = if (end) TextAlign.End else TextAlign.Start)
+        if (sub.isNotBlank()) Text(sub, style = PcType.Caption.copy(color = Pc.Text2), textAlign = if (end) TextAlign.End else TextAlign.Start)
     }
 }
 
@@ -281,7 +281,7 @@ private fun StatsTab(d: MatchDetail, hidden: Boolean, onReveal: () -> Unit) {
         return
     }
     Row(Modifier.fillMaxWidth()) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(Pc.Lime)); Text(d.match.home.name, style = PcType.Label) }
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(Pc.Accent)); Text(d.match.home.name, style = PcType.Label) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(d.match.away.name, style = PcType.Label.copy(color = Pc.Text2)); Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(Pc.Neutral)) }
     }
     d.stats.forEach { StatBar(it) }
@@ -298,8 +298,8 @@ private fun LineupsTab(d: MatchDetail, nav: MatchNav) {
         listOf(d.match.home to l.home, d.match.away to l.away).forEach { (team, lineup) ->
             PcCard(Modifier.weight(1f)) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("${team.name} · ${lineup.formation}", style = PcType.Label.copy(color = if (team == d.match.home) Pc.Lime else Pc.Text2), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("Coach ${lineup.coach}", style = PcType.Meta)
+                    Text("${team.name} · ${lineup.formation}", style = PcType.Label.copy(color = if (team == d.match.home) Pc.Accent else Pc.Text2), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Coach ${lineup.coach}", style = PcType.Caption)
                     lineup.starters.sortedBy { it.number }.forEach { p ->
                         Row(
                             Modifier.fillMaxWidth().heightIn(min = 40.dp).pcClickable(PcShape.Chip, "Open ${p.name}") { nav.openPlayer(p.playerId) },
@@ -324,7 +324,7 @@ fun LineupRoute(back: () -> Unit, openPlayer: (String) -> Unit, vm: MatchDetailV
     Screen(maxWidth = 640) {
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             BackButton(back)
-            Text("Lineups", style = PcType.Headline, modifier = Modifier.weight(1f))
+            Text("Lineups", style = PcType.Subtitle, modifier = Modifier.weight(1f))
         }
         StateContent(state, vm::retry, Modifier.padding(horizontal = 16.dp), loading = { DetailSkeleton() }) { d ->
             val l = d.lineups
@@ -360,7 +360,7 @@ private fun PitchView(d: MatchDetail, home: Lineup, away: Lineup, openPlayer: (S
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     val gk = p.position.startsWith("G")
-                    Box(Modifier.size(34.dp).clip(CircleShape).background(if (gk) Pc.Amber else Color(team.color)).border(2.dp, if (p.scored) Pc.Lime else Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(34.dp).clip(CircleShape).background(if (gk) Pc.Warning else Color(team.color)).border(2.dp, if (p.scored) Pc.Accent else Color.White, CircleShape), contentAlignment = Alignment.Center) {
                         Text(p.number.toString(), color = if (gk) Color(0xFF07111F) else Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                     }
                     Text(p.name.substringAfterLast(' '), color = Color.White, fontSize = 12.sp, fontWeight = if (p.scored) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
@@ -370,7 +370,7 @@ private fun PitchView(d: MatchDetail, home: Lineup, away: Lineup, openPlayer: (S
         Text("BENCH · COACH ${l.coach.uppercase()}", style = PcType.Overline.copy(color = Pc.Text2))
         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             l.bench.forEach { b ->
-                Box(Modifier.heightIn(min = 40.dp).clip(PcShape.Chip).background(Pc.Raised).pcClickable(PcShape.Chip, "Open ${b.name}") { openPlayer(b.playerId) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.heightIn(min = 40.dp).clip(PcShape.Chip).background(Pc.SurfaceVariant).pcClickable(PcShape.Chip, "Open ${b.name}") { openPlayer(b.playerId) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("${b.number} ${b.name}", style = PcType.Label.copy(fontSize = 13.sp))
                 }
             }

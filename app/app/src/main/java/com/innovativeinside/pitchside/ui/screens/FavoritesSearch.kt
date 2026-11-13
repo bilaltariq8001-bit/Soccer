@@ -99,7 +99,7 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
             Text("Favorites", style = PcType.Title.copy(fontSize = 28.sp, lineHeight = 34.sp), modifier = Modifier.weight(1f))
             IconAction(Icons.Outlined.Settings, "Settings", nav.openSettings, filled = true)
             Spacer(Modifier.width(8.dp))
-            Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Lime).pcClickable(PcShape.Control, "Add favorites", onClick = nav.openSearch), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Add, null, tint = Pc.OnLime) }
+            Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Accent).pcClickable(PcShape.Control, "Add favorites", onClick = nav.openSearch), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Add, null, tint = Pc.OnAccent) }
         }
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SegmentedTabs(listOf("Teams ${prefs.teams.size}", "Leagues ${prefs.leagues.size}", "Players ${prefs.players.size}"), tab, { tab = it })
@@ -138,9 +138,9 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
 private fun FollowMeter(prefs: UserPrefs) {
     val limit = UserPrefs.FREE_TEAM_LIMIT
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("${prefs.teams.size} of $limit free follows", style = PcType.Meta.copy(color = Pc.Text2))
-        Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Pc.Border)) {
-            Box(Modifier.fillMaxWidth((prefs.teams.size / limit.toFloat()).coerceAtMost(1f)).height(6.dp).clip(CircleShape).background(Pc.Lime))
+        Text("${prefs.teams.size} of $limit free follows", style = PcType.Caption.copy(color = Pc.Text2))
+        Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Pc.Outline)) {
+            Box(Modifier.fillMaxWidth((prefs.teams.size / limit.toFloat()).coerceAtMost(1f)).height(6.dp).clip(CircleShape).background(Pc.Accent))
         }
     }
 }
@@ -155,11 +155,11 @@ private fun FollowedTeamCard(t: Team, prefs: UserPrefs, nav: FavoritesNav, onUnf
                 Crest(t, 40.dp)
                 Text(t.name, style = PcType.Label.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
                 val on = t.id in prefs.shielded
-                IconAction(if (on) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, if (on) "Spoiler Shield on for ${t.name}" else "Spoiler Shield off for ${t.name}", { app.toggleShield(t.id) }, tint = if (on) Pc.Lime else Pc.Text2, filled = true)
+                IconAction(if (on) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, if (on) "Spoiler Shield on for ${t.name}" else "Spoiler Shield off for ${t.name}", { app.toggleShield(t.id) }, tint = if (on) Pc.Accent else Pc.Text2, filled = true)
             }
-            Text("Alerts", style = PcType.Meta)
+            Text("Alerts", style = PcType.Caption)
             FlowChips(AlertLevel.entries.map { it.label }, level.label, { label -> app.setTeamAlert(t.id, AlertLevel.entries.first { it.label == label }) })
-            TextAction("Unfollow", onUnfollow, color = Pc.Red)
+            TextAction("Unfollow", onUnfollow, color = Pc.Error)
         }
     }
 }
@@ -227,7 +227,7 @@ private fun ResultRow(leading: @Composable () -> Unit, title: String, sub: Strin
     PcCard(Modifier.fillMaxWidth(), onClick = onOpen) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp).heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             leading()
-            Column(Modifier.weight(1f)) { Text(title, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)); Text(sub, style = PcType.Meta.copy(color = Pc.Text2)) }
+            Column(Modifier.weight(1f)) { Text(title, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)); Text(sub, style = PcType.Caption.copy(color = Pc.Text2)) }
             Chip(if (following) stringResource(R.string.action_following) else stringResource(R.string.action_follow), following, onToggle)
         }
     }

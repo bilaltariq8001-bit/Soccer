@@ -65,7 +65,7 @@ fun NewsRoute(openArticle: (String) -> Unit, vm: NewsViewModel = viewModel(facto
 fun NewsContent(s: NewsState, onCategory: (NewsCategory?) -> Unit, onRetry: () -> Unit, onMore: () -> Unit, openArticle: (String) -> Unit) {
     Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
         Text("News", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
-        Text("Reports, transfers and analysis", style = PcType.BodySmall)
+        Text("Reports, transfers and analysis", style = PcType.BodyMuted)
     }
     Spacer(Modifier.height(16.dp))
     ChipRow(categories.map { it?.label ?: "All" }, s.category?.label ?: "All", { label -> onCategory(categories.firstOrNull { (it?.label ?: "All") == label }) })
@@ -82,18 +82,18 @@ fun NewsContent(s: NewsState, onCategory: (NewsCategory?) -> Unit, onRetry: () -
                         NewsThumb(f.category, Modifier.fillMaxWidth().height(140.dp))
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Overline(f.category.label.uppercase())
-                            Text(f.title, style = PcType.Headline.copy(fontSize = 22.sp, lineHeight = 28.sp))
-                            Text(f.dek, style = PcType.BodySmall)
-                            Text("${timeAgo(f.publishedMs)} · ${f.readMinutes} min read", style = PcType.Meta)
+                            Text(f.title, style = PcType.Subtitle.copy(fontSize = 22.sp, lineHeight = 28.sp))
+                            Text(f.dek, style = PcType.BodyMuted)
+                            Text("${timeAgo(f.publishedMs)} · ${f.readMinutes} min read", style = PcType.Caption)
                         }
                     }
                 }
                 s.items.drop(1).forEach { NewsRow(it, { openArticle(it.id) }) }
                 when {
-                    s.loadingMore -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Pc.Lime) }
+                    s.loadingMore -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Pc.Accent) }
                     s.loadMoreError != null -> ErrorState(s.loadMoreError, onMore)
                     s.nextCursor != null -> SecondaryButton(stringResource(R.string.action_load_more), onMore, Modifier.fillMaxWidth().testTag("load_more"))
-                    else -> Text("You're all caught up.", style = PcType.Meta, modifier = Modifier.padding(8.dp))
+                    else -> Text("You're all caught up.", style = PcType.Caption, modifier = Modifier.padding(8.dp))
                 }
             }
         }
@@ -124,8 +124,8 @@ fun ArticleBody(a: NewsItem) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Overline(a.category.label.uppercase())
         Text(a.title, style = PcType.Title)
-        Text(a.dek, style = PcType.Subhead.copy(color = Pc.Text2))
-        Text("${a.source} · ${timeAgo(a.publishedMs)} · ${a.readMinutes} min read", style = PcType.Meta)
+        Text(a.dek, style = PcType.Subtitle.copy(color = Pc.Text2))
+        Text("${a.source} · ${timeAgo(a.publishedMs)} · ${a.readMinutes} min read", style = PcType.Caption)
         a.body.split("\n\n").forEach { Text(it, style = PcType.Body.copy(lineHeight = 26.sp)) }
         if (a.url != null) TextAction("Read at source", { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(a.url))) })
     }

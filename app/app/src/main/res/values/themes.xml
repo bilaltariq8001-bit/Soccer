@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Pitchside" parent="android:Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#07111F</item>
+        <item name="android:windowBackground">@color/pitchside_splash_stage</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 
-    <!-- Launch theme: shown until preferences are loaded (installSplashScreen in MainActivity). -->
+    <!-- Launch theme: the system splash shows the brand mark on the deep-green stage until preferences
+         are read, then the animated intro (AnimatedSplashScreen) plays over the composed app. -->
     <style name="Theme.Pitchside.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#07111F</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">@color/pitchside_splash_stage</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_pitchside_splash_mark</item>
+        <item name="windowSplashScreenAnimationDuration">500</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
         <item name="postSplashScreenTheme">@style/Theme.Pitchside</item>
     </style>
 </resources>

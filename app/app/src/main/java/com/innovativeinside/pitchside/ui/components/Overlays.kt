@@ -57,17 +57,17 @@ fun PcDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().clip(PcShape.Hero).background(Pc.Surface).border(1.dp, Pc.BorderStrong, PcShape.Hero).padding(24.dp),
+            Modifier.fillMaxWidth().clip(PcShape.Hero).background(Pc.Surface).border(1.dp, Pc.OutlineStrong, PcShape.Hero).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (icon != null) Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) { Icon(icon, null, tint = Pc.Lime) }
-            Text(title, style = PcType.Headline)
-            Text(body, style = PcType.BodySmall)
+            if (icon != null) Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = Pc.Accent) }
+            Text(title, style = PcType.Subtitle)
+            Text(body, style = PcType.BodyMuted)
             Spacer(Modifier.height(4.dp))
             Box(
-                Modifier.fillMaxWidth().heightIn48().clip(PcShape.Control).background(if (danger) Pc.Red else Pc.Lime).pcClickable(PcShape.Control, onClick = onConfirm),
+                Modifier.fillMaxWidth().heightIn48().clip(PcShape.Control).background(if (danger) Pc.Error else Pc.Accent).pcClickable(PcShape.Control, onClick = onConfirm),
                 contentAlignment = Alignment.Center,
-            ) { Text(confirmLabel, color = Pc.OnLime, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
+            ) { Text(confirmLabel, color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
             TextAction(dismissLabel, onDismiss, Modifier.fillMaxWidth(), color = Pc.Text2)
         }
     }
@@ -86,12 +86,12 @@ fun PcSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
         ) {
             Column(
                 Modifier.widthIn(max = 560.dp).fillMaxWidth().clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).background(Pc.Surface)
-                    .border(1.dp, Pc.BorderStrong, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .border(1.dp, Pc.OutlineStrong, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                     .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Box(Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(Pc.BorderStrong))
+                Box(Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(Pc.OutlineStrong))
                 content()
                 Spacer(Modifier.height(8.dp))
             }
@@ -104,11 +104,11 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
     val focus = remember { FocusRequester() }
     BasicTextField(
         value = value, onValueChange = onValueChange, singleLine = true,
-        textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Lime),
+        textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Accent),
         modifier = modifier.fillMaxWidth().height(52.dp).focusRequester(focus),
         decorationBox = { inner ->
             Row(
-                Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, Pc.Border, PcShape.Control).padding(horizontal = 16.dp),
+                Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Control).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(Icons.Outlined.Search, null, tint = Pc.Text2, modifier = Modifier.size(20.dp))

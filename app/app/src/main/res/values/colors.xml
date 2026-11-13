@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Window and splash colours. They mirror the Compose tokens in ui/theme/Theme.kt (bg / hero / live). -->
+<resources>
+    <color name="pitchside_window_background">#F4F3EC</color>
+    <color name="pitchside_splash_stage">#1F4D35</color>
+    <color name="pitchside_splash_ink">#FFFFFF</color>
+    <color name="pitchside_splash_background_glow">#2A5B41</color>
+    <color name="pitchside_splash_primary">#E3EBDD</color>
+    <color name="pitchside_splash_live">#D94841</color>
+</resources>

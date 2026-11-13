@@ -88,7 +88,7 @@ fun MatchesContent(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Matches", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
-                Text(dayLabel(date, today), style = PcType.BodySmall)
+                Text(dayLabel(date, today), style = PcType.BodyMuted)
             }
             IconAction(Icons.Outlined.Search, stringResource(R.string.action_search), openSearch, filled = true)
             Spacer(Modifier.width(8.dp))
@@ -141,8 +141,8 @@ fun MatchesContent(
             DatePicker(
                 pickerState,
                 colors = DatePickerDefaults.colors(
-                    containerColor = Pc.Surface, selectedDayContainerColor = Pc.Lime, selectedDayContentColor = Pc.OnLime,
-                    todayDateBorderColor = Pc.Lime, todayContentColor = Pc.Lime, dayContentColor = Pc.Text, weekdayContentColor = Pc.Text2,
+                    containerColor = Pc.Surface, selectedDayContainerColor = Pc.Accent, selectedDayContentColor = Pc.OnAccent,
+                    todayDateBorderColor = Pc.Accent, todayContentColor = Pc.Accent, dayContentColor = Pc.Text, weekdayContentColor = Pc.Text2,
                     titleContentColor = Pc.Text2, headlineContentColor = Pc.Text, navigationContentColor = Pc.Text, yearContentColor = Pc.Text,
                 ),
             )

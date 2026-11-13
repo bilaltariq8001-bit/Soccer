@@ -92,10 +92,10 @@ fun HomeContent(state: UiState<HomeData>, actions: HomeActions, onRetry: () -> U
             Text(greeting(), style = PcType.Title.copy(fontSize = 28.sp, lineHeight = 34.sp))
             Text(
                 if (data != null) "${data.live.size} live now · ${data.matches.size} matches today" else "Today's football",
-                style = PcType.BodySmall,
+                style = PcType.BodyMuted,
             )
         }
-        IconAction(Icons.Outlined.AutoAwesome, stringResource(R.string.action_ask), actions.openAsk, tint = Pc.Lime, filled = true)
+        IconAction(Icons.Outlined.AutoAwesome, stringResource(R.string.action_ask), actions.openAsk, tint = Pc.Accent, filled = true)
         Spacer(Modifier.width(4.dp))
         IconAction(Icons.Outlined.Search, stringResource(R.string.action_search), actions.openSearch, filled = true)
     }
@@ -135,7 +135,7 @@ private fun MainColumn(d: HomeData, actions: HomeActions) {
     if (d.matches.isEmpty()) {
         EmptyState("No matches today", "Check tomorrow's fixtures or browse a league.", actionLabel = "See fixtures", onAction = actions.openMatches, icon = Icons.Outlined.EventBusy)
     } else if (rest.isEmpty()) {
-        Text("That's every match today.", style = PcType.BodySmall)
+        Text("That's every match today.", style = PcType.BodyMuted)
     } else {
         groupByLeague(rest, prefs.leagues).forEach { (name, ms) ->
             LeagueGroup(name, ms, actions.openMatch, openLeague = { actions.openLeague(ms.first().leagueId) })
@@ -160,11 +160,11 @@ private fun TopLeaguesRow(leagues: List<League>, followed: List<String>, open: (
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         leagues.sortedBy { if (it.id in followed) 0 else 1 }.forEach { l ->
             Row(
-                Modifier.heightIn(min = 44.dp).clip(PcShape.Control).background(Pc.Surface).border(1.dp, if (l.id in followed) Pc.Lime.copy(alpha = 0.6f) else Pc.Border, PcShape.Control)
+                Modifier.heightIn(min = 44.dp).clip(PcShape.Control).background(Pc.Surface).border(1.dp, if (l.id in followed) Pc.Accent.copy(alpha = 0.6f) else Pc.Outline, PcShape.Control)
                     .pcClickable(PcShape.Control, "Open ${l.name}") { open(l.id) }.padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Box(Modifier.size(26.dp).clip(PcShape.Badge).background(Pc.Raised), contentAlignment = Alignment.Center) { Text(l.short, color = Pc.Lime, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp) }
+                Box(Modifier.size(26.dp).clip(PcShape.Badge).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text(l.short, color = Pc.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 11.sp) }
                 Text(l.name, style = PcType.Label, maxLines = 1)
             }
         }
@@ -173,13 +173,13 @@ private fun TopLeaguesRow(leagues: List<League>, followed: List<String>, open: (
 
 @Composable
 fun ShieldBanner(count: Int, onCaughtUp: () -> Unit) {
-    PcCard(Modifier.fillMaxWidth(), container = Pc.LimeTintSoft, border = Pc.Lime.copy(alpha = 0.45f)) {
+    PcCard(Modifier.fillMaxWidth(), container = Pc.AccentContainer, border = Pc.Accent.copy(alpha = 0.45f)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.VisibilityOff, null, tint = Pc.Lime) }
+                Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.VisibilityOff, null, tint = Pc.Accent) }
                 Column {
-                    Text("Spoiler Shield is on", style = PcType.Subhead)
-                    Text("$count ${if (count == 1) "score is" else "scores are"} hidden. Alerts are held until you're caught up.", style = PcType.BodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp))
+                    Text("Spoiler Shield is on", style = PcType.Subtitle)
+                    Text("$count ${if (count == 1) "score is" else "scores are"} hidden. Alerts are held until you're caught up.", style = PcType.BodyMuted.copy(fontSize = 13.sp, lineHeight = 18.sp))
                 }
             }
             PrimaryButton("I'm caught up", onCaughtUp, Modifier.fillMaxWidth())
@@ -194,25 +194,25 @@ fun HeroMatch(match: Match, hidden: Boolean, onClick: () -> Unit, onReveal: () -
     PcCard(modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = desc }, shape = PcShape.Hero, onClick = onClick) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("${match.leagueName} · ${match.venue}", style = PcType.BodySmall.copy(fontSize = 13.sp), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${match.leagueName} · ${match.venue}", style = PcType.BodyMuted.copy(fontSize = 13.sp), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 StatusBadge(match.status, match.label)
             }
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Crest(match.home, 56.dp); Text(match.home.name, style = PcType.Label.copy(fontSize = 15.sp, fontWeight = FontWeight.ExtraBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                if (hidden) Box(Modifier.size(width = 104.dp, height = 56.dp).clip(PcShape.Control).background(Pc.Raised).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {
-                    Text("Reveal", style = PcType.Label.copy(color = Pc.Lime))
-                } else Text(if (match.hasScore) "${match.homeScore} – ${match.awayScore}" else match.label, style = PcType.ScoreXL.copy(fontSize = 56.sp, lineHeight = 56.sp))
+                if (hidden) Box(Modifier.size(width = 104.dp, height = 56.dp).clip(PcShape.Control).background(Pc.SurfaceVariant).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {
+                    Text("Reveal", style = PcType.Label.copy(color = Pc.Accent))
+                } else Text(if (match.hasScore) "${match.homeScore} – ${match.awayScore}" else match.label, style = PcType.ScoreDisplay.copy(fontSize = 56.sp, lineHeight = 56.sp))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Crest(match.away, 56.dp); Text(match.away.name, style = PcType.Label.copy(fontSize = 15.sp, color = Pc.Text2), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (match.brief.isNotBlank()) {
-                Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+                Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Lime, modifier = Modifier.size(18.dp).padding(top = 2.dp))
-                    Text(if (hidden) "Brief hidden to avoid spoilers." else match.brief, style = PcType.BodySmall.copy(color = Pc.Text), modifier = Modifier.weight(1f), maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Accent, modifier = Modifier.size(18.dp).padding(top = 2.dp))
+                    Text(if (hidden) "Brief hidden to avoid spoilers." else match.brief, style = PcType.BodyMuted.copy(color = Pc.Text), modifier = Modifier.weight(1f), maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

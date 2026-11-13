@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,6 +24,7 @@ import com.innovativeinside.pitchside.data.prefs.ThemeChoice
 import com.innovativeinside.pitchside.ui.AppRoot
 import com.innovativeinside.pitchside.ui.LocalApp
 import com.innovativeinside.pitchside.ui.LocalPrefs
+import com.innovativeinside.pitchside.ui.screens.AnimatedSplashScreen
 import com.innovativeinside.pitchside.ui.theme.Pc
 import com.innovativeinside.pitchside.ui.theme.PitchsideTheme
 import com.innovativeinside.pitchside.ui.vm.AppViewModel
@@ -36,15 +40,20 @@ class MainActivity : ComponentActivity() {
             val prefs by app.prefs.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
             val dark = when (prefs?.theme) { ThemeChoice.Light -> false; ThemeChoice.Dark -> true; else -> systemDark }
-            DisposableEffect(dark) {
-                val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+            // A fresh launch gets the short brand intro; recreation and returning from background do not replay it.
+            var showIntro by remember { mutableStateOf(savedInstanceState == null && intent?.data == null) }
+            DisposableEffect(dark, showIntro) {
+                val style = if (dark || showIntro) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 onDispose { }
             }
             PitchsideTheme(dark) {
                 val p = prefs
-                if (p == null) Box(Modifier.fillMaxSize().background(Pc.Bg))
-                else CompositionLocalProvider(LocalApp provides app, LocalPrefs provides p) { AppRoot(app, p) }
+                Box(Modifier.fillMaxSize().background(Pc.Bg)) {
+                    if (p != null) CompositionLocalProvider(LocalApp provides app, LocalPrefs provides p) { AppRoot(app, p) }
+                    // The intro overlays the already-composed app, so it never delays loading.
+                    if (showIntro) AnimatedSplashScreen(onFinished = { showIntro = false })
+                }
             }
         }
     }

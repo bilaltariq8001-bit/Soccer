@@ -94,7 +94,7 @@ import com.innovativeinside.pitchside.ui.theme.PcType
 fun Modifier.focusRing(shape: Shape = PcShape.Control): Modifier = composed2 {
     var focused by remember { mutableStateOf(false) }
     this.onFocusChanged { focused = it.isFocused }
-        .then(if (focused) Modifier.border(2.dp, Pc.Lime, shape) else Modifier)
+        .then(if (focused) Modifier.border(2.dp, Pc.Accent, shape) else Modifier)
 }
 
 @Suppress("UnnecessaryComposedModifier")
@@ -111,7 +111,7 @@ fun PcCard(
     modifier: Modifier = Modifier,
     shape: Shape = PcShape.Card,
     container: Color = Pc.Surface,
-    border: Color = Pc.Border,
+    border: Color = Pc.Outline,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
@@ -130,10 +130,10 @@ fun Crest(team: Team, size: Dp = 24.dp) {
 @Composable
 fun StatusBadge(status: Status, label: String, modifier: Modifier = Modifier) {
     val (bg, fg) = when (status) {
-        Status.Live -> Pc.LiveTint to Pc.Live
-        Status.Upcoming -> Pc.Raised to Pc.Text
-        Status.Finished -> Pc.Raised to Pc.Text2
-        Status.Postponed -> Pc.AmberTint to Pc.Amber
+        Status.Live -> Pc.LiveContainer to Pc.LiveText
+        Status.Upcoming -> Pc.SurfaceVariant to Pc.Text
+        Status.Finished -> Pc.SurfaceVariant to Pc.Text2
+        Status.Postponed -> Pc.WarningContainer to Pc.Warning
     }
     val text = when (status) {
         Status.Live -> "LIVE $label"
@@ -150,13 +150,13 @@ fun StatusBadge(status: Status, label: String, modifier: Modifier = Modifier) {
             Status.Finished -> Icon(Icons.Outlined.Check, null, tint = fg, modifier = Modifier.size(14.dp))
             Status.Postponed -> Icon(Icons.Outlined.Pause, null, tint = fg, modifier = Modifier.size(14.dp))
         }
-        Text(text, style = PcType.Meta, color = fg, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text(text, style = PcType.Caption, color = fg, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
 }
 
 @Composable
 fun ScoreText(value: String, modifier: Modifier = Modifier, bold: Boolean = true) {
-    Text(value, style = PcType.ScoreM, color = if (bold) Pc.Text else Pc.Text2, modifier = modifier.widthIn(min = 20.dp), textAlign = TextAlign.End)
+    Text(value, style = PcType.ScoreCompact, color = if (bold) Pc.Text else Pc.Text2, modifier = modifier.widthIn(min = 20.dp), textAlign = TextAlign.End)
 }
 
 @Composable
@@ -179,7 +179,7 @@ fun MatchCard(match: Match, hidden: Boolean, onClick: () -> Unit, onReveal: () -
             Spacer(Modifier.width(8.dp))
             if (hidden) {
                 Box(
-                    Modifier.size(48.dp).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal).background(Pc.Raised).border(1.dp, Pc.Border, PcShape.Control),
+                    Modifier.size(48.dp).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal).background(Pc.SurfaceVariant).border(1.dp, Pc.Outline, PcShape.Control),
                     contentAlignment = Alignment.Center,
                 ) { Icon(Icons.Outlined.Visibility, "Reveal score", tint = Pc.Text) }
             } else {
@@ -198,7 +198,7 @@ private fun TeamScoreRow(team: Team, score: Int?, hidden: Boolean, leading: Bool
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
         when {
-            hidden -> Box(Modifier.size(width = 28.dp, height = 20.dp).clip(RoundedCornerShape(6.dp)).background(Pc.Border))
+            hidden -> Box(Modifier.size(width = 28.dp, height = 20.dp).clip(RoundedCornerShape(6.dp)).background(Pc.Outline))
             score != null -> ScoreText(score.toString(), bold = leading)
             else -> Text("–", color = Pc.Text3, fontSize = 22.sp, modifier = Modifier.widthIn(min = 20.dp), textAlign = TextAlign.End)
         }
@@ -209,8 +209,8 @@ private fun TeamScoreRow(team: Team, score: Int?, hidden: Boolean, leading: Bool
 
 @Composable
 fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, loading: Boolean = false) {
-    val bg = if (enabled || loading) Pc.Lime else Pc.Raised
-    val fg = if (enabled || loading) Pc.OnLime else Pc.Text3
+    val bg = if (enabled || loading) Pc.Accent else Pc.SurfaceVariant
+    val fg = if (enabled || loading) Pc.OnAccent else Pc.Text3
     Box(
         modifier.heightIn(min = 52.dp).clip(PcShape.Control).background(bg).let { if (enabled && !loading) it.pcClickable(PcShape.Control, onClick = onClick) else it.semantics { disabled() } }
             .padding(horizontal = 24.dp),
@@ -224,13 +224,13 @@ fun PrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifi
 @Composable
 fun SecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, danger: Boolean = false) {
     Box(
-        modifier.heightIn(min = 52.dp).pcClickable(PcShape.Control, onClick = onClick).background(Pc.Surface).border(1.dp, if (danger) Pc.Red else Pc.Border, PcShape.Control).padding(horizontal = 24.dp),
+        modifier.heightIn(min = 52.dp).pcClickable(PcShape.Control, onClick = onClick).background(Pc.Surface).border(1.dp, if (danger) Pc.Error else Pc.Outline, PcShape.Control).padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(text, color = if (danger) Pc.Red else Pc.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+    ) { Text(text, color = if (danger) Pc.Error else Pc.Text, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
 }
 
 @Composable
-fun TextAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = Pc.Lime) {
+fun TextAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = Pc.Accent) {
     Box(modifier.heightIn(min = 48.dp).pcClickable(PcShape.Control, onClick = onClick).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
         Text(text, color = color, fontWeight = FontWeight.Bold, fontSize = 14.sp)
     }
@@ -239,7 +239,7 @@ fun TextAction(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
 @Composable
 fun IconAction(icon: ImageVector, description: String, onClick: () -> Unit, tint: Color = Pc.Text, modifier: Modifier = Modifier, filled: Boolean = false) {
     Box(
-        modifier.size(48.dp).pcClickable(PcShape.Control, description, onClick = onClick).background(if (filled) Pc.Surface else Color.Transparent).let { if (filled) it.border(1.dp, Pc.Border, PcShape.Control) else it },
+        modifier.size(48.dp).pcClickable(PcShape.Control, description, onClick = onClick).background(if (filled) Pc.Surface else Color.Transparent).let { if (filled) it.border(1.dp, Pc.Outline, PcShape.Control) else it },
         contentAlignment = Alignment.Center,
     ) { Icon(icon, description, tint = tint, modifier = Modifier.size(22.dp)) }
 }
@@ -251,10 +251,10 @@ fun BackButton(onBack: () -> Unit) = IconAction(Icons.AutoMirrored.Filled.ArrowB
 fun Chip(label: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier.heightIn(min = 40.dp).pcClickable(PcShape.Control, role = Role.Button, onClick = onClick)
-            .background(if (selected) Pc.Lime else Pc.Surface).border(1.dp, if (selected) Pc.Lime else Pc.Border, PcShape.Control)
+            .background(if (selected) Pc.Accent else Pc.Surface).border(1.dp, if (selected) Pc.Accent else Pc.Outline, PcShape.Control)
             .semantics { this.selected = selected }.padding(horizontal = 16.dp),
         contentAlignment = Alignment.Center,
-    ) { Text(label, color = if (selected) Pc.OnLime else Pc.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
+    ) { Text(label, color = if (selected) Pc.OnAccent else Pc.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
 }
 
 @Composable
@@ -275,12 +275,12 @@ fun FlowChips(options: List<String>, selected: String, onSelect: (String) -> Uni
 
 @Composable
 fun SegmentedTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth().clip(PcShape.Control).background(Pc.Surface).border(1.dp, Pc.Border, PcShape.Control).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(modifier.fillMaxWidth().clip(PcShape.Control).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Control).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         options.forEachIndexed { i, label ->
             val on = i == selected
             Box(
                 Modifier.weight(1f).heightIn(min = 40.dp).pcClickable(RoundedCornerShape(10.dp), role = Role.Tab) { onSelect(i) }
-                    .background(if (on) Pc.Raised else Color.Transparent).semantics { this.selected = on },
+                    .background(if (on) Pc.SurfaceVariant else Color.Transparent).semantics { this.selected = on },
                 contentAlignment = Alignment.Center,
             ) { Text(label, color = if (on) Pc.Text else Pc.Text2, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
         }
@@ -297,9 +297,9 @@ fun UnderlineTabs(options: List<String>, selected: Int, onSelect: (Int) -> Unit,
                 Modifier.heightIn(min = 48.dp).pcClickable(RoundedCornerShape(8.dp), role = Role.Tab) { onSelect(i) }.padding(horizontal = 12.dp).semantics { this.selected = on },
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
             ) {
-                Text(label, color = if (on) Pc.Lime else Pc.Text2, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+                Text(label, color = if (on) Pc.Accent else Pc.Text2, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
                 Spacer(Modifier.height(8.dp))
-                Box(Modifier.height(3.dp).fillMaxWidth().background(if (on) Pc.Lime else Color.Transparent))
+                Box(Modifier.height(3.dp).fillMaxWidth().background(if (on) Pc.Accent else Color.Transparent))
             }
         }
     }
@@ -310,8 +310,8 @@ fun PcSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     Switch(
         checked = checked, onCheckedChange = onChange,
         colors = SwitchDefaults.colors(
-            checkedThumbColor = Pc.OnLime, checkedTrackColor = Pc.Lime, checkedBorderColor = Pc.Lime,
-            uncheckedThumbColor = Pc.Text2, uncheckedTrackColor = Pc.Raised, uncheckedBorderColor = Pc.BorderStrong,
+            checkedThumbColor = Pc.OnAccent, checkedTrackColor = Pc.Accent, checkedBorderColor = Pc.Accent,
+            uncheckedThumbColor = Pc.Text2, uncheckedTrackColor = Pc.SurfaceVariant, uncheckedBorderColor = Pc.OutlineStrong,
         ),
     )
 }
@@ -322,32 +322,32 @@ fun PcSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
 @Composable
 fun SectionHeader(title: String, action: String? = null, onAction: () -> Unit = {}, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = PcType.Headline, modifier = Modifier.weight(1f))
+        Text(title, style = PcType.Subtitle, modifier = Modifier.weight(1f))
         if (action != null) TextAction(action, onAction)
     }
 }
 
 @Composable
-fun Overline(text: String, modifier: Modifier = Modifier, color: Color = Pc.Lime) = Text(text, style = PcType.Overline, color = color, modifier = modifier)
+fun Overline(text: String, modifier: Modifier = Modifier, color: Color = Pc.Accent) = Text(text, style = PcType.Overline, color = color, modifier = modifier)
 
 @Composable
 fun PhotoPlaceholder(modifier: Modifier = Modifier, label: String = "Photo") {
-    Box(modifier.clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.BottomStart) {
-        Text(label, style = PcType.Meta, modifier = Modifier.padding(8.dp))
+    Box(modifier.clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.BottomStart) {
+        Text(label, style = PcType.Caption, modifier = Modifier.padding(8.dp))
     }
 }
 
 @Composable
 fun BriefCard(text: String, modifier: Modifier = Modifier, title: String = "MATCH BRIEF · LIVE", updated: String = "2 min ago", compactMeta: Boolean = false) {
-    PcCard(modifier, border = Pc.Lime.copy(alpha = 0.45f)) {
+    PcCard(modifier, border = Pc.Accent.copy(alpha = 0.45f)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Lime, modifier = Modifier.size(16.dp))
+                Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Accent, modifier = Modifier.size(16.dp))
                 Overline(title, Modifier.weight(1f))
-                Text(updated, style = PcType.Meta)
+                Text(updated, style = PcType.Caption)
             }
             Text(text, style = PcType.Body)
-            if (!compactMeta) Text("AI-generated from match data", style = PcType.Meta)
+            if (!compactMeta) Text("AI-generated from match data", style = PcType.Caption)
         }
     }
 }
@@ -359,11 +359,11 @@ fun StatBar(stat: StatRow, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row {
             Text(stat.homeText, style = PcType.Label.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
-            Text(stat.label, style = PcType.BodySmall)
+            Text(stat.label, style = PcType.BodyMuted)
             Text(stat.awayText, style = PcType.Label.copy(fontSize = 15.sp), textAlign = TextAlign.End, modifier = Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Box(Modifier.weight(hw.coerceIn(0.02f, 0.98f)).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Pc.Lime))
+            Box(Modifier.weight(hw.coerceIn(0.02f, 0.98f)).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Pc.Accent))
             Box(Modifier.weight((1 - hw).coerceIn(0.02f, 0.98f)).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Pc.Neutral))
         }
     }
@@ -372,9 +372,9 @@ fun StatBar(stat: StatRow, modifier: Modifier = Modifier) {
 @Composable
 fun FormChip(letter: Char) {
     val (bg, fg) = when (letter) {
-        'W' -> Pc.LimeTint to Pc.Lime
-        'L' -> Pc.RedTint to Pc.Red
-        else -> Pc.Raised to Pc.Text2
+        'W' -> Pc.AccentContainer to Pc.Accent
+        'L' -> Pc.ErrorContainer to Pc.Error
+        else -> Pc.SurfaceVariant to Pc.Text2
     }
     Box(Modifier.size(26.dp).clip(RoundedCornerShape(8.dp)).background(bg), contentAlignment = Alignment.Center) {
         Text(letter.toString(), color = fg, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
@@ -388,10 +388,10 @@ enum class BannerKind { Info, Success, Warning, Error }
 @Composable
 fun InfoBanner(text: String, kind: BannerKind, modifier: Modifier = Modifier, action: String? = null, onAction: () -> Unit = {}) {
     val (bg, fg, icon) = when (kind) {
-        BannerKind.Success -> Triple(Pc.LimeTint, Pc.Lime, Icons.Outlined.Check)
-        BannerKind.Warning -> Triple(Pc.AmberTint, Pc.Amber, Icons.Outlined.WifiOff)
-        BannerKind.Error -> Triple(Pc.RedTint, Pc.Red, Icons.Outlined.ErrorOutline)
-        BannerKind.Info -> Triple(Pc.LiveTint, Pc.Live, Icons.Outlined.ErrorOutline)
+        BannerKind.Success -> Triple(Pc.AccentContainer, Pc.Accent, Icons.Outlined.Check)
+        BannerKind.Warning -> Triple(Pc.WarningContainer, Pc.Warning, Icons.Outlined.WifiOff)
+        BannerKind.Error -> Triple(Pc.ErrorContainer, Pc.Error, Icons.Outlined.ErrorOutline)
+        BannerKind.Info -> Triple(Pc.LiveContainer, Pc.LiveText, Icons.Outlined.ErrorOutline)
     }
     Row(
         modifier.fillMaxWidth().clip(PcShape.Control).background(bg).border(1.dp, fg.copy(alpha = 0.4f), PcShape.Control).padding(horizontal = 16.dp, vertical = 12.dp).semantics(mergeDescendants = true) {},
@@ -406,7 +406,7 @@ fun InfoBanner(text: String, kind: BannerKind, modifier: Modifier = Modifier, ac
 fun Modifier.skeleton(): Modifier = composed2 {
     val t = rememberInfiniteTransition(label = "skeleton")
     val a by t.animateFloat(0.45f, 1f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "alpha")
-    this.alpha(a).background(Pc.Raised, RoundedCornerShape(8.dp))
+    this.alpha(a).background(Pc.SurfaceVariant, RoundedCornerShape(8.dp))
 }
 
 @Composable
@@ -437,7 +437,7 @@ val navItems = listOf(
 @Composable
 fun BottomNav(current: String?, onNavigate: (String) -> Unit, badges: Map<String, Int> = emptyMap()) {
     Column(Modifier.background(Pc.Nav).navigationBarsPadding()) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
         Row(Modifier.fillMaxWidth().background(Pc.Nav).padding(horizontal = 8.dp, vertical = 6.dp)) {
             navItems.forEach { item ->
                 val on = item.route == current
@@ -446,11 +446,11 @@ fun BottomNav(current: String?, onNavigate: (String) -> Unit, badges: Map<String
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
                     Box {
-                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
+                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Accent else Pc.Text2, modifier = Modifier.size(22.dp))
                         val n = badges[item.route] ?: 0
                         if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = 12.dp, y = (-6).dp))
                     }
-                    Text(stringResource(item.label), color = if (on) Pc.Lime else Pc.Text2, fontSize = 12.sp, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold)
+                    Text(stringResource(item.label), color = if (on) Pc.Accent else Pc.Text2, fontSize = 12.sp, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold)
                 }
             }
         }
@@ -465,35 +465,35 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
             horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Row(Modifier.padding(bottom = 24.dp, start = if (wide) 8.dp else 0.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Pc.Lime), contentAlignment = Alignment.Center) { Text("P", color = Pc.OnLime, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
-                if (wide) Text("Pitchside", style = PcType.Headline)
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Pc.Accent), contentAlignment = Alignment.Center) { Text("P", color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 18.sp) }
+                if (wide) Text("Pitchside", style = PcType.Subtitle)
             }
             navItems.forEach { item ->
                 val on = item.route == current
                 Row(
                     Modifier.then(if (wide) Modifier.fillMaxWidth() else Modifier.size(72.dp, 64.dp)).heightIn(min = 48.dp).pcClickable(PcShape.Control, role = Role.Tab) { onNavigate(item.route) }
-                        .background(if (on) Pc.LimeTint else Color.Transparent).padding(horizontal = 12.dp).semantics { selected = on },
+                        .background(if (on) Pc.AccentContainer else Color.Transparent).padding(horizontal = 12.dp).semantics { selected = on },
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = if (wide) Arrangement.spacedBy(12.dp) else Arrangement.Center,
                 ) {
                     Box {
-                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Lime else Pc.Text2, modifier = Modifier.size(22.dp))
+                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Accent else Pc.Text2, modifier = Modifier.size(22.dp))
                         val n = badges[item.route] ?: 0
                         if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = 12.dp, y = (-6).dp))
                     }
                     if (!wide) Spacer(Modifier.width(0.dp))
-                    if (wide) Text(stringResource(item.label), color = if (on) Pc.Lime else Pc.Text2, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 15.sp)
+                    if (wide) Text(stringResource(item.label), color = if (on) Pc.Accent else Pc.Text2, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.SemiBold, fontSize = 15.sp)
                 }
             }
             Spacer(Modifier.weight(1f))
             Row(
-                Modifier.then(if (wide) Modifier.fillMaxWidth() else Modifier.size(48.dp)).heightIn(min = 48.dp).pcClickable(PcShape.Control, onClick = onAsk).background(Pc.Surface).border(1.dp, Pc.Border, PcShape.Control),
+                Modifier.then(if (wide) Modifier.fillMaxWidth() else Modifier.size(48.dp)).heightIn(min = 48.dp).pcClickable(PcShape.Control, onClick = onAsk).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Control),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(Icons.Outlined.AutoAwesome, "Ask Pitchside", tint = Pc.Lime, modifier = Modifier.size(20.dp))
-                if (wide) { Spacer(Modifier.width(8.dp)); Text("Ask Pitchside", color = Pc.Lime, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
+                Icon(Icons.Outlined.AutoAwesome, "Ask Pitchside", tint = Pc.Accent, modifier = Modifier.size(20.dp))
+                if (wide) { Spacer(Modifier.width(8.dp)); Text("Ask Pitchside", color = Pc.Accent, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp) }
             }
         }
-        Box(Modifier.fillMaxHeight().width(1.dp).background(Pc.Border))
+        Box(Modifier.fillMaxHeight().width(1.dp).background(Pc.Outline))
     }
 }
 
@@ -502,7 +502,7 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
 @Composable
 fun LiveCountBadge(count: Int, modifier: Modifier = Modifier) {
     Box(
-        modifier.heightIn(min = 16.dp).widthIn(min = 16.dp).clip(CircleShape).background(Pc.Live).padding(horizontal = 4.dp)
+        modifier.heightIn(min = 16.dp).widthIn(min = 16.dp).clip(CircleShape).background(Pc.LiveText).padding(horizontal = 4.dp)
             .semantics { contentDescription = "$count live" },
         contentAlignment = Alignment.Center,
     ) { Text(if (count > 9) "9+" else count.toString(), color = Pc.Bg, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold) }

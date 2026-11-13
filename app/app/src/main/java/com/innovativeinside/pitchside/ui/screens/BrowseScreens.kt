@@ -102,7 +102,7 @@ fun LeaguesContent(state: UiState<LeaguesData>, onRetry: () -> Unit, openLeague:
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("Leagues", style = PcType.Title.copy(fontSize = 30.sp, lineHeight = 36.sp))
-            Text("Tables, fixtures and top scorers", style = PcType.BodySmall)
+            Text("Tables, fixtures and top scorers", style = PcType.BodyMuted)
         }
         IconAction(Icons.Outlined.Search, stringResource(R.string.action_search), openSearch, filled = true)
     }
@@ -123,8 +123,8 @@ fun LeaguesContent(state: UiState<LeaguesData>, onRetry: () -> Unit, openLeague:
 
 @Composable
 fun LeagueBadge(short: String, size: Int = 40) {
-    Box(Modifier.size(size.dp).clip(PcShape.Control).background(Pc.Raised), contentAlignment = Alignment.Center) {
-        Text(short, color = Pc.Lime, fontWeight = FontWeight.ExtraBold, fontSize = (size * 0.32f).sp)
+    Box(Modifier.size(size.dp).clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
+        Text(short, color = Pc.Accent, fontWeight = FontWeight.ExtraBold, fontSize = (size * 0.32f).sp)
     }
 }
 
@@ -133,7 +133,7 @@ fun LeagueRow(l: League, following: Boolean, onOpen: () -> Unit, onToggle: () ->
     PcCard(Modifier.fillMaxWidth(), onClick = onOpen) {
         Row(Modifier.padding(12.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LeagueBadge(l.short)
-            Column(Modifier.weight(1f)) { Text(l.name, style = PcType.Label.copy(fontSize = 15.sp)); Text("${l.country} · ${l.currentRound}", style = PcType.Meta.copy(color = Pc.Text2)) }
+            Column(Modifier.weight(1f)) { Text(l.name, style = PcType.Label.copy(fontSize = 15.sp)); Text("${l.country} · ${l.currentRound}", style = PcType.Caption.copy(color = Pc.Text2)) }
             Chip(if (following) stringResource(R.string.action_following) else stringResource(R.string.action_follow), following, onToggle)
         }
     }
@@ -150,7 +150,7 @@ fun PlayerAvatar(name: String, color: Long, size: Int = 40) {
 @Composable
 fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () -> Unit = {
     Box(Modifier.heightIn(min = 28.dp).clip(PcShape.Badge).background(ratingColor(p.rating)).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-        Text("%.1f".format(p.rating), color = Pc.OnLime, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+        Text("%.1f".format(p.rating), color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
     }
 }) {
     PcCard(Modifier.fillMaxWidth(), onClick = onClick) {
@@ -158,7 +158,7 @@ fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () ->
             PlayerAvatar(p.name, p.team.color)
             Column(Modifier.weight(1f)) {
                 Text(p.name, style = PcType.Label.copy(fontSize = 15.sp))
-                Text("${p.position} · ${p.team.name} · ${p.nationality}", style = PcType.Meta.copy(color = Pc.Text2), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${p.position} · ${p.team.name} · ${p.nationality}", style = PcType.Caption.copy(color = Pc.Text2), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             trailing()
         }
@@ -166,7 +166,7 @@ fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () ->
 }
 
 @Composable
-fun ratingColor(r: Double): Color = when { r >= 8.0 -> Pc.Lime; r >= 7.0 -> Pc.Amber; else -> Pc.Neutral }
+fun ratingColor(r: Double): Color = when { r >= 8.0 -> Pc.Accent; r >= 7.0 -> Pc.Warning; else -> Pc.Neutral }
 
 // ---------------- League detail ----------------
 
@@ -192,13 +192,13 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
         LeagueBadge(l.short, 52)
         Column(Modifier.weight(1f)) {
             Text(l.name, style = PcType.Title.copy(fontSize = 24.sp, lineHeight = 28.sp))
-            Text("${l.country} · ${l.season} · ${l.currentRound}", style = PcType.BodySmall.copy(fontSize = 13.sp))
+            Text("${l.country} · ${l.season} · ${l.currentRound}", style = PcType.BodyMuted.copy(fontSize = 13.sp))
         }
-        IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${l.name}" else "Follow ${l.name}", { app.toggleLeague(l.id, l.name) }, tint = if (following) Pc.Lime else Pc.Text2, filled = true)
+        IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${l.name}" else "Follow ${l.name}", { app.toggleLeague(l.id, l.name) }, tint = if (following) Pc.Accent else Pc.Text2, filled = true)
     }
     Spacer(Modifier.height(12.dp))
     UnderlineTabs(listOf("Table", "Matches", "Top scorers", "Teams"), tab, { tab = it })
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (tab) {
             0 -> if (d.standings.isEmpty()) EmptyState("Knockout competition", "${l.name} has no league table. Check Matches for the draw and results.", icon = Icons.Outlined.TableChart)
@@ -206,7 +206,7 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
                 var view by rememberSaveable { mutableIntStateOf(0) }
                 SegmentedTabs(listOf("Short", "Full", "Form"), view, { view = it })
                 StandingsTable(d.standings, openTeam, compact = view == 0, showForm = view == 2)
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { Legend(Pc.Lime, "Your club"); Legend(Pc.Red, "Negative goal difference") }
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) { Legend(Pc.Accent, "Your club"); Legend(Pc.Error, "Negative goal difference") }
             }
             1 -> if (d.fixtures.isEmpty()) EmptyState("No fixtures this week", "Fixtures for the next round appear once they're scheduled.", icon = Icons.Outlined.EventBusy)
             else d.fixtures.groupBy { formatDay(it.kickoffMs) }.forEach { (day, ms) -> LeagueGroup(day, ms, openMatch) }
@@ -236,8 +236,8 @@ private fun ScorerRow(s: Scorer, onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(s.rank.toString(), style = PcType.Label.copy(color = Pc.Text2), modifier = Modifier.width(20.dp))
             PlayerAvatar(s.name, s.team.color)
-            Column(Modifier.weight(1f)) { Text(s.name, style = PcType.Label.copy(fontSize = 15.sp)); Text("${s.team.name} · ${s.assists} assists", style = PcType.BodySmall.copy(fontSize = 13.sp)) }
-            Text(s.goals.toString(), style = PcType.ScoreL.copy(fontSize = 32.sp))
+            Column(Modifier.weight(1f)) { Text(s.name, style = PcType.Label.copy(fontSize = 15.sp)); Text("${s.team.name} · ${s.assists} assists", style = PcType.BodyMuted.copy(fontSize = 13.sp)) }
+            Text(s.goals.toString(), style = PcType.ScoreCompact.copy(fontSize = 32.sp))
         }
     }
 }
@@ -246,7 +246,7 @@ private fun ScorerRow(s: Scorer, onClick: () -> Unit) {
 private fun Legend(color: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Box(Modifier.size(12.dp).clip(PcShape.Badge).background(color))
-        Text(label, style = PcType.Meta.copy(color = Pc.Text2))
+        Text(label, style = PcType.Caption.copy(color = Pc.Text2))
     }
 }
 
@@ -275,7 +275,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
         Crest(t, 64.dp)
         Column(Modifier.weight(1f)) {
             Text(t.name, style = PcType.Title.copy(fontSize = 24.sp, lineHeight = 28.sp))
-            Text(d.leagueName, style = PcType.BodySmall.copy(fontSize = 13.sp))
+            Text(d.leagueName, style = PcType.BodyMuted.copy(fontSize = 13.sp))
         }
     }
     Spacer(Modifier.height(12.dp))
@@ -288,7 +288,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
     }
     Spacer(Modifier.height(8.dp))
     UnderlineTabs(listOf("Matches", "Overview", "Squad", "Table"), tab, { tab = it })
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (tab) {
             0 -> if (page.fixtures.isEmpty()) EmptyState("No matches this fortnight", "Upcoming fixtures appear once they're scheduled.", icon = Icons.Outlined.EventBusy)
@@ -312,9 +312,9 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                     group.forEach { p ->
                         PcCard(Modifier.fillMaxWidth(), onClick = { openPlayer(p.playerId) }) {
                             Row(Modifier.padding(12.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Box(Modifier.size(32.dp).clip(PcShape.Badge).background(Pc.Raised), contentAlignment = Alignment.Center) { Text(p.number.toString(), style = PcType.Label) }
+                                Box(Modifier.size(32.dp).clip(PcShape.Badge).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text(p.number.toString(), style = PcType.Label) }
                                 Text(p.name, style = PcType.Label.copy(fontSize = 15.sp), modifier = Modifier.weight(1f))
-                                p.rating?.let { r -> Box(Modifier.heightIn(min = 26.dp).clip(PcShape.Badge).background(ratingColor(r)).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) { Text("%.1f".format(r), color = Pc.OnLime, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) } }
+                                p.rating?.let { r -> Box(Modifier.heightIn(min = 26.dp).clip(PcShape.Badge).background(ratingColor(r)).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) { Text("%.1f".format(r), color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp) } }
                                 Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                             }
                         }
@@ -330,14 +330,14 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
 @Composable
 private fun KeyValue(k: String, v: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(k, style = PcType.BodySmall, modifier = Modifier.weight(1f))
+        Text(k, style = PcType.BodyMuted, modifier = Modifier.weight(1f))
         Text(v, style = PcType.Label, textAlign = TextAlign.End)
     }
 }
 
 @Composable
 fun StatTile(value: String, label: String, modifier: Modifier, color: Color = Pc.Text) {
-    PcCard(modifier) { Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(value, style = PcType.ScoreL.copy(fontSize = 28.sp, color = color), maxLines = 1); Text(label, style = PcType.Meta) } }
+    PcCard(modifier) { Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(value, style = PcType.ScoreCompact.copy(fontSize = 28.sp, color = color), maxLines = 1); Text(label, style = PcType.Caption) } }
 }
 
 // ---------------- Player ----------------
@@ -364,14 +364,14 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
         PlayerAvatar(s.name, s.team.color, 80)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(s.name, style = PcType.Title)
-            Text("${s.position} · #${s.number}", style = PcType.BodySmall)
-            Text(s.team.name, style = PcType.Label.copy(color = Pc.Lime), modifier = Modifier.pcClickable(PcShape.Chip, "Open ${s.team.name}") { openTeam(s.team.id) }.padding(vertical = 8.dp))
+            Text("${s.position} · #${s.number}", style = PcType.BodyMuted)
+            Text(s.team.name, style = PcType.Label.copy(color = Pc.Accent), modifier = Modifier.pcClickable(PcShape.Chip, "Open ${s.team.name}") { openTeam(s.team.id) }.padding(vertical = 8.dp))
         }
-        IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${s.name}" else "Follow ${s.name}", { app.togglePlayer(s.id, s.name) }, tint = if (following) Pc.Lime else Pc.Text2, filled = true)
+        IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${s.name}" else "Follow ${s.name}", { app.togglePlayer(s.id, s.name) }, tint = if (following) Pc.Accent else Pc.Text2, filled = true)
     }
     Spacer(Modifier.height(8.dp))
     UnderlineTabs(listOf("Profile", "Matches", "Stats", "Career"), tab, { tab = it })
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         when (tab) {
             0 -> {
@@ -380,7 +380,7 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     StatTile(p.goals.toString(), "Goals", Modifier.weight(1f)); StatTile(p.assists.toString(), "Assists", Modifier.weight(1f))
-                    StatTile("%.1f".format(s.rating), "Rating", Modifier.weight(1f), Pc.Lime); StatTile(p.matches.toString(), "Matches", Modifier.weight(1f))
+                    StatTile("%.1f".format(s.rating), "Rating", Modifier.weight(1f), Pc.Accent); StatTile(p.matches.toString(), "Matches", Modifier.weight(1f))
                 }
                 if (p.scoutingNote.isNotBlank()) BriefCard(p.scoutingNote, title = "SCOUTING NOTE", updated = "")
             }
@@ -391,10 +391,10 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                         Crest(m.opponent, 32.dp)
                         Column(Modifier.weight(1f)) {
                             Text("${if (m.home) "vs" else "at"} ${m.opponent.name}", style = PcType.Label)
-                            Text("${formatDay(m.dateMs)} · ${m.score} · ${m.minutes}'", style = PcType.Meta.copy(color = Pc.Text2))
+                            Text("${formatDay(m.dateMs)} · ${m.score} · ${m.minutes}'", style = PcType.Caption.copy(color = Pc.Text2))
                         }
                         Box(Modifier.heightIn(min = 28.dp).clip(PcShape.Badge).background(ratingColor(m.rating)).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                            Text("%.1f".format(m.rating), color = Pc.OnLime, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
+                            Text("%.1f".format(m.rating), color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -406,15 +406,15 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                 PcCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         if (per90 == 0) {
-                            Bar("Goals", p.goals.toDouble(), 15.0, Pc.Lime, "%.0f")
-                            Bar("Assists", p.assists.toDouble(), 10.0, Pc.Live, "%.0f")
-                            Bar("xG", p.xg, 12.0, Pc.Lime, "%.1f")
+                            Bar("Goals", p.goals.toDouble(), 15.0, Pc.Accent, "%.0f")
+                            Bar("Assists", p.assists.toDouble(), 10.0, Pc.LiveText, "%.0f")
+                            Bar("xG", p.xg, 12.0, Pc.Accent, "%.1f")
                             Bar("Minutes", p.minutes.toDouble(), 1000.0, Pc.Neutral, "%.0f")
                         } else {
-                            Bar("Goals", p.goals * 90.0 / mins, 1.2, Pc.Lime, "%.2f")
-                            Bar("Shots", p.shotsPer90, 5.0, Pc.Lime, "%.1f")
-                            Bar("Key passes", p.keyPassesPer90, 4.0, Pc.Live, "%.1f")
-                            Bar("xG", p.xg * 90.0 / mins, 1.0, Pc.Lime, "%.2f")
+                            Bar("Goals", p.goals * 90.0 / mins, 1.2, Pc.Accent, "%.2f")
+                            Bar("Shots", p.shotsPer90, 5.0, Pc.Accent, "%.1f")
+                            Bar("Key passes", p.keyPassesPer90, 4.0, Pc.LiveText, "%.1f")
+                            Bar("xG", p.xg * 90.0 / mins, 1.0, Pc.Accent, "%.2f")
                         }
                     }
                 }
@@ -423,11 +423,11 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     p.career.forEachIndexed { i, c ->
                         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(12.dp).clip(CircleShape).background(if (c.current) Pc.Lime else Pc.BorderStrong))
-                            Column(Modifier.weight(1f)) { Text(c.club, style = PcType.Label.copy(fontSize = 15.sp)); Text(c.years, style = PcType.BodySmall.copy(fontSize = 13.sp)) }
-                            Column(horizontalAlignment = Alignment.End) { Text("${c.apps} apps", style = PcType.BodySmall.copy(fontSize = 13.sp)); Text("${c.goals} goals", style = PcType.Label.copy(color = Pc.Lime, fontSize = 13.sp)) }
+                            Box(Modifier.size(12.dp).clip(CircleShape).background(if (c.current) Pc.Accent else Pc.OutlineStrong))
+                            Column(Modifier.weight(1f)) { Text(c.club, style = PcType.Label.copy(fontSize = 15.sp)); Text(c.years, style = PcType.BodyMuted.copy(fontSize = 13.sp)) }
+                            Column(horizontalAlignment = Alignment.End) { Text("${c.apps} apps", style = PcType.BodyMuted.copy(fontSize = 13.sp)); Text("${c.goals} goals", style = PcType.Label.copy(color = Pc.Accent, fontSize = 13.sp)) }
                         }
-                        if (i < p.career.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Border))
+                        if (i < p.career.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(Pc.Outline))
                     }
                 }
             }
@@ -437,14 +437,14 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
 
 @Composable
 private fun Tag(text: String) {
-    Box(Modifier.heightIn(min = 28.dp).clip(PcShape.Chip).background(Pc.Surface).border(1.dp, Pc.Border, PcShape.Chip).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { Text(text, style = PcType.Meta.copy(color = Pc.Text)) }
+    Box(Modifier.heightIn(min = 28.dp).clip(PcShape.Chip).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Chip).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { Text(text, style = PcType.Caption.copy(color = Pc.Text)) }
 }
 
 @Composable
 private fun Bar(label: String, value: Double, max: Double, color: Color, fmt: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(label, style = PcType.BodySmall, modifier = Modifier.width(92.dp))
-        Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(Pc.Border)) { Box(Modifier.fillMaxWidth((value / max).coerceIn(0.03, 1.0).toFloat()).height(8.dp).clip(CircleShape).background(color)) }
+        Text(label, style = PcType.BodyMuted, modifier = Modifier.width(92.dp))
+        Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(Pc.Outline)) { Box(Modifier.fillMaxWidth((value / max).coerceIn(0.03, 1.0).toFloat()).height(8.dp).clip(CircleShape).background(color)) }
         Text(fmt.format(value), style = PcType.Label, modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
     }
 }

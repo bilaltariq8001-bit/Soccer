@@ -50,4 +50,5 @@
     <string name="auth_reset_sent">If an account uses that email, a reset link is on its way.</string>
     <string name="auth_sign_out">Sign out</string>
     <string name="auth_why">An account backs up your follows, alerts and Spoiler Shield. Everything else works without one.</string>
+    <string name="splash_tagline">Football news  /  Live matches</string>
 </resources>
