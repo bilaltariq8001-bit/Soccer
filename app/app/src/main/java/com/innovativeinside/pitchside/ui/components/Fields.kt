@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.innovativeinside.pitchside.ui.theme.Pc
 import com.innovativeinside.pitchside.ui.theme.PcShape
 import com.innovativeinside.pitchside.ui.theme.PcType
+import com.innovativeinside.pitchside.ui.theme.PcSpace
 
 /** The app's text field: label above, 52dp control, inline error below announced to TalkBack. */
 @Composable
@@ -59,14 +60,14 @@ fun PcTextField(
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = PcType.Label)
+        Text(label, style = PcType.LabelStrong)
         BasicTextField(
             value = value, onValueChange = onValueChange, singleLine = true, enabled = enabled,
             textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Accent),
             keyboardOptions = KeyboardOptions(keyboardType = if (password) KeyboardType.Password else keyboardType, imeAction = imeAction),
             keyboardActions = KeyboardActions(onAny = { onIme() }),
             visualTransformation = if (password && !visible) PasswordVisualTransformation() else VisualTransformation.None,
-            modifier = Modifier.fillMaxWidth().height(52.dp).testTag("field_$tag").semantics {
+            modifier = Modifier.fillMaxWidth().height(PcSpace.touch + 4.dp).testTag("field_$tag").semantics {
                 contentDescription = label
                 if (error != null) error(error)
             },

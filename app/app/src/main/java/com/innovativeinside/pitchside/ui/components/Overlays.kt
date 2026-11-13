@@ -57,23 +57,23 @@ fun PcDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().clip(PcShape.Hero).background(Pc.Surface).border(1.dp, Pc.OutlineStrong, PcShape.Hero).padding(24.dp),
+            Modifier.fillMaxWidth().clip(PcShape.Tile).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Tile).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (icon != null) Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = Pc.Accent) }
+            if (icon != null) Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = Pc.Accent) }
             Text(title, style = PcType.Subtitle)
             Text(body, style = PcType.BodyMuted)
             Spacer(Modifier.height(4.dp))
             Box(
                 Modifier.fillMaxWidth().heightIn48().clip(PcShape.Control).background(if (danger) Pc.Error else Pc.Accent).pcClickable(PcShape.Control, onClick = onConfirm),
                 contentAlignment = Alignment.Center,
-            ) { Text(confirmLabel, color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp) }
+            ) { Text(confirmLabel, style = PcType.LabelStrong, color = Pc.OnAccent) }
             TextAction(dismissLabel, onDismiss, Modifier.fillMaxWidth(), color = Pc.Text2)
         }
     }
 }
 
-private fun Modifier.heightIn48(): Modifier = this.then(Modifier.height(52.dp))
+private fun Modifier.heightIn48(): Modifier = this.then(Modifier.height(48.dp))
 
 /** Bottom sheet built on a dialog so it works without experimental Material APIs. */
 @Composable
@@ -81,17 +81,17 @@ fun PcSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
     val none = remember { MutableInteractionSource() }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(
-            Modifier.fillMaxSize().background(Color(0x99000000)).clickable(interactionSource = none, indication = null, onClick = onDismiss),
+            Modifier.fillMaxSize().background(Pc.Scrim).clickable(interactionSource = none, indication = null, onClick = onDismiss),
             contentAlignment = Alignment.BottomCenter,
         ) {
             Column(
-                Modifier.widthIn(max = 560.dp).fillMaxWidth().clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)).background(Pc.Surface)
-                    .border(1.dp, Pc.OutlineStrong, RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                Modifier.widthIn(max = 560.dp).fillMaxWidth().clip(PcShape.SheetTop).background(Pc.Surface)
+                    .border(1.dp, Pc.OutlineStrong, PcShape.SheetTop)
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                     .navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Box(Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp).clip(RoundedCornerShape(2.dp)).background(Pc.OutlineStrong))
+                Box(Modifier.align(Alignment.CenterHorizontally).size(width = 36.dp, height = 4.dp).clip(PcShape.Chip).background(Pc.OutlineStrong))
                 content()
                 Spacer(Modifier.height(8.dp))
             }
@@ -100,15 +100,17 @@ fun PcSheet(onDismiss: () -> Unit, content: @Composable () -> Unit) {
 }
 
 @Composable
-fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, autoFocus: Boolean = false) {
+fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, autoFocus: Boolean = false, onSearch: () -> Unit = {}) {
     val focus = remember { FocusRequester() }
     BasicTextField(
         value = value, onValueChange = onValueChange, singleLine = true,
         textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Accent),
-        modifier = modifier.fillMaxWidth().height(52.dp).focusRequester(focus),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { onSearch() }),
+        modifier = modifier.fillMaxWidth().height(48.dp).focusRequester(focus),
         decorationBox = { inner ->
             Row(
-                Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Control).padding(horizontal = 16.dp),
+                Modifier.fillMaxSize().clip(PcShape.Chip).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Chip).padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Icon(Icons.Outlined.Search, null, tint = Pc.Text2, modifier = Modifier.size(20.dp))
@@ -116,10 +118,9 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
                     if (value.isEmpty()) Text(placeholder, style = PcType.Body, color = Pc.Text2)
                     inner()
                 }
-                if (value.isNotEmpty()) Icon(
-                    Icons.Outlined.Close, "Clear search", tint = Pc.Text2,
-                    modifier = Modifier.size(24.dp).pcClickable(PcShape.Chip, "Clear search") { onValueChange("") },
-                )
+                if (value.isNotEmpty()) Box(Modifier.size(40.dp).pcClickable(PcShape.Chip, "Clear search") { onValueChange("") }, contentAlignment = Alignment.Center) {
+                    Icon(Icons.Outlined.Close, "Clear search", tint = Pc.Text2, modifier = Modifier.size(20.dp))
+                }
             }
         },
     )

@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
@@ -26,6 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
+import com.innovativeinside.pitchside.ui.theme.PcSpace
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -91,34 +96,60 @@ fun StateCard(
     tint: androidx.compose.ui.graphics.Color = Pc.Accent,
 ) {
     PcCard(modifier.fillMaxWidth()) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp), horizontalAlignment = Alignment.Start, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(44.dp).clip(PcShape.Control).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint) }
-            Text(title, style = PcType.Subtitle)
-            Text(body, style = PcType.BodyMuted)
-            if (actionLabel != null) { Spacer(Modifier.height(4.dp)); PrimaryButton(actionLabel, onAction, Modifier.testTag("retry_button")) }
+        Column(Modifier.fillMaxWidth().padding(horizontal = PcSpace.lg, vertical = PcSpace.lg), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+            Box(Modifier.size(48.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp)) }
+            Spacer(Modifier.height(PcSpace.xxs))
+            Text(title, style = PcType.Subtitle, textAlign = TextAlign.Center)
+            Text(body, style = PcType.BodyMuted, textAlign = TextAlign.Center)
+            if (actionLabel != null) { Spacer(Modifier.height(PcSpace.xs)); PrimaryButton(actionLabel, onAction, Modifier.testTag("retry_button")) }
         }
     }
 }
 
-/** Empty state with the standard inbox icon. Used when a load succeeded but there is nothing to show. */
+/** Empty state: a load succeeded but there is nothing to show. */
 @Composable
 fun EmptyState(title: String, body: String, modifier: Modifier = Modifier, actionLabel: String? = null, onAction: () -> Unit = {}, icon: ImageVector = Icons.Outlined.Inbox) =
     StateCard(icon, title, body, modifier, actionLabel, onAction)
 
-/** Skeleton list shown on first load (no spinners on content screens). */
+/** Skeleton list shown on first load (no spinners on content screens): rows inside one tile. */
 @Suppress("ModifierParameter")
 @Composable
 fun ListSkeleton(rows: Int = 4, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        repeat(rows) { MatchCardSkeleton() }
+    PcCard(modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite; contentDescription = "Loading" }) {
+        Column { repeat(rows) { i -> MatchCardSkeleton(); if (i < rows - 1) Hairline() } }
+    }
+}
+
+/** Skeleton that mirrors the Home layout: hero, rail, two bento rows. */
+@Composable
+fun HomeSkeleton(modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth().semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
+        Box(Modifier.fillMaxWidth().height(236.dp).skeleton(PcShape.Tile))
+        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { repeat(3) { Box(Modifier.weight(1f).height(112.dp).skeleton(PcShape.Tile)) } }
+        repeat(2) { Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) { repeat(2) { Box(Modifier.weight(1f).height(156.dp).skeleton(PcShape.Tile)) } } }
+    }
+}
+
+/** Skeleton that mirrors the News layout: lead card then compact rows. */
+@Composable
+fun NewsSkeleton(modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth().semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).skeleton(PcShape.Tile))
+        Box(Modifier.fillMaxWidth(0.8f).height(20.dp).skeleton())
+        repeat(3) {
+            Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) { Box(Modifier.fillMaxWidth(0.3f).height(10.dp).skeleton()); Box(Modifier.fillMaxWidth().height(16.dp).skeleton()); Box(Modifier.fillMaxWidth(0.7f).height(16.dp).skeleton()) }
+                Box(Modifier.size(width = 104.dp, height = 78.dp).skeleton(PcShape.Control))
+            }
+        }
     }
 }
 
 @Composable
 fun DetailSkeleton(modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Box(Modifier.fillMaxWidth().height(160.dp).skeleton())
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { repeat(3) { Box(Modifier.weight(1f).height(36.dp).skeleton()) } }
-        repeat(4) { Box(Modifier.fillMaxWidth().height(56.dp).skeleton()) }
+    Column(modifier.fillMaxWidth().padding(PcSpace.md).semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.md)) {
+        Box(Modifier.fillMaxWidth().height(180.dp).skeleton(PcShape.Tile))
+        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { repeat(4) { Box(Modifier.weight(1f).height(32.dp).skeleton()) } }
+        repeat(4) { Box(Modifier.fillMaxWidth().height(56.dp).skeleton(PcShape.Control)) }
     }
 }
