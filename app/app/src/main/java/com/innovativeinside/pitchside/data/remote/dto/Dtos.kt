@@ -44,7 +44,33 @@ data class FixtureDto(
     val homeScore: Int? = null,
     val awayScore: Int? = null,
     val brief: String? = null,
+    /** Pre-match win probability, when the source publishes one (apifootball.com get_predictions). */
+    val prediction: PredictionDto? = null,
 )
+
+/** Win / draw / win probabilities in percent, plus a couple of goal markets when known. */
+@Serializable
+data class PredictionDto(
+    val home: Double,
+    val draw: Double,
+    val away: Double,
+    val over25: Double? = null,
+    val btts: Double? = null,
+)
+
+/** Decimal 1X2 prices from one bookmaker (or the live market when [live]). */
+@Serializable
+data class OddsDto(val bookmaker: String, val home: Double, val draw: Double, val away: Double, val updated: String? = null, val live: Boolean = false)
+
+@Serializable
+data class CommentDto(val time: String, val text: String, val state: String = "")
+
+/** Live commentary and the live 1X2 market of one match. */
+@Serializable
+data class LiveDataDto(val comments: List<CommentDto> = emptyList(), val liveOdds: OddsDto? = null)
+
+@Serializable
+data class VideoDto(val title: String, val url: String)
 
 @Serializable
 data class EventDto(

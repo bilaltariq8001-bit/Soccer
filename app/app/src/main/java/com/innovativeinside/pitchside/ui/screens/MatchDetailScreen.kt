@@ -39,6 +39,7 @@ import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.TableChart
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,6 +57,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -68,6 +70,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.innovativeinside.pitchside.core.UiState
 import com.innovativeinside.pitchside.data.model.EventKind
+import com.innovativeinside.pitchside.data.model.Highlight
+import com.innovativeinside.pitchside.data.model.MatchOdds
+import com.innovativeinside.pitchside.data.model.WinProbability
 import com.innovativeinside.pitchside.data.model.Lineup
 import com.innovativeinside.pitchside.data.model.Match
 import com.innovativeinside.pitchside.data.model.MatchEvent
@@ -90,6 +95,7 @@ import com.innovativeinside.pitchside.ui.components.LiveBadge
 import com.innovativeinside.pitchside.ui.components.Overline
 import com.innovativeinside.pitchside.ui.components.PcCard
 import com.innovativeinside.pitchside.ui.components.PrimaryButton
+import com.innovativeinside.pitchside.ui.components.ProbabilityBar
 import com.innovativeinside.pitchside.ui.components.ScoreText
 import com.innovativeinside.pitchside.ui.components.SectionHeader
 import com.innovativeinside.pitchside.ui.components.SegmentedTabs
@@ -116,11 +122,12 @@ class MatchNav(
     val openLeague: (String) -> Unit,
 )
 
-private enum class MatchTab(val label: String) { Overview("Overview"), Timeline("Timeline"), Stats("Stats"), Lineups("Lineups"), Table("Table") }
+private enum class MatchTab(val label: String) { Overview("Overview"), Commentary("Commentary"), Timeline("Timeline"), Stats("Stats"), Lineups("Lineups"), Table("Table") }
 
 /** Tabs backed by data for this match; Overview always exists. */
 private fun tabsFor(d: MatchDetail): List<MatchTab> = buildList {
     add(MatchTab.Overview)
+    if (d.commentary.isNotEmpty()) add(MatchTab.Commentary)
     if (d.events.isNotEmpty()) add(MatchTab.Timeline)
     if (d.stats.isNotEmpty()) add(MatchTab.Stats)
     if (d.lineups != null) add(MatchTab.Lineups)
@@ -210,6 +217,7 @@ private fun MatchBody(d: MatchDetail, nav: MatchNav) {
     Column(Modifier.padding(PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         when (tab) {
             MatchTab.Overview -> OverviewTab(d, hidden, onStats = { tabName = MatchTab.Stats.name }) { app.reveal(match.id) }
+            MatchTab.Commentary -> CommentaryTab(d, hidden) { app.reveal(match.id) }
             MatchTab.Timeline -> TimelineTab(d, hidden) { app.reveal(match.id) }
             MatchTab.Stats -> StatsTab(d, hidden) { app.reveal(match.id) }
             MatchTab.Lineups -> LineupsTab(d, nav)
@@ -312,12 +320,139 @@ private fun OverviewTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, on
         SectionHeader("Key numbers", "All stats", onStats)
         PcCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) { d.stats.take(3).forEach { StatBar(it) } } }
     }
+    d.prediction?.let { ProbabilityCard(m, it) }
+    d.odds?.let { OddsCard(it) }
+    if (d.highlights.isNotEmpty()) HighlightsCard(d.highlights)
+    if (d.h2h.isNotEmpty()) HeadToHeadCard(m, d.h2h)
     PcCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xxs)) {
             InfoLine("Kickoff", formatKickoff(m.kickoffMs))
             InfoLine("Venue", m.venue.ifBlank { "To be confirmed" })
             InfoLine("Referee", m.referee ?: "Not announced yet")
             InfoLine("Round", m.round.ifBlank { "-" }, last = true)
+        }
+    }
+}
+
+@Composable
+private fun ProbabilityCard(m: Match, p: WinProbability) {
+    PcCard(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(PcSpace.md).semantics(mergeDescendants = true) {
+                contentDescription = "Win probability: ${m.home.name} ${p.home}%, draw ${p.draw}%, ${m.away.name} ${p.away}%"
+            },
+            verticalArrangement = Arrangement.spacedBy(PcSpace.sm),
+        ) {
+            Overline(if (m.status == Status.Upcoming) "Win probability" else "Pre-match win probability")
+            Row(Modifier.fillMaxWidth()) {
+                ProbCell("${p.home}%", m.home.short, Modifier.weight(1f), TextAlign.Start)
+                ProbCell("${p.draw}%", "Draw", Modifier.weight(1f), TextAlign.Center)
+                ProbCell("${p.away}%", m.away.short, Modifier.weight(1f), TextAlign.End)
+            }
+            ProbabilityBar(p, Modifier.fillMaxWidth())
+            val extra = listOfNotNull(p.over25?.let { "Over 2.5 goals $it%" }, p.btts?.let { "Both teams score $it%" })
+            if (extra.isNotEmpty()) Text(extra.joinToString(" · "), style = PcType.Caption)
+        }
+    }
+}
+
+@Composable
+private fun ProbCell(value: String, label: String, modifier: Modifier, align: TextAlign) {
+    Column(modifier) {
+        Text(value, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), textAlign = align, modifier = Modifier.fillMaxWidth())
+        Text(label, style = PcType.Caption, textAlign = align, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+    }
+}
+
+private fun price(v: Double) = String.format(java.util.Locale.US, "%.2f", v)
+
+@Composable
+private fun OddsCard(o: MatchOdds) {
+    PcCard(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(PcSpace.md).semantics(mergeDescendants = true) {
+                contentDescription = "${if (o.live) "Live odds" else "Odds"}: home ${price(o.home)}, draw ${price(o.draw)}, away ${price(o.away)}"
+            },
+            verticalArrangement = Arrangement.spacedBy(PcSpace.sm),
+        ) {
+            Overline(if (o.live) "Live odds · 1X2" else "Odds · 1X2")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                listOf("1" to o.home, "X" to o.draw, "2" to o.away).forEach { (k, v) ->
+                    Row(
+                        Modifier.weight(1f).clip(PcShape.Control).background(Pc.SurfaceVariant).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs),
+                        horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(k, style = PcType.Caption)
+                        Text(price(v), style = PcType.Numeric.copy(fontWeight = FontWeight.SemiBold))
+                    }
+                }
+            }
+            Text(if (o.live) "In-play decimal prices" else "Decimal prices · ${o.bookmaker}", style = PcType.Caption)
+        }
+    }
+}
+
+@Composable
+private fun HighlightsCard(clips: List<Highlight>) {
+    val uri = LocalUriHandler.current
+    PcCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xxs)) {
+            clips.forEachIndexed { i, c ->
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).pcClickable(PcShape.Control, "Watch ${c.title}") { runCatching { uri.openUri(c.url) } },
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
+                ) {
+                    Icon(Icons.Outlined.PlayCircle, null, tint = Pc.Accent, modifier = Modifier.size(22.dp))
+                    Text(c.title, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text("Highlights", style = PcType.Caption)
+                }
+                if (i < clips.lastIndex) Hairline()
+            }
+        }
+    }
+}
+
+private val h2hDate = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
+
+@Composable
+private fun HeadToHeadCard(m: Match, games: List<Match>) {
+    val homeWins = games.count { g -> g.hasScore && ((g.home.id == m.home.id && g.homeScore!! > g.awayScore!!) || (g.away.id == m.home.id && g.awayScore!! > g.homeScore!!)) }
+    val awayWins = games.count { g -> g.hasScore && ((g.home.id == m.away.id && g.homeScore!! > g.awayScore!!) || (g.away.id == m.away.id && g.awayScore!! > g.homeScore!!)) }
+    val draws = games.count { it.hasScore && it.homeScore == it.awayScore }
+    SectionHeader("Head to head")
+    PcCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xs)) {
+            Text("${m.home.short} $homeWins · Draws $draws · ${m.away.short} $awayWins", style = PcType.LabelStrong, modifier = Modifier.padding(vertical = PcSpace.xs))
+            games.forEach { g ->
+                Hairline()
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 44.dp).semantics(mergeDescendants = true) {},
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
+                ) {
+                    Text(java.time.Instant.ofEpochMilli(g.kickoffMs).atZone(java.time.ZoneId.systemDefault()).format(h2hDate), style = PcType.Caption, modifier = Modifier.width(84.dp))
+                    Text(g.home.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text("${g.homeScore ?: "-"}–${g.awayScore ?: "-"}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+                    Text(g.away.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommentaryTab(d: MatchDetail, hidden: Boolean, onReveal: () -> Unit) {
+    if (hidden) { SpoilerGate("Commentary", onReveal); return }
+    d.odds?.takeIf { it.live }?.let { OddsCard(it) }
+    PcCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xs)) {
+            Text("Live commentary · updates every 30 s", style = PcType.Caption, modifier = Modifier.padding(vertical = PcSpace.xs))
+            d.commentary.forEach { c ->
+                Hairline()
+                Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(vertical = PcSpace.xs).semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                    Text(c.time, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), modifier = Modifier.width(52.dp))
+                    Text(c.text, style = PcType.Body, modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }

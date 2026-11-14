@@ -118,7 +118,7 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
                     MatchList(mine, nav.openMatch)
                 }
                 SegmentedControl(
-                    listOf(Segment("Teams", prefs.teams.size), Segment("Leagues", prefs.leagues.size), Segment("Players", prefs.players.size)),
+                    listOf(Segment("Teams", prefs.teams.size), Segment("Leagues", d.leagues.count { it.id in prefs.leagues }), Segment("Players", prefs.players.size)),
                     tab, { tab = it },
                 )
                 when (tab) {

@@ -67,6 +67,21 @@ abstract class LoadViewModel<T> : ViewModel() {
         }
     }
 
+    /**
+     * Collects a push stream (the livescore socket) and refreshes silently when [shouldReload] says the change matters
+     * to what is on screen. Bursts are coalesced: at most one reload every [minGapMs].
+     */
+    protected fun reloadOn(updates: kotlinx.coroutines.flow.Flow<Set<String>>, minGapMs: Long = 5_000, shouldReload: (T, Set<String>) -> Boolean) {
+        viewModelScope.launch {
+            var last = 0L
+            updates.collect { ids ->
+                val data = (_state.value as? UiState.Success)?.data ?: return@collect
+                val now = System.currentTimeMillis()
+                if (now - last >= minGapMs && shouldReload(data, ids)) { last = now; silentRefresh() }
+            }
+        }
+    }
+
     /** Background refresh: never shows a spinner and never replaces good data with an error. */
     private fun silentRefresh() {
         loadJob?.cancel()

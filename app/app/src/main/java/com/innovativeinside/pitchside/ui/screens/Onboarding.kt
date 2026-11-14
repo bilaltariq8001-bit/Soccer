@@ -149,18 +149,21 @@ fun WelcomeScreen(onStart: () -> Unit, onRestore: () -> Unit) {
             Text("Pitchside", style = PcType.Subtitle)
         }
         Spacer(Modifier.height(48.dp))
+        // What the app does, without inventing a match: the real fixtures load right after onboarding.
         PcCard(Modifier.widthIn(max = 520.dp).fillMaxWidth(), shape = PcShape.Hero, border = Pc.OutlineStrong) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    com.innovativeinside.pitchside.ui.components.StatusBadge(Status.Live, "74'")
-                    Text("Premier Division", style = PcType.Caption)
+                listOf(
+                    "Live scores, goals and cards as they happen",
+                    "Tables, lineups, stats and head-to-head",
+                    "Win probability before every kickoff",
+                ).forEach { line ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Check, null, tint = Pc.Accent, modifier = Modifier.size(16.dp))
+                        }
+                        Text(line, style = PcType.Body)
+                    }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ng", "Northgate", "NG", 0xFF1F6F6B), 36.dp); Text("Northgate", style = PcType.LabelStrong, maxLines = 1) }
-                    Text("2 – 1", style = PcType.ScoreCompact)
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) { Crest(Team("ru", "Riverside", "RU", 0xFF7A3FBF), 36.dp); Text("Riverside", style = PcType.LabelStrong, maxLines = 1) }
-                }
-                Text("Riverside need one goal to stay level with the leaders.", style = PcType.BodyMuted.copy(color = Pc.Text))
             }
         }
         Spacer(Modifier.weight(1f))

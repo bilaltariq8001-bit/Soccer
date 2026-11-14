@@ -22,6 +22,10 @@ import com.innovativeinside.pitchside.data.model.StatRow
 import com.innovativeinside.pitchside.data.model.Status
 import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.data.model.TeamDetail
+import com.innovativeinside.pitchside.data.model.WinProbability
+import com.innovativeinside.pitchside.data.model.MatchOdds
+import com.innovativeinside.pitchside.data.model.Commentary
+import com.innovativeinside.pitchside.data.model.Highlight
 import com.innovativeinside.pitchside.data.remote.dto.CareerStopDto
 import com.innovativeinside.pitchside.data.remote.dto.EventDto
 import com.innovativeinside.pitchside.data.remote.dto.FixtureDto
@@ -32,6 +36,10 @@ import com.innovativeinside.pitchside.data.remote.dto.NewsDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerMatchDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerSummaryDto
+import com.innovativeinside.pitchside.data.remote.dto.PredictionDto
+import com.innovativeinside.pitchside.data.remote.dto.OddsDto
+import com.innovativeinside.pitchside.data.remote.dto.CommentDto
+import com.innovativeinside.pitchside.data.remote.dto.VideoDto
 import com.innovativeinside.pitchside.data.remote.dto.ScorerDto
 import com.innovativeinside.pitchside.data.remote.dto.SearchDto
 import com.innovativeinside.pitchside.data.remote.dto.SquadPlayerDto
@@ -95,8 +103,22 @@ object Mappers {
             homeScore = if (st == Status.Upcoming) null else d.homeScore,
             awayScore = if (st == Status.Upcoming) null else d.awayScore,
             status = st, label = label, brief = d.brief.orEmpty(),
+            probs = d.prediction?.let(::prediction),
         )
     }
+
+    /** Rounds to whole percents; null when the three outcomes are all zero (no real prediction). */
+    fun prediction(d: PredictionDto): WinProbability? {
+        if (d.home + d.draw + d.away <= 0.0) return null
+        return WinProbability(
+            Math.round(d.home).toInt(), Math.round(d.draw).toInt(), Math.round(d.away).toInt(),
+            d.over25?.let { Math.round(it).toInt() }, d.btts?.let { Math.round(it).toInt() },
+        )
+    }
+
+    fun odds(d: OddsDto) = MatchOdds(d.bookmaker, d.home, d.draw, d.away, d.live)
+    fun comment(d: CommentDto) = Commentary(d.time, d.text)
+    fun highlight(d: VideoDto) = Highlight(d.title, d.url)
 
     fun eventKind(s: String): EventKind? = when (s) {
         "goal" -> EventKind.Goal

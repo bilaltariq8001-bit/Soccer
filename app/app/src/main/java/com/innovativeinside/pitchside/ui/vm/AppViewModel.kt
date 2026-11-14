@@ -55,6 +55,9 @@ class AppViewModel(private val c: AppContainer) : ViewModel() {
     val events = _events.receiveAsFlow()
 
     val usesMockData: Boolean get() = c.usesMockData
+    /** Live socket only while the app is visible (MainActivity onStart / onStop). */
+    fun onForeground() = c.onForeground()
+    fun onBackground() = c.onBackground()
     val mockBehavior get() = c.mockBehavior
 
     private fun update(block: (UserPrefs) -> UserPrefs) = viewModelScope.launch { c.prefs.update(block) }

@@ -57,4 +57,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        app.onForeground()
+    }
+
+    override fun onStop() {
+        app.onBackground()
+        super.onStop()
+    }
 }

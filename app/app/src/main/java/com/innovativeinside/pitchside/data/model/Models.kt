@@ -40,10 +40,24 @@ data class Match(
     val label: String,
     /** Short Match Brief text (computed from match data on the backend). */
     val brief: String,
+    /** Pre-match win probability when the data source has one. */
+    val probs: WinProbability? = null,
 ) {
     val hasScore: Boolean get() = homeScore != null && awayScore != null
     fun involves(teamIds: Collection<String>) = home.id in teamIds || away.id in teamIds
 }
+
+/** Percentages (0-100) for home win, draw and away win; goal markets when the source publishes them. */
+data class WinProbability(val home: Int, val draw: Int, val away: Int, val over25: Int? = null, val btts: Int? = null)
+
+/** Decimal 1X2 odds from one bookmaker, or the in-play market when [live]. */
+data class MatchOdds(val bookmaker: String, val home: Double, val draw: Double, val away: Double, val live: Boolean = false)
+
+/** One line of live commentary ("44:58", "Kunshan free kick"). */
+data class Commentary(val time: String, val text: String)
+
+/** A highlight clip opened in the browser or video app. */
+data class Highlight(val title: String, val url: String)
 
 enum class EventKind { Goal, YellowCard, RedCard, Sub }
 

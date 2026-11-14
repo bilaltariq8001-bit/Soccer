@@ -143,7 +143,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
             }
             item {
                 if (s.sending) Text("Thinking…", style = PcType.BodyMuted, modifier = Modifier.padding(start = 4.dp).testTag("ask_thinking"))
-                else FlowChips(listOf("Who leads the table?", "Redmont form", "Who scores most for Northgate?"), "", { onSend(it) }, Modifier.fillMaxWidth())
+                else FlowChips(listOf("Who leads the table?", "Who is the top scorer?", "Which team is in the best form?"), "", { onSend(it) }, Modifier.fillMaxWidth())
             }
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

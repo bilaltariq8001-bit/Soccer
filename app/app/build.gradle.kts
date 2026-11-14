@@ -14,14 +14,20 @@ android {
         applicationId = "com.innovativeinside.pitchside"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.3.1"
+        versionCode = 5
+        versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Base URL of the Pitchside REST gateway (see API_CONTRACTS.md). Empty means the app runs on the
         // built-in mock data source. Set it with -PpitchsideApiBaseUrl=https://... or in gradle.properties.
         val apiBase = (project.findProperty("pitchsideApiBaseUrl") as String?) ?: ""
         buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
+
+        // apifootball.com v3 key. When set, the app reads football data straight from apifootball.com (see
+        // data/remote/ApiFootballComApi.kt). Keep it out of the repo: put apifootballKey=... in ~/.gradle/gradle.properties
+        // (or $GRADLE_USER_HOME/gradle.properties), or pass -PapifootballKey=... . Empty falls back to the gateway or mock data.
+        val apifootballKey = ((project.findProperty("apifootballKey") as String?) ?: "").trim()
+        buildConfigField("String", "APIFOOTBALL_KEY", "\"$apifootballKey\"")
     }
 
     buildTypes {

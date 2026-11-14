@@ -50,15 +50,24 @@ data class HomeData(
     val live: List<Match> get() = matches.filter { it.status == Status.Live }
 }
 
-const val MAIN_LEAGUE = "pd"
+/**
+ * Which competitions to try for the Home standings tile: followed ones the data source knows, then the source's own
+ * leagues in its order. Followed ids the source doesn't know (e.g. a default from another data source) are skipped.
+ */
+fun tableCandidates(followed: List<String>, known: List<String>, max: Int = 3): List<String> =
+    (if (known.isEmpty()) followed else followed.filter { it in known } + known).distinct().take(max)
 
 class HomeViewModel(
     private val repo: FootballRepository,
     /** Followed league ids, in the user's order; the first one with a table feeds the standings tile. */
     private val followedLeagues: suspend () -> List<String> = { emptyList() },
+    liveUpdates: kotlinx.coroutines.flow.Flow<Set<String>> = kotlinx.coroutines.flow.emptyFlow(),
     private val today: () -> LocalDate,
 ) : LoadViewModel<HomeData>() {
-    init { load() }
+    init {
+        load()
+        reloadOn(liveUpdates) { d, ids -> d.matches.any { it.id in ids } || d.live.isNotEmpty() }
+    }
 
     override suspend fun fetch(refresh: Boolean): Result<HomeData> = coroutineScope {
         val matches = async { repo.matchesOn(today(), refresh) }
@@ -66,7 +75,7 @@ class HomeViewModel(
         val leagues = async { repo.leagues(refresh) }
         val ahead = (1..3L).map { d -> async { repo.matchesOn(today().plusDays(d), refresh).getOrDefault(emptyList()) } }
         val table = async {
-            val candidates = (followedLeagues() + MAIN_LEAGUE).distinct().take(3)
+            val candidates = tableCandidates(followedLeagues(), leagues.await().getOrDefault(emptyList()).map { it.id })
             candidates.firstNotNullOfOrNull { id -> repo.leagueDetail(id, refresh).getOrNull()?.takeIf { it.standings.isNotEmpty() } }
         }
         // Matches are the point of the page: if they fail, the page fails. The rest degrade to empty.
@@ -98,7 +107,7 @@ class HomeViewModel(
     }
 
     companion object {
-        val Factory = containerFactory { c, _ -> HomeViewModel(c.football, { c.prefs.prefs.first().leagues }) { c.clock.today() } }
+        val Factory = containerFactory { c, _ -> HomeViewModel(c.football, { c.prefs.prefs.first().leagues }, c.liveUpdates) { c.clock.today() } }
     }
 }
 
@@ -170,7 +179,11 @@ fun groupByLeague(list: List<Match>, followedLeagues: Collection<String>): List<
         .sortedWith(compareBy<Pair<String, List<Match>>> { (_, ms) -> if (ms.first().leagueId in followedLeagues) 0 else 1 }.thenBy { it.first })
         .map { (name, ms) -> name to ms.sortedBy { it.kickoffMs } }
 
-class MatchesViewModel(private val repo: FootballRepository, private val todayFn: () -> LocalDate) : LoadViewModel<List<Match>>() {
+class MatchesViewModel(
+    private val repo: FootballRepository,
+    liveUpdates: kotlinx.coroutines.flow.Flow<Set<String>> = kotlinx.coroutines.flow.emptyFlow(),
+    private val todayFn: () -> LocalDate,
+) : LoadViewModel<List<Match>>() {
     private val _date = MutableStateFlow(todayFn())
     val date: StateFlow<LocalDate> = _date.asStateFlow()
     private val _filter = MutableStateFlow(MatchFilter.All)
@@ -181,7 +194,10 @@ class MatchesViewModel(private val repo: FootballRepository, private val todayFn
 
     val today: LocalDate get() = todayFn()
 
-    init { load() }
+    init {
+        load()
+        reloadOn(liveUpdates) { list, ids -> list.any { it.id in ids } }
+    }
 
     fun selectDate(d: LocalDate) { if (d != _date.value) { _date.value = d; load() } }
     fun setFilter(f: MatchFilter) { if (f == MatchFilter.MyTeams) _myTeams.value = true else _filter.value = f }
@@ -190,18 +206,25 @@ class MatchesViewModel(private val repo: FootballRepository, private val todayFn
     override suspend fun fetch(refresh: Boolean) = repo.matchesOn(_date.value, refresh)
     override fun pollIntervalMs(data: List<Match>) = if (data.any { it.status == Status.Live }) LIVE_POLL_MS else null
 
-    companion object { val Factory = containerFactory { c, _ -> MatchesViewModel(c.football) { c.clock.today() } } }
+    companion object { val Factory = containerFactory { c, _ -> MatchesViewModel(c.football, c.liveUpdates) { c.clock.today() } } }
 }
 
 // ---------------- Match detail ----------------
 
-class MatchDetailViewModel(private val repo: FootballRepository, private val id: String) : LoadViewModel<MatchDetail>() {
-    init { load() }
+class MatchDetailViewModel(
+    private val repo: FootballRepository,
+    private val id: String,
+    liveUpdates: kotlinx.coroutines.flow.Flow<Set<String>> = kotlinx.coroutines.flow.emptyFlow(),
+) : LoadViewModel<MatchDetail>() {
+    init {
+        load()
+        reloadOn(liveUpdates, minGapMs = 3_000) { _, ids -> id in ids }
+    }
     override suspend fun fetch(refresh: Boolean) = if (id.isBlank()) missingId() else repo.matchDetail(id, refresh)
     override fun isEmpty(data: MatchDetail) = false
     override fun pollIntervalMs(data: MatchDetail) = if (data.match.status == Status.Live) LIVE_POLL_MS else null
 
-    companion object { val Factory = containerFactory { c, s -> MatchDetailViewModel(c.football, s.requireId()) } }
+    companion object { val Factory = containerFactory { c, s -> MatchDetailViewModel(c.football, s.requireId(), c.liveUpdates) } }
 }
 
 // ---------------- Leagues ----------------
@@ -344,7 +367,10 @@ class BuildHomeViewModel(private val c: AppContainer) : androidx.lifecycle.ViewM
         viewModelScope.launch {
             run(0) { true }
             run(1) { c.football.matchesOn(c.clock.today()).isSuccess }
-            run(2) { c.football.leagues().isSuccess && c.football.standings("pd").isSuccess }
+            run(2) {
+                val first = c.football.leagues().getOrNull()?.firstOrNull()
+                first != null && c.football.standings(first.id).isSuccess
+            }
             run(3) { c.football.liveMatches().isSuccess }
             // Persist last, so a crash mid-way re-runs onboarding instead of leaving a half-built home.
             c.prefs.update(com.innovativeinside.pitchside.data.prefs.PrefsReducer::completeOnboarding)

@@ -37,6 +37,16 @@ data class MatchDetail(
     val stats: List<StatRow>,
     val lineups: MatchLineups?,
     val table: List<StandingRow>,
+    /** Pre-match win probability (null when the data source has none). */
+    val prediction: com.innovativeinside.pitchside.data.model.WinProbability? = null,
+    /** Previous meetings of these two teams, newest first. */
+    val h2h: List<Match> = emptyList(),
+    /** Pre-match 1X2 odds (null when the data source has none). */
+    val odds: com.innovativeinside.pitchside.data.model.MatchOdds? = null,
+    /** Live commentary, newest first (live matches only, when the source has it). */
+    val commentary: List<com.innovativeinside.pitchside.data.model.Commentary> = emptyList(),
+    /** Highlight clips, when the source has any for this match. */
+    val highlights: List<com.innovativeinside.pitchside.data.model.Highlight> = emptyList(),
 )
 
 data class LeagueDetail(val league: League, val standings: List<StandingRow>, val fixtures: List<Match>, val scorers: List<Scorer>)
@@ -129,6 +139,16 @@ class DefaultFootballRepository(
             val lineups = async { api.lineups(id) }
             // The table is a nice-to-have on the match page: a failure there must not fail the whole page.
             val table = async { runCatching { api.standings(fixture.leagueId) }.getOrDefault(emptyList()) }
+            // Prediction, odds, head-to-head and commentary are extras too: absent or failing sources leave them empty.
+            val prediction = async { runCatching { api.prediction(id) }.getOrNull()?.let(Mappers::prediction) ?: fixture.probs }
+            val h2h = async { runCatching { api.headToHead(id) }.getOrDefault(emptyList()).map(::match).filter { it.id != id } }
+            val odds = async { runCatching { api.odds(id) }.getOrNull()?.let(Mappers::odds) }
+            val videos = async {
+                if (fixture.status == com.innovativeinside.pitchside.data.model.Status.Finished) runCatching { api.videos(id) }.getOrDefault(emptyList()).map(Mappers::highlight) else emptyList()
+            }
+            val live = async {
+                if (fixture.status == com.innovativeinside.pitchside.data.model.Status.Live) runCatching { api.liveCommentary(id) }.getOrNull() else null
+            }
             val ev = Mappers.events(events.await(), fixture.home.id)
             val scorers = ev.filter { it.kind == com.innovativeinside.pitchside.data.model.EventKind.Goal }.map { it.player }.toSet()
             MatchDetail(
@@ -137,6 +157,11 @@ class DefaultFootballRepository(
                 stats = stats.await().map(Mappers::stat),
                 lineups = Mappers.lineups(lineups.await(), fixture.home.id, fixture.away.id, scorers),
                 table = table.await().map(Mappers::standing),
+                prediction = prediction.await(),
+                h2h = h2h.await(),
+                odds = live.await()?.liveOdds?.let(Mappers::odds) ?: odds.await(),
+                commentary = live.await()?.comments.orEmpty().map(Mappers::comment).asReversed(),
+                highlights = videos.await(),
             )
         }
     }

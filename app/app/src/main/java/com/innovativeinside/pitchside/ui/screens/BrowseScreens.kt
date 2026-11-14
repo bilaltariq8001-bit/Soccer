@@ -176,16 +176,21 @@ fun LeaguesContent(
                         is UiState.Success -> leagueSection(detail.data, view, openTeam, openMatch, openPlayer)
                     }
                     item { SectionHeader("All competitions", modifier = Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.md)) }
-                    item {
-                        PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth()) {
-                            Column { leagues.forEachIndexed { i, l ->
-                                FollowRow({ LeagueBadge(l.short) }, l.name, "${l.country} · ${l.currentRound}", l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) }) { openLeague(l.id) }
-                                if (i < leagues.lastIndex) Hairline()
-                            } }
+                    // Grouped by country, in the data source's country order (apifootball.com get_countries).
+                    val byCountry = state.data.leagues.groupBy { it.country.ifBlank { "Other" } }
+                    byCountry.forEach { (country, group) ->
+                        if (byCountry.size > 1) item(key = "country-$country") { Overline(country, Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.sm, bottom = PcSpace.xxs)) }
+                        item(key = "countryCard-$country") {
+                            PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth()) {
+                                Column { group.forEachIndexed { i, l ->
+                                    FollowRow({ LeagueBadge(l.short) }, l.name, listOf(l.country, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) }) { openLeague(l.id) }
+                                    if (i < group.lastIndex) Hairline()
+                                } }
+                            }
                         }
                     }
                     if (state.data.topPlayers.isNotEmpty()) {
-                        item { SectionHeader("Top-rated players", modifier = Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.md)) }
+                        item { SectionHeader(if (state.data.topPlayers.any { it.rating > 0 }) "Top-rated players" else "Top scorers", modifier = Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.md)) }
                         item {
                             PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth()) {
                                 Column { state.data.topPlayers.forEachIndexed { i, p -> PlayerRow(p, { openPlayer(p.id) }); if (i < state.data.topPlayers.lastIndex) Hairline() } }
@@ -237,7 +242,7 @@ fun LeagueRow(l: League, following: Boolean, onOpen: () -> Unit, onToggle: () ->
 
 /** Player row: avatar, name, position · club · nationality, and the rating pill. */
 @Composable
-fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () -> Unit = { RatingPill(p.rating) }) {
+fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () -> Unit = { if (p.rating > 0) RatingPill(p.rating) }) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 64.dp).pcClickable(PcShape.Control, "Open ${p.name}", onClick = onClick).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
@@ -245,7 +250,7 @@ fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () ->
         PlayerAvatar(p.name, p.team.color, 40.dp)
         Column(Modifier.weight(1f)) {
             Text(p.name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${p.position} · ${p.team.name} · ${p.nationality}", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOf(p.position, p.team.name, p.nationality).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         trailing()
     }

@@ -96,6 +96,21 @@ fun matchDescription(m: Match, hidden: Boolean = false): String = buildString {
     append(", "); append(m.away.name); if (showScore) append(" ${m.awayScore}")
     append(", "); append(spokenStatus(m))
     if (hidden) append(", score hidden by Spoiler Shield")
+    val p = m.probs
+    if (p != null && m.status == Status.Upcoming) append(", win chance ${m.home.name} ${p.home}%, draw ${p.draw}%, ${m.away.name} ${p.away}%")
+}
+
+/**
+ * Home win / draw / away win as one thin three-part bar (home in the accent colour, draw muted, away neutral, the same
+ * colours the stats use for each side). Decorative: callers put the numbers in text or the content description.
+ */
+@Composable
+fun ProbabilityBar(p: com.innovativeinside.pitchside.data.model.WinProbability, modifier: Modifier = Modifier, height: Dp = 6.dp) {
+    Row(modifier.height(height).clip(CircleShape).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(Modifier.weight(p.home.coerceAtLeast(1).toFloat()).fillMaxHeight().background(Pc.Accent))
+        Box(Modifier.weight(p.draw.coerceAtLeast(1).toFloat()).fillMaxHeight().background(Pc.OutlineStrong))
+        Box(Modifier.weight(p.away.coerceAtLeast(1).toFloat()).fillMaxHeight().background(Pc.Neutral))
+    }
 }
 
 // ---------------- Crest ----------------
@@ -366,6 +381,8 @@ fun MatchRow(
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 RowTeam(match.home, hs, hidden, emphasise = homeWin || (!finished), dim = awayWin)
                 RowTeam(match.away, aw, hidden, emphasise = awayWin || (!finished), dim = homeWin)
+                val probs = match.probs
+                if (probs != null && match.status == Status.Upcoming) ProbabilityBar(probs, Modifier.fillMaxWidth(0.55f), height = 3.dp)
             }
             if (hidden) {
                 Box(Modifier.size(PcSpace.touch).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {

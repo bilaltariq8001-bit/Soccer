@@ -13,10 +13,20 @@ Football live scores with a short Match Brief on every game, Spoiler Shield and 
 ```bash
 cd app
 ./gradlew :app:assembleDebug        # or open app/ in Android Studio and press Run
-./gradlew :app:testDebugUnitTest    # 87 tests (+5 opt-in screenshot renders)
+./gradlew :app:testDebugUnitTest    # unit tests (+5 opt-in screenshot renders)
 ./gradlew :app:lintDebug
 ```
-By default the app runs on built-in mock football data (fictional clubs, dated relative to today, so there are always live games). News is always real (see below). To use a real gateway: `./gradlew :app:assembleDebug -PpitchsideApiBaseUrl=https://your-gateway/` (contracts in `docs/API_CONTRACTS.md`).
+Data source, picked at build time (first match wins):
+
+1. **apifootball.com** when the Gradle property `apifootballKey` is set. Put it in your user-level `~/.gradle/gradle.properties` (or `$GRADLE_USER_HOME/gradle.properties`), never in this repo:
+   ```properties
+   apifootballKey=
+   ```
+   or pass `-PapifootballKey=...`. All football data then comes live from apifootball.com v3 (see `docs/APIFOOTBALL.md`). The key is compiled into `BuildConfig.APIFOOTBALL_KEY` of that build only.
+2. The Pitchside gateway when `pitchsideApiBaseUrl` is set: `./gradlew :app:assembleDebug -PpitchsideApiBaseUrl=https://your-gateway/` (contracts in `docs/API_CONTRACTS.md`).
+3. Otherwise built-in mock football data (fictional clubs, dated relative to today, so there are always live games). Mock data is used only in this case, in tests and in previews.
+
+News always comes from the 90min RSS feeds (see below), whatever the football source.
 
 ## News source (90min RSS)
 The News tab and Home's "Latest" read the public 90min RSS feeds, one per edition:

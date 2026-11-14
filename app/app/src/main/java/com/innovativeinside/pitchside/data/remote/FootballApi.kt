@@ -9,6 +9,10 @@ import com.innovativeinside.pitchside.data.remote.dto.LineupsDto
 import com.innovativeinside.pitchside.data.remote.dto.NewsDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerSummaryDto
+import com.innovativeinside.pitchside.data.remote.dto.PredictionDto
+import com.innovativeinside.pitchside.data.remote.dto.OddsDto
+import com.innovativeinside.pitchside.data.remote.dto.LiveDataDto
+import com.innovativeinside.pitchside.data.remote.dto.VideoDto
 import com.innovativeinside.pitchside.data.remote.dto.ScorerDto
 import com.innovativeinside.pitchside.data.remote.dto.SearchDto
 import com.innovativeinside.pitchside.data.remote.dto.StandingRowDto
@@ -62,6 +66,16 @@ interface FootballApi {
     suspend fun search(query: String): SearchDto
     /** POST /v1/ask (auth optional, quota enforced server side) */
     suspend fun ask(request: AskRequest): AskResponse
+    /** Pre-match probabilities for one fixture; null when the source has none (default: unsupported). */
+    suspend fun prediction(fixtureId: String): PredictionDto? = null
+    /** Previous meetings of the two teams in this fixture, newest first (default: unsupported). */
+    suspend fun headToHead(fixtureId: String): List<FixtureDto> = emptyList()
+    /** Pre-match 1X2 odds for one fixture (default: unsupported). */
+    suspend fun odds(fixtureId: String): OddsDto? = null
+    /** Live commentary and live odds while a fixture is in play (default: unsupported). */
+    suspend fun liveCommentary(fixtureId: String): LiveDataDto? = null
+    /** Highlight videos for one fixture (default: unsupported). */
+    suspend fun videos(fixtureId: String): List<VideoDto> = emptyList()
 }
 
 data class Page<T>(val items: List<T>, val nextCursor: String?)
