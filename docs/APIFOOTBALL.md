@@ -32,3 +32,12 @@ Code: `data/remote/ApiFootballComApi.kt` (client, cache, divisions), `data/remot
 - In-memory cache per URL: live 30 s, day fixtures 1 min (10 min for other days), league windows 5 min, standings 10 min, predictions/odds/scorers 30 min, teams/players/leagues 1 h, countries 1 day. Concurrent identical requests share one network call. Rate limit is 180 calls/hour per endpoint.
 - Leagues that put several divisions under one id (England "Non League Premier") are split into one competition per division with ids `<leagueId>.<stageKey>`, matched to standings groups by team membership.
 - Form (last five) is computed from finished results in the league window; Ask answers from live tables and scorers only.
+
+## Rich UI from live data (0.5.0)
+- **Images**: `team_badge` / `team_home_badge` / `team_away_badge` → `Team.logo`; `league_logo` / `country_logo` → `League.logo` / `countryLogo` and `Match.leagueLogo`; `player_image` → `PlayerSummary.photo`, `SquadPlayer.photo`, `Scorer.photo`, `LineupPlayer.photo`. Rendered with Coil (`RemoteImage`) in `TeamCrest`, `PlayerAvatar` and `LeagueBadge`; initials / short code are the loading and missing fallback.
+- **Squads per league**: `get_teams&league_id=` (one call per league per hour) gives player positions, numbers, nationality and photos for top scorers, top players, lineups and player pages.
+- **Lineups**: with no published formation (`match_*team_system` blank, `lineup_position` 0) starters are placed by squad position when the squad list knows at least 9 of 11 and there is one goalkeeper (`ApiFootballParse.squadShape`), marked `shapeFromSquad`; otherwise the lineup is listed by role and the pitch view is not offered.
+- **Player season**: when `get_players` leaves season numbers blank (smaller plans), apps, starts, minutes, goals, assists, cards and the last six games are counted from the team's season `get_events` (`ApiFootballParse.playerSeason`).
+- **Recent results**: `get_H2H` `firstTeam_lastResults` / `secondTeam_lastResults` feed the match page form and "Recent results".
+- **Match insight**: `data/insight/MatchBrief` writes a 2–4 sentence brief from the table, form, published prediction, head-to-head and goal events; empty when there is too little data (no filler).
+- **Stats**: 0–0 rows the feed doesn't track (throw-ins, free kicks...) are dropped; card rows are kept.

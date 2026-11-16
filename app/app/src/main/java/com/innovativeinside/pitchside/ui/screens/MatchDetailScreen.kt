@@ -89,6 +89,11 @@ import com.innovativeinside.pitchside.ui.components.CrestSize
 import com.innovativeinside.pitchside.ui.components.DetailSkeleton
 import com.innovativeinside.pitchside.ui.components.EmptyState
 import com.innovativeinside.pitchside.ui.components.FormDots
+import com.innovativeinside.pitchside.ui.components.FormChip
+import com.innovativeinside.pitchside.ui.components.StandingsHeader
+import com.innovativeinside.pitchside.ui.components.StandingsRow
+import com.innovativeinside.pitchside.ui.components.PlayerAvatar
+import com.innovativeinside.pitchside.data.insight.MatchBrief
 import com.innovativeinside.pitchside.ui.components.Hairline
 import com.innovativeinside.pitchside.ui.components.IconAction
 import com.innovativeinside.pitchside.ui.components.LiveBadge
@@ -185,12 +190,14 @@ fun MatchContent(state: UiState<MatchDetail>, nav: MatchNav, onRetry: () -> Unit
         BackButton(nav.back)
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             if (match != null) {
-                Text(
-                    match.leagueName, style = PcType.LabelStrong,
-                    modifier = Modifier.pcClickable(PcShape.Chip, "Open ${match.leagueName}") { nav.openLeague(match.leagueId) }.padding(horizontal = PcSpace.xs, vertical = 2.dp),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-                Text(match.round, style = PcType.Caption, maxLines = 1)
+                Row(
+                    Modifier.pcClickable(PcShape.Chip, "Open ${match.leagueName}") { nav.openLeague(match.leagueId) }.padding(horizontal = PcSpace.xs, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (match.leagueLogo != null) LeagueBadge(match.leagueName.take(2).uppercase(), 20, match.leagueLogo)
+                    Text(match.leagueName, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Text(listOf(match.country, match.round).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, maxLines = 1)
             } else Text("Match", style = PcType.LabelStrong)
         }
         if (match != null && match.status != Status.Finished) {
@@ -292,12 +299,12 @@ private fun OverviewTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, on
     if (hidden) { SpoilerGate("Match overview", onReveal); return }
     if (m.brief.isNotBlank()) BriefCard(
         m.brief,
-        title = when (m.status) { Status.Live -> "AI insight · live"; Status.Finished -> "AI insight · recap"; else -> "AI insight · preview" },
+        title = when (m.status) { Status.Live -> "Match insight · live"; Status.Finished -> "Match insight · recap"; else -> "Match insight · preview" },
         updated = if (m.status == Status.Live) "Updates every 30 s" else "",
     )
     val key = d.events.filter { it.kind == EventKind.Goal || it.kind == EventKind.RedCard }
-    val homeForm = d.table.firstOrNull { it.team.id == m.home.id }?.form.orEmpty()
-    val awayForm = d.table.firstOrNull { it.team.id == m.away.id }?.form.orEmpty()
+    val homeForm = d.table.firstOrNull { it.team.id == m.home.id }?.form.orEmpty().ifBlank { MatchBrief.formFrom(m.home.id, d.homeRecent) }
+    val awayForm = d.table.firstOrNull { it.team.id == m.away.id }?.form.orEmpty().ifBlank { MatchBrief.formFrom(m.away.id, d.awayRecent) }
     val showForm = homeForm.isNotBlank() || awayForm.isNotBlank()
     if (key.isNotEmpty() || showForm) Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         if (key.isNotEmpty()) BentoTile("Key events", Modifier.weight(1f).fillMaxHeight()) {
@@ -309,12 +316,16 @@ private fun OverviewTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, on
                 }
             }
         }
-        if (showForm) BentoTile("Form", Modifier.weight(1f).fillMaxHeight()) {
+        if (showForm) BentoTile("Form · last 5", Modifier.weight(1f).fillMaxHeight()) {
             listOf(m.home to homeForm, m.away to awayForm).forEach { (t, f) ->
-                Text(t.name, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TeamCrest(t, 20.dp)
+                    Text(t.name, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 if (f.isNotBlank()) FormDots(f) else Text("No recent results", style = PcType.Caption)
             }
         }
+        if (key.isEmpty() && showForm && d.table.isNotEmpty()) TableSpotTile(d, Modifier.weight(1f).fillMaxHeight())
     }
     if (d.stats.isNotEmpty()) {
         SectionHeader("Key numbers", "All stats", onStats)
@@ -324,12 +335,91 @@ private fun OverviewTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, on
     d.odds?.let { OddsCard(it) }
     if (d.highlights.isNotEmpty()) HighlightsCard(d.highlights)
     if (d.h2h.isNotEmpty()) HeadToHeadCard(m, d.h2h)
+    if (d.homeRecent.isNotEmpty() || d.awayRecent.isNotEmpty()) RecentResultsCard(m, d.homeRecent, d.awayRecent)
+    if (d.table.isNotEmpty()) MiniTableCard(d)
     PcCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xxs)) {
             InfoLine("Kickoff", formatKickoff(m.kickoffMs))
-            InfoLine("Venue", m.venue.ifBlank { "To be confirmed" })
-            InfoLine("Referee", m.referee ?: "Not announced yet")
-            InfoLine("Round", m.round.ifBlank { "-" }, last = true)
+            if (m.venue.isNotBlank()) InfoLine("Venue", m.venue)
+            m.referee?.let { InfoLine("Referee", it) }
+            if (m.round.isNotBlank()) InfoLine("Round", m.round)
+            InfoLine("Competition", listOf(m.leagueName, m.country).filter { it.isNotBlank() }.joinToString(" · "))
+            InfoLine(
+                "Lineups",
+                when { d.lineups != null -> "Published"; m.status == Status.Upcoming -> "Usually out ~1 h before kickoff"; else -> "Not published for this match" },
+                last = true,
+            )
+        }
+    }
+}
+
+/** Both clubs' table positions side by side (Overview, when there are no key events yet). */
+@Composable
+private fun TableSpotTile(d: MatchDetail, modifier: Modifier) {
+    val m = d.match
+    BentoTile("League position", modifier) {
+        listOf(m.home, m.away).forEach { t ->
+            val r = d.table.firstOrNull { it.team.id == t.id }
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(r?.let { MatchBrief.ordinal(it.rank) } ?: "–", style = PcType.ScoreRow)
+                Text(r?.let { "${it.points} pts" } ?: t.short, style = PcType.Caption, modifier = Modifier.padding(bottom = 2.dp))
+            }
+            Text(t.name, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** The table around both clubs: each side with its neighbours above and below, so the stakes are visible. */
+@Composable
+private fun MiniTableCard(d: MatchDetail) {
+    val m = d.match
+    val idx = listOf(m.home.id, m.away.id).mapNotNull { id -> d.table.indexOfFirst { it.team.id == id }.takeIf { it >= 0 } }
+    if (idx.isEmpty()) return
+    val keep = idx.flatMap { (it - 1)..(it + 1) }.filter { it in d.table.indices }.toSortedSet().toList()
+    SectionHeader("Table snapshot")
+    PcCard(Modifier.fillMaxWidth()) {
+        Column {
+            StandingsHeader(showForm = true)
+            keep.forEachIndexed { i, k ->
+                if (i > 0 && k != keep[i - 1] + 1) Box(Modifier.fillMaxWidth().height(14.dp), contentAlignment = Alignment.Center) { Text("···", style = PcType.Caption) }
+                else if (i > 0) Hairline()
+                val r = d.table[k]
+                StandingsRow(r, {}, highlight = r.team.id == m.home.id || r.team.id == m.away.id, showForm = true)
+            }
+        }
+    }
+}
+
+/** Each side's latest results (from the head-to-head feed), newest first, with W/D/L chips. */
+@Composable
+private fun RecentResultsCard(m: Match, home: List<Match>, away: List<Match>) {
+    SectionHeader("Recent results")
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
+        listOf(m.home to home, m.away to away).forEach { (team, games) ->
+            PcCard(Modifier.weight(1f).fillMaxHeight()) {
+                Column(Modifier.padding(PcSpace.sm), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TeamCrest(team, 20.dp)
+                        Text(team.short, style = PcType.LabelStrong, maxLines = 1)
+                    }
+                    if (games.isEmpty()) Text("No recent results", style = PcType.Caption)
+                    games.take(5).forEach { g ->
+                        val home = g.home.id == team.id
+                        val opp = if (home) g.away else g.home
+                        val mine = if (home) g.homeScore else g.awayScore
+                        val theirs = if (home) g.awayScore else g.homeScore
+                        val res = if (mine == null || theirs == null) '-' else if (mine > theirs) 'W' else if (mine < theirs) 'L' else 'D'
+                        Row(
+                            Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = "${if (home) "versus" else "at"} ${opp.name}, $mine to $theirs" },
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            if (res != '-') FormChip(res, 16.dp)
+                            Text("${if (home) "v" else "@"} ${opp.short}", style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text("${mine ?: "-"}–${theirs ?: "-"}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -412,7 +502,7 @@ private fun HighlightsCard(clips: List<Highlight>) {
     }
 }
 
-private val h2hDate = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
+private fun h2hDate() = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy", java.util.Locale.getDefault())
 
 @Composable
 private fun HeadToHeadCard(m: Match, games: List<Match>) {
@@ -429,7 +519,7 @@ private fun HeadToHeadCard(m: Match, games: List<Match>) {
                     Modifier.fillMaxWidth().heightIn(min = 44.dp).semantics(mergeDescendants = true) {},
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
                 ) {
-                    Text(java.time.Instant.ofEpochMilli(g.kickoffMs).atZone(java.time.ZoneId.systemDefault()).format(h2hDate), style = PcType.Caption, modifier = Modifier.width(84.dp))
+                    Text(java.time.Instant.ofEpochMilli(g.kickoffMs).atZone(java.time.ZoneId.systemDefault()).format(h2hDate()), style = PcType.Caption, modifier = Modifier.width(84.dp))
                     Text(g.home.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                     Text("${g.homeScore ?: "-"}–${g.awayScore ?: "-"}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
                     Text(g.away.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -547,21 +637,40 @@ private fun LineupsTab(d: MatchDetail, nav: MatchNav) {
                         Text(lineup.formation, style = PcType.Numeric, color = Pc.Text2)
                     }
                     Text("Coach ${lineup.coach}", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    lineup.starters.sortedBy { it.number }.forEach { p ->
-                        Row(
-                            Modifier.fillMaxWidth().heightIn(min = 40.dp).pcClickable(PcShape.Small, "Open ${p.name}") { nav.openPlayer(p.playerId) },
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs),
-                        ) {
-                            Text(p.number.toString(), style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(22.dp), textAlign = TextAlign.End)
-                            Text(p.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            if (p.scored) Icon(Icons.Outlined.SportsSoccer, "Scored", tint = Pc.Accent, modifier = Modifier.size(14.dp))
-                        }
+                    val order = mapOf("G" to 0, "D" to 1, "M" to 2, "F" to 3)
+                    lineup.starters.sortedWith(compareBy({ order[it.position.take(1)] ?: 2 }, { it.number })).forEach { p ->
+                        LineupLine(p, team.color) { nav.openPlayer(p.playerId) }
+                    }
+                    if (lineup.bench.isNotEmpty()) {
+                        Spacer(Modifier.height(PcSpace.xs))
+                        Overline("Bench")
+                        lineup.bench.sortedBy { it.number }.forEach { p -> LineupLine(p, team.color, dim = true) { nav.openPlayer(p.playerId) } }
                     }
                 }
             }
         }
     }
-    PrimaryButton("Open pitch view", { nav.openLineup(d.match.id) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Groups)
+    when {
+        l.home.hasPositions && l.away.hasPositions -> {
+            if (l.home.shapeFromSquad || l.away.shapeFromSquad) Text("No formation was published: shapes are drawn from each starter's squad position.", style = PcType.Caption)
+            PrimaryButton("Open pitch view", { nav.openLineup(d.match.id) }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Groups)
+        }
+        else -> Text("Starting elevens as published. Pitch positions weren't released for this match, so they're listed by role where known.", style = PcType.Caption)
+    }
+}
+
+@Composable
+private fun LineupLine(p: com.innovativeinside.pitchside.data.model.LineupPlayer, color: Long, dim: Boolean = false, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 40.dp).pcClickable(PcShape.Small, "Open ${p.name}", onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs),
+    ) {
+        PlayerAvatar(p.name, color, 26.dp, p.photo)
+        Text(if (p.number > 0) p.number.toString() else "", style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(20.dp), textAlign = TextAlign.End)
+        Text(p.name, style = PcType.Label, color = if (dim) Pc.Text2 else Pc.Text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        if (p.position.isNotBlank()) Text(p.position.take(1), style = PcType.Micro, color = Pc.Text3)
+        if (p.scored) Icon(Icons.Outlined.SportsSoccer, "Scored", tint = Pc.Accent, modifier = Modifier.size(14.dp))
+    }
 }
 
 // ---------------- Pitch view ----------------
@@ -576,7 +685,7 @@ fun LineupRoute(back: () -> Unit, openPlayer: (String) -> Unit, vm: MatchDetailV
         }
         StateContent(state, vm::retry, Modifier.padding(horizontal = PcSpace.screen), loading = { DetailSkeleton() }) { d ->
             val l = d.lineups
-            if (l == null) EmptyState("Lineups not announced", "Check back about an hour before kickoff.", icon = Icons.Outlined.Groups)
+            if (l == null || !l.home.hasPositions || !l.away.hasPositions) EmptyState("No pitch positions", "Lineups for this match are listed on the match page.", icon = Icons.Outlined.Groups)
             else PitchView(d, l.home, l.away, openPlayer)
         }
     }
@@ -608,7 +717,10 @@ private fun PitchView(d: MatchDetail, home: Lineup, away: Lineup, openPlayer: (S
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     val gk = p.position.startsWith("G")
-                    Box(
+                    if (p.photo != null) Box(contentAlignment = Alignment.BottomEnd) {
+                        PlayerAvatar(p.name, if (gk) 0xFFE0A100 else team.color, 34.dp, p.photo)
+                        if (p.number > 0) Box(Modifier.size(16.dp).clip(CircleShape).background(Pc.Hero), contentAlignment = Alignment.Center) { Text(p.number.toString(), style = PcType.Micro, color = Pc.OnHero) }
+                    } else Box(
                         Modifier.size(34.dp).clip(CircleShape).background(if (gk) Pc.Warning else Pc.team(team.color)).border(2.dp, if (p.scored) Pc.AccentContainer else Pc.OnHero, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) { Text(p.number.toString(), style = PcType.LabelStrong, color = Pc.OnTeam) }

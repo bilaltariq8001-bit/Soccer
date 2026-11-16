@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -160,6 +162,11 @@ fun NextKickoffTile(
             Box(Modifier.width(3.dp).fillMaxHeight().heightIn(min = 156.dp).background(Pc.team(match.home.color)))
             Column(Modifier.weight(1f).padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
                 Overline("Next kickoff")
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TeamCrest(match.home, 28.dp)
+                    Text("v", style = PcType.Caption)
+                    TeamCrest(match.away, 28.dp)
+                }
                 Text("${match.home.name} vs ${match.away.name}", style = PcType.BodyStrong, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(match.leagueName, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.weight(1f, fill = false))
@@ -175,13 +182,18 @@ fun NextKickoffTile(
 
 // ---------------- Player stat ----------------
 
-/** Initials avatar in a team-colour ring; a silhouette when there is no name. Player photos need backend URLs. */
+/** Player photo in a team-colour ring; initials (or a silhouette when there is no name) while it loads or when there is none. */
 @Composable
-fun PlayerAvatar(name: String, color: Long, size: Dp = 40.dp) {
+fun PlayerAvatar(name: String, color: Long, size: Dp = 40.dp, photo: String? = null) {
     val initials = name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
-    Box(Modifier.size(size).clip(CircleShape).background(Pc.SurfaceVariant).border(2.dp, Pc.team(color), CircleShape), contentAlignment = Alignment.Center) {
-        if (initials.isBlank()) Icon(Icons.Outlined.Person, null, tint = Pc.Text2, modifier = Modifier.size(size * 0.6f))
-        else Text(initials, style = if (size >= 56.dp) PcType.Subtitle else PcType.LabelStrong, color = Pc.Text)
+    val fallback: @Composable () -> Unit = {
+        Box(Modifier.fillMaxSize().background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
+            if (initials.isBlank()) Icon(Icons.Outlined.Person, null, tint = Pc.Text2, modifier = Modifier.size(size * 0.6f))
+            else Text(initials, style = if (size >= 56.dp) PcType.Subtitle else PcType.LabelStrong, color = Pc.Text)
+        }
+    }
+    Box(Modifier.size(size).clip(CircleShape).border(2.dp, Pc.team(color), CircleShape).padding(2.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
+        if (photo == null) fallback() else RemoteImage(photo, fallback, Modifier.fillMaxSize(), ContentScale.Crop)
     }
 }
 
@@ -193,7 +205,7 @@ fun PlayerAvatar(name: String, color: Long, size: Int) = PlayerAvatar(name, colo
 fun PlayerStatTile(scorer: Scorer, onClick: () -> Unit, modifier: Modifier = Modifier) {
     BentoTile("Top scorer", modifier, onClick, description = "Top scorer: ${scorer.name}, ${scorer.team.name}, ${scorer.goals} goals") {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            PlayerAvatar(scorer.name, scorer.team.color, 40.dp)
+            PlayerAvatar(scorer.name, scorer.team.color, 44.dp, scorer.photo)
             Column(Modifier.weight(1f)) {
                 Text(scorer.name, style = PcType.LabelStrong, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(scorer.team.name, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -214,7 +226,7 @@ fun PlayerStatTile(scorer: Scorer, onClick: () -> Unit, modifier: Modifier = Mod
 /** Insight text from Match.brief. No probability or confidence ring: no such data exists. */
 @Composable
 fun AiInsightTile(text: String, context: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    BentoTile("AI insight", modifier, onClick, description = "AI insight about $context: $text") {
+    BentoTile("Match insight", modifier, onClick, description = "Match insight about $context: $text") {
         Box(Modifier.size(28.dp).clip(CircleShape).background(Pc.AccentContainer), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Accent, modifier = Modifier.size(16.dp))
         }
@@ -236,7 +248,7 @@ fun BriefCard(text: String, modifier: Modifier = Modifier, title: String = "MATC
                 if (updated.isNotBlank()) Text(updated, style = PcType.Caption)
             }
             Text(text, style = PcType.Body)
-            if (!compactMeta) Text("AI-generated from match data", style = PcType.Caption)
+            if (!compactMeta) Text("Written from table, form, prediction and match data", style = PcType.Caption)
         }
     }
 }

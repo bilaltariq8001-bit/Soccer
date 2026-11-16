@@ -257,14 +257,16 @@ class ApiFootballComApi(
             val baseId = l.str("league_id")
             val country = l.str("country_name").ifBlank { countryOrder[l.str("country_id")]?.second.orEmpty() }
             val season = l.str("league_season")
+            val logo = l.str("league_logo").ifBlank { null }
+            val flag = l.str("country_logo").ifBlank { null }
             val divs = runCatching { divisions(baseId) }.getOrDefault(emptyList())
             val events = runCatching { leagueWindow(baseId) }.getOrDefault(emptyList())
             if (divs.isEmpty()) {
                 val teams = runCatching { rawStandings(baseId).size }.getOrDefault(0)
-                listOf(LeagueDto(baseId, l.str("league_name"), null, country, teams, season, roundOf(events)))
+                listOf(LeagueDto(baseId, l.str("league_name"), null, country, teams, season, roundOf(events), logo, flag))
             } else divs.map { d ->
                 val dEvents = events.filter { (d.stageKey != null && it.str("fk_stage_key") == d.stageKey) || (d.stageKey == null && it.str("match_hometeam_id") in d.teamIds) }
-                LeagueDto(d.id, d.name, null, country, d.teamIds.size, season, roundOf(dEvents))
+                LeagueDto(d.id, d.name, null, country, d.teamIds.size, season, roundOf(dEvents), logo, flag)
             }
         }
     }
@@ -302,14 +304,27 @@ class ApiFootballComApi(
         val official = runCatching { list("get_topscorers", mapOf("league_id" to baseId), HALF_HOUR) }.getOrDefault(emptyList())
             .map { ApiFootballParse.topScorer(it, leagueId) }
             .filter { div == null || it.team.id in div.teamIds }
-        if (official.isNotEmpty()) return official.sortedBy { it.rank }.mapIndexed { i, s -> s.copy(rank = i + 1) }.take(20)
+        val roster = roster(baseId)
+        val logos = teamLogos(baseId)
+        fun ScorerDto.dressed() = copy(photo = photo ?: roster[playerId]?.photo, team = if (team.logo != null) team else logos[team.id]?.let { team.copy(logo = it) } ?: team)
+        if (official.isNotEmpty()) return official.sortedBy { it.rank }.mapIndexed { i, s -> s.copy(rank = i + 1).dressed() }.take(20)
         // get_topscorers is not on every plan: count goals from this season's results instead.
         val season = runCatching {
             list("get_events", range(seasonStart(baseId), todayUtc()) + ("league_id" to baseId), HALF_HOUR)
         }.getOrDefault(emptyList()).filter { e ->
             div == null || (div.stageKey != null && e.str("fk_stage_key") == div.stageKey) || (div.stageKey == null && e.str("match_hometeam_id") in div.teamIds)
         }
-        return ApiFootballParse.scorersFromEvents(season, leagueId)
+        return ApiFootballParse.scorersFromEvents(season, leagueId).map { it.dressed() }
+    }
+
+    /** Squads of every team in a league (one get_teams call per league per hour): positions, photos, numbers. */
+    private suspend fun roster(baseId: String): Map<String, ApiFootballParse.RosterEntry> = memo("roster:$baseId", HOUR) {
+        runCatching { list("get_teams", mapOf("league_id" to baseId), HOUR) }.map { ApiFootballParse.roster(it) }.getOrDefault(emptyMap())
+    }
+
+    private suspend fun teamLogos(baseId: String): Map<String, String> = memo("logos:$baseId", HOUR) {
+        runCatching { list("get_teams", mapOf("league_id" to baseId), HOUR) }.getOrDefault(emptyList())
+            .mapNotNull { t -> t.str("team_badge").takeIf { it.startsWith("http") }?.let { t.str("team_key") to it } }.toMap()
     }
 
     // ---------------- fixtures ----------------
@@ -364,10 +379,11 @@ class ApiFootballComApi(
             val root = runCatching { objectOrNull("get_lineups", mapOf("match_id" to fixtureId), TEN_MIN) }.getOrNull() as? JsonObject
             (root?.get(fixtureId) as? JsonObject)?.obj("lineup")?.let { lineup = it }
         }
+        val roster = runCatching { roster(e.str("league_id")) }.getOrDefault(emptyMap())
         return LineupsDto(
             listOf(
-                ApiFootballParse.lineup(lineup?.obj("home"), e.str("match_hometeam_id"), e.str("match_hometeam_system")),
-                ApiFootballParse.lineup(lineup?.obj("away"), e.str("match_awayteam_id"), e.str("match_awayteam_system")),
+                ApiFootballParse.lineup(lineup?.obj("home"), e.str("match_hometeam_id"), e.str("match_hometeam_system"), roster),
+                ApiFootballParse.lineup(lineup?.obj("away"), e.str("match_awayteam_id"), e.str("match_awayteam_system"), roster),
             ),
         )
     }
@@ -375,17 +391,28 @@ class ApiFootballComApi(
     override suspend fun prediction(fixtureId: String): PredictionDto? =
         list("get_predictions", mapOf("match_id" to fixtureId, "timezone" to "UTC"), HALF_HOUR).firstOrNull()?.let(ApiFootballParse::prediction)
 
-    override suspend fun headToHead(fixtureId: String): List<FixtureDto> {
+    private suspend fun h2hRoot(fixtureId: String): JsonObject? {
         val e = eventRow(fixtureId)
-        val root = objectOrNull(
+        return objectOrNull(
             "get_H2H",
             mapOf("firstTeamId" to e.str("match_hometeam_id"), "secondTeamId" to e.str("match_awayteam_id"), "timezone" to "UTC"),
             HOUR,
-        ) as? JsonObject ?: return emptyList()
-        return root.arr("firstTeam_VS_secondTeam").map { ApiFootballParse.fixture(it) }
-            .filter { it.id != fixtureId && it.status == "finished" }
-            .sortedByDescending { it.kickoffMs }
-            .take(6)
+        ) as? JsonObject
+    }
+
+    private fun finishedOnly(rows: List<JsonObject>, exclude: String, max: Int) = rows.map { ApiFootballParse.fixture(it) }
+        .filter { it.id != exclude && it.status == "finished" }
+        .sortedByDescending { it.kickoffMs }
+        .take(max)
+
+    override suspend fun headToHead(fixtureId: String): List<FixtureDto> {
+        val root = h2hRoot(fixtureId) ?: return emptyList()
+        return finishedOnly(root.arr("firstTeam_VS_secondTeam"), fixtureId, 6)
+    }
+
+    override suspend fun recentResults(fixtureId: String): Pair<List<FixtureDto>, List<FixtureDto>> {
+        val root = h2hRoot(fixtureId) ?: return emptyList<FixtureDto>() to emptyList()
+        return finishedOnly(root.arr("firstTeam_lastResults"), fixtureId, 5) to finishedOnly(root.arr("secondTeam_lastResults"), fixtureId, 5)
     }
 
     override suspend fun odds(fixtureId: String): OddsDto? =
@@ -422,16 +449,43 @@ class ApiFootballComApi(
 
     override suspend fun player(id: String): PlayerDto {
         val rows = list("get_players", mapOf("player_id" to id), HOUR)
-        val leagueId = rows.firstOrNull()?.str("team_key")?.let { tk -> runCatching { allTeams().firstOrNull { it.id == tk }?.leagueId }.getOrNull() }
-        return ApiFootballParse.player(rows, leagueId) ?: throw AppError.NotFound("This player")
+        val teamId = rows.firstOrNull()?.str("team_key").orEmpty()
+        val teamRef = runCatching { allTeams().firstOrNull { it.id == teamId } }.getOrNull()
+        val leagueId = teamRef?.leagueId
+        val base = ApiFootballParse.player(rows, leagueId) ?: throw AppError.NotFound("This player")
+        val baseLeague = leagueId?.let(::baseOf)
+        val r = baseLeague?.let { runCatching { roster(it)[id] }.getOrNull() }
+        val summary = base.summary.copy(
+            photo = base.summary.photo ?: r?.photo,
+            team = base.summary.team.copy(logo = base.summary.team.logo ?: teamRef?.logo),
+            number = base.summary.number.takeIf { it > 0 } ?: r?.number ?: 0,
+            nationality = base.summary.nationality.ifBlank { r?.country.orEmpty() },
+        )
+        // Smaller plans leave get_players' season numbers blank: count them from this season's match events instead.
+        if (base.matches > 0 || teamId.isBlank() || baseLeague == null) return base.copy(summary = summary)
+        val events = runCatching {
+            list("get_events", range(seasonStart(baseLeague), todayUtc()) + ("team_id" to teamId), HALF_HOUR)
+        }.getOrDefault(emptyList())
+        val s = ApiFootballParse.playerSeason(id, teamId, events)
+        if (s.apps == 0) return base.copy(summary = summary)
+        return base.copy(
+            summary = summary, age = base.age.takeIf { it > 0 } ?: r?.age ?: 0,
+            goals = s.goals, assists = s.assists, matches = s.apps, minutes = s.minutes, starts = s.starts,
+            yellowCards = s.yellow, redCards = s.red, recentMatches = s.recent,
+            career = base.career.map { c -> if (c.current) c.copy(apps = s.apps, goals = s.goals) else c },
+            statsNote = "Counted from this season's match reports",
+        )
     }
 
     override suspend fun topPlayers(): List<PlayerSummaryDto> =
-        leagues().flatMap { l -> runCatching { scorers(l.id).take(3) }.getOrDefault(emptyList()) }
-            .sortedWith(compareByDescending<ScorerDto> { it.goals }.thenByDescending { it.assists })
-            .distinctBy { it.playerId }
+        leagues().flatMap { l -> runCatching { scorers(l.id).take(3).map { l.id to it } }.getOrDefault(emptyList()) }
+            .sortedWith(compareByDescending<Pair<String, ScorerDto>> { it.second.goals }.thenByDescending { it.second.assists })
+            .distinctBy { it.second.playerId }
             .take(10)
-            .map { s -> PlayerSummaryDto(s.playerId, s.name, s.team, position = "", number = 0) }
+            .map { (lid, s) ->
+                val r = runCatching { roster(baseOf(lid))[s.playerId] }.getOrNull()
+                PlayerSummaryDto(s.playerId, s.name, s.team, position = r?.role.orEmpty(), number = r?.number ?: 0, nationality = r?.country.orEmpty(), photo = s.photo ?: r?.photo)
+            }
 
     // ---------------- news (not from this API) ----------------
 

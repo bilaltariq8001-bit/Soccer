@@ -19,6 +19,7 @@ import com.innovativeinside.pitchside.data.model.StatRow
 import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.data.model.TeamDetail
 import com.innovativeinside.pitchside.data.remote.FootballApi
+import com.innovativeinside.pitchside.data.insight.MatchBrief
 import com.innovativeinside.pitchside.data.remote.Mappers
 import com.innovativeinside.pitchside.data.news.NewsFeedSource
 import com.innovativeinside.pitchside.data.remote.dto.AskRequest
@@ -47,6 +48,9 @@ data class MatchDetail(
     val commentary: List<com.innovativeinside.pitchside.data.model.Commentary> = emptyList(),
     /** Highlight clips, when the source has any for this match. */
     val highlights: List<com.innovativeinside.pitchside.data.model.Highlight> = emptyList(),
+    /** Each side's latest finished results before this match, newest first. */
+    val homeRecent: List<Match> = emptyList(),
+    val awayRecent: List<Match> = emptyList(),
 )
 
 data class LeagueDetail(val league: League, val standings: List<StandingRow>, val fixtures: List<Match>, val scorers: List<Scorer>)
@@ -149,19 +153,31 @@ class DefaultFootballRepository(
             val live = async {
                 if (fixture.status == com.innovativeinside.pitchside.data.model.Status.Live) runCatching { api.liveCommentary(id) }.getOrNull() else null
             }
+            val recent = async { runCatching { api.recentResults(id) }.getOrNull() }
             val ev = Mappers.events(events.await(), fixture.home.id)
             val scorers = ev.filter { it.kind == com.innovativeinside.pitchside.data.model.EventKind.Goal }.map { it.player }.toSet()
+            val tableRows = table.await().map(Mappers::standing)
+            val h2hList = h2h.await()
+            val (homeRecent, awayRecent) = recent.await()?.let { (h, a) -> h.map(::match) to a.map(::match) } ?: (emptyList<Match>() to emptyList())
+            val brief = fixture.brief.ifBlank {
+                MatchBrief.of(
+                    fixture.copy(probs = prediction.await() ?: fixture.probs), tableRows, h2hList, ev,
+                    MatchBrief.formFrom(fixture.home.id, homeRecent), MatchBrief.formFrom(fixture.away.id, awayRecent),
+                )
+            }
             MatchDetail(
-                match = fixture,
+                match = fixture.copy(brief = brief),
                 events = ev,
                 stats = stats.await().map(Mappers::stat),
                 lineups = Mappers.lineups(lineups.await(), fixture.home.id, fixture.away.id, scorers),
-                table = table.await().map(Mappers::standing),
+                table = tableRows,
                 prediction = prediction.await(),
-                h2h = h2h.await(),
+                h2h = h2hList,
                 odds = live.await()?.liveOdds?.let(Mappers::odds) ?: odds.await(),
                 commentary = live.await()?.comments.orEmpty().map(Mappers::comment).asReversed(),
                 highlights = videos.await(),
+                homeRecent = homeRecent,
+                awayRecent = awayRecent,
             )
         }
     }

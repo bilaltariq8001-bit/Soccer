@@ -46,6 +46,8 @@ data class FixtureDto(
     val brief: String? = null,
     /** Pre-match win probability, when the source publishes one (apifootball.com get_predictions). */
     val prediction: PredictionDto? = null,
+    val leagueLogo: String? = null,
+    val country: String = "",
 )
 
 /** Win / draw / win probabilities in percent, plus a couple of goal markets when known. */
@@ -89,7 +91,7 @@ data class EventDto(
 data class StatLineDto(val label: String, val home: Int, val away: Int, val homeText: String? = null, val awayText: String? = null)
 
 @Serializable
-data class LineupPlayerDto(val id: String, val name: String, val number: Int? = null, val pos: String? = null, val grid: String? = null)
+data class LineupPlayerDto(val id: String, val name: String, val number: Int? = null, val pos: String? = null, val grid: String? = null, val photo: String? = null)
 
 @Serializable
 data class LineupDto(
@@ -98,6 +100,8 @@ data class LineupDto(
     val formation: String? = null,
     val startXI: List<LineupPlayerDto> = emptyList(),
     val substitutes: List<LineupPlayerDto> = emptyList(),
+    /** True when [formation] and the grid were worked out from squad positions, not published. */
+    val derived: Boolean = false,
 )
 
 @Serializable
@@ -127,10 +131,12 @@ data class LeagueDto(
     val teamCount: Int = 0,
     val season: String = "",
     val currentRound: String = "",
+    val logo: String? = null,
+    val countryLogo: String? = null,
 )
 
 @Serializable
-data class ScorerDto(val rank: Int, val playerId: String, val name: String, val team: TeamRefDto, val goals: Int, val assists: Int = 0)
+data class ScorerDto(val rank: Int, val playerId: String, val name: String, val team: TeamRefDto, val goals: Int, val assists: Int = 0, val photo: String? = null)
 
 @Serializable
 data class NewsDto(
@@ -155,10 +161,14 @@ data class PlayerSummaryDto(
     val number: Int = 0,
     val nationality: String = "",
     val rating: Double = 0.0,
+    val photo: String? = null,
 )
 
 @Serializable
-data class PlayerMatchDto(val matchId: String, val opponent: TeamRefDto, val home: Boolean, val score: String, val minutes: Int, val rating: Double, val dateMs: Long)
+data class PlayerMatchDto(
+    val matchId: String, val opponent: TeamRefDto, val home: Boolean, val score: String, val minutes: Int, val rating: Double, val dateMs: Long,
+    val goals: Int = 0, val started: Boolean = true, val result: String = "",
+)
 
 @Serializable
 data class CareerStopDto(val club: String, val years: String, val apps: Int, val goals: Int, val current: Boolean = false)
@@ -180,10 +190,14 @@ data class PlayerDto(
     val scoutingNote: String = "",
     val recentMatches: List<PlayerMatchDto> = emptyList(),
     val career: List<CareerStopDto> = emptyList(),
+    val yellowCards: Int = 0,
+    val redCards: Int = 0,
+    val starts: Int = 0,
+    val statsNote: String = "",
 )
 
 @Serializable
-data class SquadPlayerDto(val playerId: String, val name: String, val number: Int = 0, val position: String, val rating: Double? = null)
+data class SquadPlayerDto(val playerId: String, val name: String, val number: Int = 0, val position: String, val rating: Double? = null, val photo: String? = null, val age: Int = 0)
 
 @Serializable
 data class TeamDto(

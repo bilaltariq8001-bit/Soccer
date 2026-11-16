@@ -1,6 +1,7 @@
 package com.innovativeinside.pitchside.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -137,6 +138,7 @@ fun MatchesContent(
         ) { _ ->
             val shown = filterMatches(byComp, segmentFilters[segIndex], prefs.teams, prefs.leagues)
             Column(verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                if (byComp.isNotEmpty()) DaySummary(byComp)
                 if (shown.isEmpty()) {
                     EmptyState(
                         when { myTeams -> "None of your teams or leagues play"; filter == MatchFilter.Live -> "Nothing live right now"; else -> "No matches here" },
@@ -144,7 +146,7 @@ fun MatchesContent(
                         actionLabel = "Show all matches", onAction = { onFilter(MatchFilter.All); onMyTeams(false); app.setCompetition(null) }, icon = Icons.Outlined.EventBusy,
                     )
                 } else groupByLeague(shown, prefs.leagues).forEach { (name, ms) ->
-                    LeagueGroup(name, ms, openMatch, openLeague = { openLeague(ms.first().leagueId) })
+                    LeagueGroup(name, ms, openMatch, openLeague = { openLeague(ms.first().leagueId) }, logo = ms.firstNotNullOfOrNull { it.leagueLogo })
                 }
             }
         }
@@ -171,6 +173,32 @@ fun MatchesContent(
                     selectedYearContainerColor = Pc.Accent, selectedYearContentColor = Pc.OnAccent,
                 ),
             )
+        }
+    }
+}
+
+/** One line of the day in numbers: matches, competitions, goals so far and how many are live. */
+@Composable
+private fun DaySummary(ms: List<Match>) {
+    val goals = ms.filter { it.status != com.innovativeinside.pitchside.data.model.Status.Upcoming }.sumOf { (it.homeScore ?: 0) + (it.awayScore ?: 0) }
+    val comps = ms.map { it.leagueId }.distinct().size
+    val live = ms.count { it.status == com.innovativeinside.pitchside.data.model.Status.Live }
+    val items = listOfNotNull(
+        "${ms.size}" to if (ms.size == 1) "match" else "matches",
+        "$comps" to if (comps == 1) "competition" else "competitions",
+        ("$goals" to if (goals == 1) "goal" else "goals").takeIf { ms.any { it.hasScore } },
+        ("$live" to "live").takeIf { live > 0 },
+    )
+    Row(
+        Modifier.fillMaxWidth().clip(PcShape.Control).background(Pc.SurfaceVariant).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs)
+            .semantics(mergeDescendants = true) { contentDescription = items.joinToString(", ") { "${it.first} ${it.second}" } },
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        items.forEach { (n, label) ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(n, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = if (label == "live") Pc.LiveText else Pc.Text)
+                Text(label, style = PcType.Caption)
+            }
         }
     }
 }

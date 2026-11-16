@@ -9,6 +9,7 @@ import com.innovativeinside.pitchside.data.remote.dto.LiveDataDto
 import com.innovativeinside.pitchside.data.remote.dto.OddsDto
 import com.innovativeinside.pitchside.data.remote.dto.VideoDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerDto
+import com.innovativeinside.pitchside.data.remote.dto.PlayerMatchDto
 import com.innovativeinside.pitchside.data.remote.dto.PlayerSummaryDto
 import com.innovativeinside.pitchside.data.remote.dto.PredictionDto
 import com.innovativeinside.pitchside.data.remote.dto.ScorerDto
@@ -128,6 +129,8 @@ object ApiFootballParse {
             homeScore = if (st.status == "upcoming") null else hs,
             awayScore = if (st.status == "upcoming") null else aw,
             prediction = prediction,
+            leagueLogo = e.str("league_logo").ifBlank { null },
+            country = e.str("country_name"),
         )
     }
 
@@ -226,33 +229,134 @@ object ApiFootballParse {
             val a = at.filter { it.isDigit() }.toIntOrNull() ?: 0
             StatLineDto(label, h, a, ht.ifBlank { "0" }, at.ifBlank { "0" })
         }
-        return out.sortedBy { labelOrder.indexOf(it.label).let { i -> if (i < 0) Int.MAX_VALUE else i } }
+        // The feed reports untracked numbers as 0-0 (throw-ins, free kicks...): drop those, keep a real 0-0 for cards.
+        return out.filter { it.home != 0 || it.away != 0 || it.label == "Yellow cards" || it.label == "Red cards" }
+            .sortedBy { labelOrder.indexOf(it.label).let { i -> if (i < 0) Int.MAX_VALUE else i } }
     }
 
     /**
      * One side of a lineup. apifootball sends the formation separately ("4-2-3-1") and numbers starters 1..11 in
      * lineup_position; with a formation that adds up we turn that into the "row:col" grid the pitch view uses.
      */
-    fun lineup(side: JsonObject?, teamId: String, system: String): LineupDto {
+    fun lineup(side: JsonObject?, teamId: String, system: String, roster: Map<String, RosterEntry> = emptyMap()): LineupDto {
         if (side == null) return LineupDto(teamId)
         val starters = side.arr("starting_lineups").sortedBy { it.int("lineup_position") ?: 99 }
         val rows = system.split('-').mapNotNull { it.trim().toIntOrNull() }
-        val grids: List<String?> = if (starters.size == 11 && rows.isNotEmpty() && rows.sum() == 10) {
+        val positioned = starters.all { (it.int("lineup_position") ?: 0) in 1..11 } && starters.map { it.int("lineup_position") }.distinct().size == starters.size
+        var derived = false
+        var formation = system.ifBlank { null }
+        val grids: List<String?> = if (starters.size == 11 && positioned && rows.isNotEmpty() && rows.sum() == 10) {
             buildList {
                 add("1:1")
                 rows.forEachIndexed { r, n -> for (c in 1..n) add("${r + 2}:$c") }
             }
-        } else List(starters.size) { null }
-        fun player(p: JsonObject, grid: String?) = LineupPlayerDto(
-            id = p.str("player_key"), name = p.str("lineup_player"), number = p.int("lineup_number"), pos = null, grid = grid,
-        )
+        } else {
+            // No published formation: place starters by their squad position (goalkeeper, defenders, midfielders,
+            // forwards) when the squad list knows nearly all of them. Otherwise there is no honest pitch layout.
+            val shape = squadShape(starters.map { roster[it.str("player_key")]?.role })
+            if (shape != null) { derived = true; formation = shape.first; shape.second } else List(starters.size) { null }
+        }
+        fun player(p: JsonObject, grid: String?): LineupPlayerDto {
+            val r = roster[p.str("player_key")]
+            return LineupPlayerDto(
+                id = p.str("player_key"), name = p.str("lineup_player"), number = p.int("lineup_number") ?: r?.number?.takeIf { it > 0 },
+                pos = r?.role?.take(1), grid = grid, photo = r?.photo,
+            )
+        }
         return LineupDto(
             teamId = teamId,
             coach = side.arr("coach").firstOrNull()?.str("lineup_player")?.ifBlank { null },
-            formation = system.ifBlank { null },
+            formation = formation,
             startXI = starters.mapIndexed { i, p -> player(p, grids.getOrNull(i)) },
             substitutes = side.arr("substitutes").map { player(it, null) },
+            derived = derived,
         )
+    }
+
+    /**
+     * Rows for 11 starters from their squad roles ("Goalkeeper", "Defender", ...; null = unknown). Needs exactly one
+     * goalkeeper, at most two unknowns (placed in midfield) and three to five defenders. Returns ("4-4-2", grids).
+     */
+    fun squadShape(roles: List<String?>): Pair<String, List<String?>>? {
+        if (roles.size != 11) return null
+        val letters = roles.map { it?.trim()?.uppercase()?.take(1) }
+        if (letters.count { it == null } > 2 || letters.count { it == "G" } != 1) return null
+        val line = letters.map { when (it) { "G" -> 1; "D" -> 2; "F" -> 4; else -> 3 } }
+        val counts = (2..4).map { r -> line.count { it == r } }
+        if (counts[0] !in 3..5 || counts.sum() != 10) return null
+        val seen = IntArray(5)
+        val grids = line.map { r -> seen[r] += 1; "$r:${seen[r]}" }
+        // Collapse empty lines so a 4-6-0 reads as "4-6", never "4-6-0".
+        val label = counts.filter { it > 0 }.joinToString("-")
+        // Renumber rows without gaps (e.g. no forwards) so the pitch spreads the lines evenly.
+        val present = (1..4).filter { r -> r == 1 || line.contains(r) }
+        val remap = present.withIndex().associate { (i, r) -> r to i + 1 }
+        return label to grids.map { g -> val (r, c) = g.split(':'); "${remap[r.toInt()]}:$c" }
+    }
+
+    /** One player of a get_teams squad, keyed by player id in [roster]. */
+    data class RosterEntry(val role: String, val photo: String?, val number: Int, val country: String, val teamId: String, val age: Int)
+
+    /** Every player of every team in a get_teams answer (league_id or team_id), keyed by player id. */
+    fun roster(teams: List<JsonObject>): Map<String, RosterEntry> = buildMap {
+        teams.forEach { t ->
+            val teamId = t.str("team_key")
+            t.arr("players").forEach { p ->
+                val id = p.str("player_id").ifBlank { p.str("player_key") }
+                if (id.isBlank() || id == "0") return@forEach
+                put(id, RosterEntry(position(p.str("player_type")), p.str("player_image").ifBlank { null }, p.intOr0("player_number"), p.str("player_country"), teamId, p.intOr0("player_age")))
+            }
+        }
+    }
+
+    /** A player's season counted from match events: what the API's own player stats leave blank on smaller plans. */
+    data class SeasonLine(
+        val apps: Int, val starts: Int, val minutes: Int, val goals: Int, val assists: Int, val yellow: Int, val red: Int,
+        val recent: List<PlayerMatchDto>,
+    )
+
+    fun playerSeason(playerId: String, teamId: String, events: List<JsonObject>, recentCount: Int = 6): SeasonLine {
+        var apps = 0; var starts = 0; var minutes = 0; var goals = 0; var assists = 0; var yellow = 0; var red = 0
+        val recent = mutableListOf<PlayerMatchDto>()
+        val finished = events.filter { status(it.str("match_status")).status == "finished" }
+            .sortedBy { kickoffMs(it.str("match_date"), it.str("match_time")) }
+        finished.forEach { e ->
+            val home = e.str("match_hometeam_id") == teamId
+            val side = if (home) "home" else "away"
+            val lineup = e.obj("lineup")?.obj(side)
+            val started = lineup?.arr("starting_lineups")?.any { it.str("player_key") == playerId } == true
+            var on: Int? = null; var off: Int? = null
+            e.obj("substitutions")?.arr(side)?.forEach { sub ->
+                val ids = sub.str("substitution_player_id").split('|').map { it.trim() }
+                val t = minute(sub.str("time")).first.coerceIn(0, 120)
+                if (ids.getOrNull(0) == playerId) off = t
+                if (ids.getOrNull(1) == playerId) on = t
+            }
+            val g = e.arr("goalscorer").count { it.str("${side}_scorer_id") == playerId && "own" !in it.str("info").lowercase() }
+            val a = e.arr("goalscorer").count { it.str("${side}_assist_id") == playerId }
+            val cards = e.arr("cards").filter { it.str("${side}_player_id") == playerId }.map { it.str("card").lowercase() }
+            val played = started || on != null || g > 0 || a > 0 || cards.isNotEmpty()
+            if (!played) return@forEach
+            apps++; if (started) starts++
+            val mins = when {
+                started -> off ?: 90
+                on != null -> (90 - on!!).coerceAtLeast(1)
+                else -> 0
+            }
+            minutes += mins; goals += g; assists += a
+            yellow += cards.count { "yellow" in it && "red" !in it }
+            red += cards.count { "red" in it }
+            val f = fixture(e)
+            val mine = if (home) f.homeScore else f.awayScore
+            val theirs = if (home) f.awayScore else f.homeScore
+            val result = if (mine == null || theirs == null) "" else when { mine > theirs -> "W"; mine < theirs -> "L"; else -> "D" }
+            recent += PlayerMatchDto(
+                matchId = f.id, opponent = if (home) f.away else f.home, home = home,
+                score = if (f.homeScore != null && f.awayScore != null) "${f.homeScore}-${f.awayScore}" else "",
+                minutes = mins, rating = 0.0, dateMs = f.kickoffMs, goals = g, started = started, result = result,
+            )
+        }
+        return SeasonLine(apps, starts, minutes, goals, assists, yellow, red, recent.takeLast(recentCount).reversed())
     }
 
     // ---- standings ----
@@ -340,7 +444,10 @@ object ApiFootballParse {
             val id = p.str("player_id").ifBlank { p.str("player_key") }
             val name = p.str("player_name").ifBlank { p.str("player_complete_name") }
             if (id.isBlank() || id == "0" || name.isBlank()) return@mapNotNull null
-            SquadPlayerDto(id, name, p.intOr0("player_number"), position(p.str("player_type")).ifBlank { "Forward" }, p.dbl("player_rating")?.takeIf { it > 0 })
+            SquadPlayerDto(
+                id, name, p.intOr0("player_number"), position(p.str("player_type")).ifBlank { "Forward" }, p.dbl("player_rating")?.takeIf { it > 0 },
+                photo = p.str("player_image").ifBlank { null }, age = p.intOr0("player_age"),
+            )
         }
         return TeamDto(
             team = TeamRefDto(t.str("team_key"), t.str("team_name"), logo = t.str("team_badge").ifBlank { null }, leagueId = leagueId),
@@ -362,6 +469,7 @@ object ApiFootballParse {
         number = p.intOr0("player_number"),
         nationality = p.str("player_country"),
         rating = p.dbl("player_rating") ?: 0.0,
+        photo = p.str("player_image").ifBlank { null },
     )
 
     /** get_players can return one row per club the player is registered with; the first is the current one. */

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -118,9 +120,9 @@ fun ProbabilityBar(p: com.innovativeinside.pitchside.data.model.WinProbability, 
 enum class CrestSize(val dp: Dp) { S(24.dp), M(32.dp), L(48.dp), XL(64.dp) }
 
 /**
- * Circular team badge. No crest images exist yet, so it shows the club initials on a neutral disc with a
- * team-colour ring (the only place a club colour appears at this size). Decorative for TalkBack: the
- * team name is always next to it.
+ * Circular team badge. Shows the club crest from the data source (through Coil, cached) on a light disc; while it
+ * loads, or when there is no crest, the club initials on a neutral disc with a team-colour ring. Decorative for
+ * TalkBack: the team name is always next to it.
  */
 @Composable
 fun TeamCrest(team: Team, size: Dp = CrestSize.M.dp, modifier: Modifier = Modifier, onHero: Boolean = false, ring: Boolean = true) {
@@ -131,14 +133,39 @@ fun TeamCrest(team: Team, size: Dp = CrestSize.M.dp, modifier: Modifier = Modifi
         size >= 32.dp -> PcType.LabelStrong
         else -> PcType.Micro
     }
-    Box(
-        modifier.size(size).clip(CircleShape).background(if (onHero) Pc.HeroRaised else Pc.SurfaceVariant)
-            .let { if (ring) it.border(ringWidth, Pc.team(team.color), CircleShape) else it }
-            .clearAndSetSemantics {},
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(team.short.take(3), style = style, color = if (onHero) Pc.OnHero else Pc.Text, maxLines = 1)
+    val initials: @Composable () -> Unit = {
+        Box(
+            Modifier.fillMaxSize().background(if (onHero) Pc.HeroRaised else Pc.SurfaceVariant)
+                .let { if (ring) it.border(ringWidth, Pc.team(team.color), CircleShape) else it },
+            contentAlignment = Alignment.Center,
+        ) { Text(team.short.take(3), style = style, color = if (onHero) Pc.OnHero else Pc.Text, maxLines = 1) }
     }
+    Box(modifier.size(size).clip(CircleShape).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+        val logo = team.logo
+        if (logo == null) initials()
+        else RemoteImage(
+            logo, initials,
+            Modifier.fillMaxSize().background(Color.White).border(1.dp, if (onHero) Pc.HeroOutline else Pc.Outline, CircleShape).padding(size * 0.12f),
+            ContentScale.Fit,
+        )
+    }
+}
+
+/**
+ * A remote image (crest, logo, player photo) through Coil with [fallback] shown while loading and on error, so a slow or
+ * missing image never leaves a hole. Decorative: callers give the name in text next to it.
+ */
+@Composable
+fun RemoteImage(url: String, fallback: @Composable () -> Unit, modifier: Modifier = Modifier, scale: ContentScale = ContentScale.Crop) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    coil.compose.SubcomposeAsyncImage(
+        model = remember(url) { coil.request.ImageRequest.Builder(ctx).data(url).crossfade(true).build() },
+        contentDescription = null,
+        contentScale = scale,
+        loading = { fallback() },
+        error = { fallback() },
+        modifier = modifier,
+    )
 }
 
 /** Older call sites. */
@@ -227,6 +254,9 @@ fun LiveMatchTile(
     onReveal: () -> Unit,
     modifier: Modifier = Modifier,
     stats: List<StatRow> = emptyList(),
+    /** Replaces the status text at the top right for non-live matches ("Tomorrow", "Sat 16 Nov"). */
+    topRight: String? = null,
+    footer: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
 ) {
     PcCard(
         modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = "Featured match: " + matchDescription(match, hidden) },
@@ -241,7 +271,7 @@ fun LiveMatchTile(
                 Spacer(Modifier.width(PcSpace.xs))
                 when (match.status) {
                     Status.Live -> LiveBadge(match.label, onHero = true)
-                    else -> Text(if (match.status == Status.Finished) "FT" else match.label, style = PcType.LabelStrong, color = Pc.OnHero)
+                    else -> Text(topRight ?: if (match.status == Status.Finished) "FT" else match.label, style = PcType.LabelStrong, color = Pc.OnHero)
                 }
             }
             Row(Modifier.fillMaxWidth().padding(vertical = PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
@@ -291,6 +321,7 @@ fun LiveMatchTile(
                     )
                 }
             }
+            footer()
         }
     }
 }

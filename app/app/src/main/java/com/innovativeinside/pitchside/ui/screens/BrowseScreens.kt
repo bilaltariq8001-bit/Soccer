@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.EventBusy
+import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.TableChart
@@ -160,10 +161,10 @@ fun LeaguesContent(
                             Modifier.fillMaxWidth().padding(horizontal = PcSpace.screen, vertical = PcSpace.xs),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
                         ) {
-                            LeagueBadge(current.short, 48)
+                            LeagueBadge(current.short, 48, current.logo)
                             Column(Modifier.weight(1f)) {
                                 Text(current.name, style = PcType.Subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
-                                Text("${current.country} · ${current.season} · ${current.currentRound}", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(listOf(current.country, current.season, current.currentRound).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                             IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${current.name}" else "Follow ${current.name}", { app.toggleLeague(current.id, current.name) }, tint = if (following) Pc.Accent else Pc.Text2)
                             IconAction(Icons.AutoMirrored.Outlined.KeyboardArrowRight, "Open ${current.name}", { openLeague(current.id) }, tint = Pc.Text2)
@@ -179,11 +180,18 @@ fun LeaguesContent(
                     // Grouped by country, in the data source's country order (apifootball.com get_countries).
                     val byCountry = state.data.leagues.groupBy { it.country.ifBlank { "Other" } }
                     byCountry.forEach { (country, group) ->
-                        if (byCountry.size > 1) item(key = "country-$country") { Overline(country, Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.sm, bottom = PcSpace.xxs)) }
+                        if (byCountry.size > 1) item(key = "country-$country") {
+                            Row(Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.sm, bottom = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                group.firstNotNullOfOrNull { it.countryLogo }?.let { flag ->
+                                    com.innovativeinside.pitchside.ui.components.RemoteImage(flag, { Box(Modifier.fillMaxSize().background(Pc.SurfaceVariant)) }, Modifier.size(width = 20.dp, height = 14.dp).clip(PcShape.Small), androidx.compose.ui.layout.ContentScale.Crop)
+                                }
+                                Overline(country)
+                            }
+                        }
                         item(key = "countryCard-$country") {
                             PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth()) {
                                 Column { group.forEachIndexed { i, l ->
-                                    FollowRow({ LeagueBadge(l.short) }, l.name, listOf(l.country, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) }) { openLeague(l.id) }
+                                    FollowRow({ LeagueBadge(l.short, logo = l.logo) }, l.name, listOf(l.country, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) }) { openLeague(l.id) }
                                     if (i < group.lastIndex) Hairline()
                                 } }
                             }
@@ -227,9 +235,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.leagueSection(d: Leag
         }
         else -> if (d.scorers.isEmpty()) item {
             EmptyState("No goals yet", "Top scorers appear after the first round.", Modifier.padding(PcSpace.screen), icon = Icons.Outlined.EmojiEvents)
-        } else item {
-            PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth()) {
-                Column { d.scorers.forEachIndexed { i, s -> ScorerRow(s) { openPlayer(s.playerId) }; if (i < d.scorers.lastIndex) Hairline() } }
+        } else {
+            if (d.scorers.size >= 3) item { ScorerPodium(d.scorers.take(3), openPlayer, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xxs)) }
+            item {
+                PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth()) {
+                    Column { d.scorers.forEachIndexed { i, s -> ScorerRow(s) { openPlayer(s.playerId) }; if (i < d.scorers.lastIndex) Hairline() } }
+                }
             }
         }
     }
@@ -237,7 +248,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.leagueSection(d: Leag
 
 @Composable
 fun LeagueRow(l: League, following: Boolean, onOpen: () -> Unit, onToggle: () -> Unit) {
-    PcCard(Modifier.fillMaxWidth()) { FollowRow({ LeagueBadge(l.short) }, l.name, "${l.country} · ${l.currentRound}", following, onToggle, onOpen) }
+    PcCard(Modifier.fillMaxWidth()) { FollowRow({ LeagueBadge(l.short, logo = l.logo) }, l.name, listOf(l.country, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), following, onToggle, onOpen) }
 }
 
 /** Player row: avatar, name, position · club · nationality, and the rating pill. */
@@ -247,7 +258,7 @@ fun PlayerRow(p: PlayerSummary, onClick: () -> Unit, trailing: @Composable () ->
         Modifier.fillMaxWidth().heightIn(min = 64.dp).pcClickable(PcShape.Control, "Open ${p.name}", onClick = onClick).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
     ) {
-        PlayerAvatar(p.name, p.team.color, 40.dp)
+        PlayerAvatar(p.name, p.team.color, 40.dp, p.photo)
         Column(Modifier.weight(1f)) {
             Text(p.name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(listOf(p.position, p.team.name, p.nationality).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -308,7 +319,7 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
     val prefs = LocalPrefs.current
     val l = d.league
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    EntityHeader({ LeagueBadge(l.short, 64) }, l.name, "${l.country} · ${l.season} · ${l.currentRound}", l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) })
+    EntityHeader({ LeagueBadge(l.short, 64, l.logo) }, l.name, listOf(l.country, l.season, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) })
     Spacer(Modifier.height(PcSpace.sm))
     val tabs = buildList { if (d.standings.isNotEmpty()) add("Table"); add("Matches"); if (d.scorers.isNotEmpty()) add("Top scorers"); add("Teams") }
     val current = tabs.getOrElse(tab) { tabs.first() }
@@ -322,7 +333,10 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
             }
             "Matches" -> if (d.fixtures.isEmpty()) EmptyState("No fixtures this week", "Fixtures for the next round appear once they're scheduled.", icon = Icons.Outlined.EventBusy)
             else d.fixtures.groupBy { formatDay(it.kickoffMs) }.forEach { (day, ms) -> LeagueGroup(day, ms, openMatch, short = day.take(3)) }
-            "Top scorers" -> PcCard(Modifier.fillMaxWidth()) { Column { d.scorers.forEachIndexed { i, s -> ScorerRow(s) { openPlayer(s.playerId) }; if (i < d.scorers.lastIndex) Hairline() } } }
+            "Top scorers" -> {
+                if (d.scorers.size >= 3) ScorerPodium(d.scorers.take(3), openPlayer)
+                PcCard(Modifier.fillMaxWidth()) { Column { d.scorers.forEachIndexed { i, s -> ScorerRow(s) { openPlayer(s.playerId) }; if (i < d.scorers.lastIndex) Hairline() } } }
+            }
             else -> {
                 val teams = d.standings.map { it.team }.ifEmpty { d.fixtures.flatMap { listOf(it.home, it.away) }.distinctBy { it.id } }
                 if (teams.isEmpty()) EmptyState("No teams listed", "Team lists appear when the season starts.", icon = Icons.Outlined.Groups)
@@ -337,6 +351,32 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
     }
 }
 
+/** The top three scorers side by side: photo, name, club crest and goals; the leader in the middle, raised. */
+@Composable
+private fun ScorerPodium(top: List<Scorer>, openPlayer: (String) -> Unit, modifier: Modifier = Modifier) {
+    val order = listOfNotNull(top.getOrNull(1), top.getOrNull(0), top.getOrNull(2))
+    Row(modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalAlignment = Alignment.Bottom) {
+        order.forEach { s ->
+            val lead = s.rank == top.first().rank && s.playerId == top.first().playerId
+            PcCard(Modifier.weight(1f), container = if (lead) Pc.AccentContainer else Pc.Surface, onClick = { openPlayer(s.playerId) }) {
+                Column(
+                    Modifier.fillMaxWidth().padding(vertical = if (lead) PcSpace.md else PcSpace.sm, horizontal = PcSpace.xs)
+                        .semantics(mergeDescendants = true) { contentDescription = "${s.rank}, ${s.name}, ${s.team.name}, ${s.goals} goals" },
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        PlayerAvatar(s.name, s.team.color, if (lead) 64.dp else 52.dp, s.photo)
+                        TeamCrest(s.team, 22.dp, ring = false)
+                    }
+                    Text(s.name, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                    Text(s.goals.toString(), style = PcType.ScoreCompact, color = if (lead) Pc.Accent else Pc.Text)
+                    Text(if (s.goals == 1) "GOAL" else "GOALS", style = PcType.Overline)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ScorerRow(s: Scorer, onClick: () -> Unit) {
     Row(
@@ -345,12 +385,18 @@ private fun ScorerRow(s: Scorer, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
     ) {
         Text(s.rank.toString(), style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.Text2, modifier = Modifier.width(20.dp))
-        PlayerAvatar(s.name, s.team.color, 40.dp)
+        PlayerAvatar(s.name, s.team.color, 40.dp, s.photo)
         Column(Modifier.weight(1f)) {
             Text(s.name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${s.team.name} · ${s.assists} assists", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TeamCrest(s.team, 16.dp, ring = false)
+                Text(s.team.name + if (s.assists > 0) " · ${s.assists} assists" else "", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
-        Text(s.goals.toString(), style = PcType.ScoreCompact)
+        Column(horizontalAlignment = Alignment.End) {
+            Text(s.goals.toString(), style = PcType.ScoreCompact)
+            Text(if (s.goals == 1) "GOAL" else "GOALS", style = PcType.Overline)
+        }
     }
 }
 
@@ -405,10 +451,49 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                         Text(formatKickoff(next.kickoffMs), style = PcType.Caption)
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                    StatTile(if (d.capacity > 0) "%,d".format(d.capacity) else "-", "Capacity", Modifier.weight(1f))
-                    StatTile(if (d.founded > 0) d.founded.toString() else "-", "Founded", Modifier.weight(1f))
-                    StatTile(d.squad.size.toString(), "Squad", Modifier.weight(1f))
+                val finishedStatus = com.innovativeinside.pitchside.data.model.Status.Finished
+                val played = page.fixtures.filter { it.status == finishedStatus && it.hasScore }.sortedByDescending { it.kickoffMs }
+                val last = played.firstOrNull()
+                val form = com.innovativeinside.pitchside.data.insight.MatchBrief.formFrom(t.id, played)
+                if (last != null || form.isNotBlank()) Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
+                    if (last != null) BentoTile("Last result", Modifier.weight(1f).fillMaxHeight(), onClick = { openMatch(last.id) }) {
+                        val home = last.home.id == t.id
+                        val opp = if (home) last.away else last.home
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                            TeamCrest(opp, CrestSize.M.dp)
+                            Text("${if (home) "vs" else "at"} ${opp.name}", style = PcType.LabelStrong, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text("${last.homeScore}–${last.awayScore}", style = PcType.ScoreCompact)
+                        Text(formatDay(last.kickoffMs), style = PcType.Caption)
+                    }
+                    if (form.isNotBlank()) BentoTile("Form · last ${form.length}", Modifier.weight(1f).fillMaxHeight(), onClick = { tab = tabs.indexOf("Fixtures") }) {
+                        com.innovativeinside.pitchside.ui.components.FormDots(form)
+                        val w = form.count { it == 'W' }; val dr = form.count { it == 'D' }; val l = form.count { it == 'L' }
+                        Text("$w W · $dr D · $l L", style = PcType.LabelStrong)
+                        val gf = played.take(form.length).sumOf { if (it.home.id == t.id) it.homeScore!! else it.awayScore!! }
+                        val ga = played.take(form.length).sumOf { if (it.home.id == t.id) it.awayScore!! else it.homeScore!! }
+                        Text("Goals $gf scored · $ga conceded", style = PcType.Caption)
+                    }
+                }
+                if (row != null) Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                    StatTile("${row.won}-${row.drawn}-${row.lost}", "W-D-L", Modifier.weight(1.3f))
+                    StatTile(row.goalsFor.toString(), "Scored", Modifier.weight(1f))
+                    StatTile(row.goalsAgainst.toString(), "Conceded", Modifier.weight(1f))
+                    StatTile(if (row.goalDiff > 0) "+${row.goalDiff}" else row.goalDiff.toString(), "GD", Modifier.weight(1f), if (row.goalDiff > 0) Pc.Accent else Pc.Text)
+                }
+                val facts = listOfNotNull(
+                    d.capacity.takeIf { it > 0 }?.let { "%,d".format(it) to "Capacity" },
+                    d.founded.takeIf { it > 0 }?.let { it.toString() to "Founded" },
+                    d.squad.size.takeIf { it > 0 }?.let { it.toString() to "Squad" },
+                )
+                if (facts.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                    facts.forEach { (v, k) -> StatTile(v, k, Modifier.weight(1f)) }
+                }
+                if (row != null) {
+                    val i = page.standings.indexOf(row)
+                    val around = page.standings.subList((i - 2).coerceAtLeast(0), (i + 3).coerceAtMost(page.standings.size))
+                    SectionHeader("Table snapshot", "Full table", { tab = tabs.indexOf("Table") })
+                    StandingsTable(around, openTeam, highlight = setOf(t.id), compact = true, showForm = true)
                 }
                 PcCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(horizontal = PcSpace.md)) {
@@ -419,7 +504,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                 }
             }
             "Fixtures" -> if (page.fixtures.isEmpty()) EmptyState("No matches this fortnight", "Upcoming fixtures appear once they're scheduled.", icon = Icons.Outlined.EventBusy)
-            else groupByLeague(page.fixtures, prefs.leagues).forEach { (name, ms) -> LeagueGroup(name, ms, openMatch) }
+            else groupByLeague(page.fixtures, prefs.leagues).forEach { (name, ms) -> LeagueGroup(name, ms, openMatch, logo = ms.firstNotNullOfOrNull { it.leagueLogo }) }
             "Squad" -> Position.entries.forEach { pos ->
                 val group = d.squad.filter { it.position == pos }.sortedBy { it.number }
                 if (group.isNotEmpty()) {
@@ -430,8 +515,12 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                                 Modifier.fillMaxWidth().heightIn(min = 56.dp).pcClickable(PcShape.Control, "Open ${p.name}") { openPlayer(p.playerId) }.padding(horizontal = PcSpace.sm),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
                             ) {
-                                Box(Modifier.size(32.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text(p.number.toString(), style = PcType.Numeric.copy(fontWeight = FontWeight.Bold)) }
-                                Text(p.name, style = PcType.BodyStrong, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                PlayerAvatar(p.name, t.color, 36.dp, p.photo)
+                                Column(Modifier.weight(1f)) {
+                                    Text(p.name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    val sub = listOfNotNull(p.number.takeIf { it > 0 }?.let { "#$it" }, p.age.takeIf { it > 0 }?.let { "Age $it" }).joinToString(" · ")
+                                    if (sub.isNotBlank()) Text(sub, style = PcType.Caption, maxLines = 1)
+                                }
                                 p.rating?.let { RatingPill(it) }
                                 Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = Pc.Text3, modifier = Modifier.size(18.dp))
                             }
@@ -482,24 +571,46 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
     val prefs = LocalPrefs.current
     val s = p.summary
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    EntityHeader({ PlayerAvatar(s.name, s.team.color, 72.dp) }, s.name, "${s.position} · #${s.number} · ${s.nationality}", s.id in prefs.players, { app.togglePlayer(s.id, s.name) }) {
+    EntityHeader({ PlayerAvatar(s.name, s.team.color, 72.dp, s.photo) }, s.name, listOf(s.position, s.number.takeIf { it > 0 }?.let { "#$it" }.orEmpty(), s.nationality).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { s.team.name }, s.id in prefs.players, { app.togglePlayer(s.id, s.name) }) {
         Chip(s.team.name, false, { openTeam(s.team.id) })
     }
     Spacer(Modifier.height(PcSpace.sm))
-    val tabs = buildList { add("Profile"); if (p.recentMatches.isNotEmpty()) add("Matches"); add("Stats"); if (p.career.isNotEmpty()) add("Career") }
+    val tabs = buildList { add("Profile"); if (p.recentMatches.isNotEmpty()) add("Matches"); if (p.matches > 0 || p.goals > 0) add("Stats"); if (p.career.isNotEmpty()) add("Career") }
     val current = tabs.getOrElse(tab) { tabs.first() }
     UnderlineTabs(tabs, tabs.indexOf(current), { tab = it })
     Column(Modifier.padding(PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         when (current) {
             "Profile" -> {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                    listOf("Age ${p.age}", "${p.heightCm} cm", "${p.foot} foot", s.nationality, "Value ${p.marketValue}").forEach { Tag(it) }
+                val tags = listOfNotNull(
+                    p.age.takeIf { it > 0 }?.let { "Age $it" }, p.heightCm.takeIf { it > 0 }?.let { "$it cm" },
+                    p.foot.takeIf { it.isNotBlank() }?.let { "$it foot" }, s.nationality.takeIf { it.isNotBlank() },
+                    p.marketValue.takeIf { it.isNotBlank() }?.let { "Value $it" }, s.position.takeIf { it.isNotBlank() },
+                )
+                if (tags.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) { tags.forEach { Tag(it) } }
+                if (p.matches > 0 || p.goals > 0) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                        StatTile(p.goals.toString(), "Goals", Modifier.weight(1f), Pc.Accent); StatTile(p.assists.toString(), "Assists", Modifier.weight(1f))
+                        StatTile(p.matches.toString(), "Apps", Modifier.weight(1f))
+                        if (s.rating > 0) StatTile("%.1f".format(s.rating), "Rating", Modifier.weight(1f), Pc.Accent)
+                        else StatTile(if (p.minutes > 0) "%,d".format(p.minutes) else p.starts.toString(), if (p.minutes > 0) "Minutes" else "Starts", Modifier.weight(1f))
+                    }
+                    if (p.yellowCards > 0 || p.redCards > 0 || p.starts > 0) Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                        StatTile(p.starts.toString(), "Starts", Modifier.weight(1f))
+                        StatTile((p.matches - p.starts).coerceAtLeast(0).toString(), "From bench", Modifier.weight(1f))
+                        StatTile(p.yellowCards.toString(), "Yellows", Modifier.weight(1f), if (p.yellowCards > 0) Pc.Warning else Pc.Text)
+                        StatTile(p.redCards.toString(), "Reds", Modifier.weight(1f), if (p.redCards > 0) Pc.Error else Pc.Text)
+                    }
+                    BriefCard(seasonSnapshot(p), title = "Season snapshot", compactMeta = true)
+                    if (p.statsNote.isNotBlank()) Text(p.statsNote + ".", style = PcType.Caption)
+                } else {
+                    PcCard(Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(PcSpace.md), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                            Icon(Icons.Outlined.EventBusy, null, tint = Pc.Text2)
+                            Text("No appearances recorded this season yet.", style = PcType.BodyMuted)
+                        }
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                    StatTile(p.goals.toString(), "Goals", Modifier.weight(1f)); StatTile(p.assists.toString(), "Assists", Modifier.weight(1f))
-                    StatTile("%.1f".format(s.rating), "Rating", Modifier.weight(1f), Pc.Accent); StatTile(p.matches.toString(), "Apps", Modifier.weight(1f))
-                }
-                if (p.scoutingNote.isNotBlank()) BriefCard(p.scoutingNote, title = "Scouting note", compactMeta = true)
+                if (p.scoutingNote.isNotBlank()) BriefCard(p.scoutingNote, title = "Profile", compactMeta = true)
             }
             "Matches" -> PcCard(Modifier.fillMaxWidth()) {
                 Column { p.recentMatches.forEachIndexed { i, m ->
@@ -507,9 +618,13 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                         TeamCrest(m.opponent, CrestSize.M.dp)
                         Column(Modifier.weight(1f)) {
                             Text("${if (m.home) "vs" else "at"} ${m.opponent.name}", style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text("${formatDay(m.dateMs)} · ${m.score} · ${m.minutes}'", style = PcType.Caption)
+                            Text(listOfNotNull(formatDay(m.dateMs), m.score.ifBlank { null }, m.minutes.takeIf { it > 0 }?.let { "$it'" }, if (m.started) null else "Sub").joinToString(" · "), style = PcType.Caption)
                         }
-                        RatingPill(m.rating)
+                        if (m.goals > 0) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.Accent, modifier = Modifier.size(14.dp))
+                            if (m.goals > 1) Text("×${m.goals}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.Accent)
+                        }
+                        if (m.rating > 0) RatingPill(m.rating) else if (m.result.isNotBlank()) com.innovativeinside.pitchside.ui.components.FormChip(m.result.first(), 22.dp)
                     }
                     if (i < p.recentMatches.lastIndex) Hairline()
                 } }
@@ -521,15 +636,21 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                 PcCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         if (per90 == 0) {
-                            Bar("Goals", p.goals.toDouble(), 15.0, "%.0f")
-                            Bar("Assists", p.assists.toDouble(), 10.0, "%.0f")
-                            Bar("xG", p.xg, 12.0, "%.1f")
-                            Bar("Minutes", p.minutes.toDouble(), 1000.0, "%.0f")
+                            Bar("Goals", p.goals.toDouble(), maxOf(10.0, p.goals.toDouble()), "%.0f")
+                            Bar("Assists", p.assists.toDouble(), maxOf(8.0, p.assists.toDouble()), "%.0f")
+                            Bar("Apps", p.matches.toDouble(), maxOf(20.0, p.matches.toDouble()), "%.0f")
+                            if (p.starts > 0) Bar("Starts", p.starts.toDouble(), maxOf(1.0, p.matches.toDouble()), "%.0f")
+                            if (p.minutes > 0) Bar("Minutes", p.minutes.toDouble(), maxOf(1.0, p.matches * 90.0), "%.0f")
+                            if (p.xg > 0) Bar("xG", p.xg, 12.0, "%.1f")
+                        } else if (p.minutes > 0) {
+                            Bar("Goals", p.goals * 90.0 / mins, 1.0, "%.2f")
+                            Bar("Assists", p.assists * 90.0 / mins, 1.0, "%.2f")
+                            Bar("G + A", (p.goals + p.assists) * 90.0 / mins, 1.5, "%.2f")
+                            if (p.shotsPer90 > 0) Bar("Shots", p.shotsPer90, 5.0, "%.1f")
+                            if (p.keyPassesPer90 > 0) Bar("Key passes", p.keyPassesPer90, 4.0, "%.1f")
+                            if (p.xg > 0) Bar("xG", p.xg * 90.0 / mins, 1.0, "%.2f")
                         } else {
-                            Bar("Goals", p.goals * 90.0 / mins, 1.2, "%.2f")
-                            Bar("Shots", p.shotsPer90, 5.0, "%.1f")
-                            Bar("Key passes", p.keyPassesPer90, 4.0, "%.1f")
-                            Bar("xG", p.xg * 90.0 / mins, 1.0, "%.2f")
+                            Text("Per-90 numbers need minutes played, which this source doesn't have for this player.", style = PcType.BodyMuted)
                         }
                     }
                 }
@@ -549,6 +670,20 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
         }
     }
 }
+
+/** One plain-language line about the player's season, from the numbers on the page. */
+fun seasonSnapshot(p: PlayerProfile): String = buildString {
+    val s = p.summary
+    append("${s.name} has ${p.goals} ${if (p.goals == 1) "goal" else "goals"} and ${p.assists} ${if (p.assists == 1) "assist" else "assists"} in ${p.matches} ${if (p.matches == 1) "appearance" else "appearances"}")
+    if (s.team.name.isNotBlank()) append(" for ${s.team.name}")
+    append(".")
+    if (p.starts > 0) append(" ${p.starts} ${if (p.starts == 1) "start" else "starts"}")
+    if (p.minutes > 0) append("${if (p.starts > 0) "," else ""} ${"%,d".format(p.minutes)} minutes")
+    if (p.starts > 0 || p.minutes > 0) append(".")
+    if (p.goals > 0 && p.minutes > 0) append(" A goal every ${p.minutes / p.goals} minutes.")
+    val recentGoals = p.recentMatches.sumOf { it.goals }
+    if (p.recentMatches.size >= 3 && recentGoals > 0) append(" $recentGoals in the last ${p.recentMatches.size} games played.")
+}.trim()
 
 @Composable
 private fun Tag(text: String) {

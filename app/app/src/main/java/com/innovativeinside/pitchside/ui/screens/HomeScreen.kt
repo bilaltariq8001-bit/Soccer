@@ -97,6 +97,13 @@ import com.innovativeinside.pitchside.ui.vm.HomeData
 import com.innovativeinside.pitchside.ui.vm.HomeViewModel
 import com.innovativeinside.pitchside.ui.vm.MatchFilter
 import com.innovativeinside.pitchside.ui.vm.competitionsOf
+import com.innovativeinside.pitchside.ui.vm.CompetitionCount
+import com.innovativeinside.pitchside.ui.vm.countsByCompetition
+import com.innovativeinside.pitchside.ui.vm.inForm
+import com.innovativeinside.pitchside.ui.vm.pickSpotlight
+import com.innovativeinside.pitchside.data.insight.MatchBrief
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.text.style.TextAlign
 import com.innovativeinside.pitchside.ui.vm.filterByCompetition
 import com.innovativeinside.pitchside.ui.vm.filterMatches
 import com.innovativeinside.pitchside.ui.vm.nextKickoff
@@ -166,7 +173,7 @@ private fun HomeBody(d: HomeData, actions: HomeActions, heroStats: Map<String, L
         if (hiddenNow.isNotEmpty()) ShieldBanner(hiddenNow.size) { app.caughtUp(hiddenNow.map { it.id }) }
 
         // 1. LIVE NOW
-        LiveSection(live, actions, heroStats, loadStats)
+        LiveSection(live, actions, heroStats, loadStats, d)
 
         // 2. TODAY rail: upcoming first, then live, then finished.
         if (matches.isNotEmpty()) {
@@ -211,13 +218,15 @@ private fun HomeBody(d: HomeData, actions: HomeActions, heroStats: Map<String, L
 }
 
 @Composable
-private fun LiveSection(live: List<Match>, actions: HomeActions, heroStats: Map<String, List<StatRow>>, loadStats: (String) -> Unit) {
+private fun LiveSection(live: List<Match>, actions: HomeActions, heroStats: Map<String, List<StatRow>>, loadStats: (String) -> Unit, d: HomeData) {
     val app = LocalApp.current
     val prefs = LocalPrefs.current
     val reduced = rememberReducedMotion()
     var promoted by rememberSaveable { mutableStateOf<String?>(null) }
     val ranked = rankLiveMatches(live, prefs.teams)
     val hero = pickHero(live, prefs.teams, promoted)
+
+    if (hero == null) { SpotlightSection(d, actions); return }
 
     SectionHeader("Live now", trailing = {
         if (live.isNotEmpty()) Row(
@@ -229,18 +238,6 @@ private fun LiveSection(live: List<Match>, actions: HomeActions, heroStats: Map<
         }
     })
 
-    if (hero == null) {
-        PcCard(Modifier.fillMaxWidth().testTag("no_live")) {
-            Row(Modifier.padding(PcSpace.md), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-                Box(Modifier.size(40.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.Text2) }
-                Column(Modifier.weight(1f)) {
-                    Text("Nothing live right now", style = PcType.BodyStrong)
-                    Text("Live matches appear here at kickoff.", style = PcType.Caption)
-                }
-            }
-        }
-        return
-    }
 
     LaunchedEffect(hero.id, hero.label) { loadStats(hero.id) }
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -283,6 +280,67 @@ private fun LiveSection(live: List<Match>, actions: HomeActions, heroStats: Map<
     }
 }
 
+/**
+ * Nothing live: a compact "nothing live" line, then the spotlight match (a followed team's next game, else the biggest
+ * game coming up by table position) on the same hero stage, with its win probability and a kickoff countdown.
+ */
+@Composable
+private fun SpotlightSection(d: HomeData, actions: HomeActions) {
+    val app = LocalApp.current
+    val prefs = LocalPrefs.current
+    var now by remember { androidx.compose.runtime.mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(30_000); now = System.currentTimeMillis() } }
+    val spot = pickSpotlight(d.upcoming, d.matches, prefs.teams, d.tables, now)
+    SectionHeader(if (spot?.status == Status.Finished) "Result of the day" else "Match spotlight", trailing = {
+        Row(
+            Modifier.clip(PcShape.Chip).background(Pc.SurfaceVariant).padding(horizontal = 10.dp, vertical = 4.dp).testTag("no_live"),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Box(Modifier.size(6.dp).clip(CircleShape).background(Pc.Text3))
+            Text("Nothing live right now", style = PcType.Caption)
+        }
+    })
+    if (spot == null) {
+        PcCard(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(PcSpace.md), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.Text2) }
+                Column(Modifier.weight(1f)) {
+                    Text("No fixtures in the next few days", style = PcType.BodyStrong)
+                    Text("Live matches take over this spot at kickoff.", style = PcType.Caption)
+                }
+            }
+        }
+        return
+    }
+    val table = d.tables[spot.leagueId].orEmpty()
+    val hr = table.firstOrNull { it.team.id == spot.home.id }
+    val ar = table.firstOrNull { it.team.id == spot.away.id }
+    val upcoming = spot.status == Status.Upcoming
+    LiveMatchTile(
+        spot, app.isHidden(prefs, spot), { actions.openMatch(spot.id) }, { app.reveal(spot.id) },
+        modifier = Modifier.testTag("spotlight"),
+        topRight = if (upcoming) formatDay(spot.kickoffMs) else null,
+    ) {
+        if (hr != null || ar != null) Row(Modifier.fillMaxWidth()) {
+            Text(hr?.let { "${MatchBrief.ordinal(it.rank)} · ${it.points} pts" }.orEmpty(), style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Spacer(Modifier.width(112.dp))
+            Text(ar?.let { "${MatchBrief.ordinal(it.rank)} · ${it.points} pts" }.orEmpty(), style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+        }
+        val p = spot.probs
+        if (upcoming && p != null) {
+            Column(Modifier.fillMaxWidth().clip(PcShape.Control).background(Pc.HeroRaised).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth()) {
+                    Text("${p.home}%", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.OnHero, modifier = Modifier.weight(1f))
+                    Text("DRAW ${p.draw}%", style = PcType.Overline, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                    Text("${p.away}%", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.OnHero, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+                }
+                com.innovativeinside.pitchside.ui.components.ProbabilityBar(p, Modifier.fillMaxWidth())
+            }
+        }
+        if (upcoming) Text("Kicks off in ${com.innovativeinside.pitchside.ui.components.countdown(now, spot.kickoffMs)}", style = PcType.LabelStrong, color = Pc.OnHero2)
+    }
+}
+
 /** Two-column bento. Tiles without data are left out; an odd tile spans the full row, so there are no holes. */
 @Composable
 private fun BentoGrid(d: HomeData, live: List<Match>, actions: HomeActions) {
@@ -292,11 +350,19 @@ private fun BentoGrid(d: HomeData, live: List<Match>, actions: HomeActions) {
     val next = nextKickoff(d.upcoming, prefs.teams, System.currentTimeMillis())
     val insightMatch = pickHero(live, prefs.teams, null)?.takeIf { it.brief.isNotBlank() && !app.isHidden(prefs, it) }
         ?: d.matches.firstOrNull { it.brief.isNotBlank() && it.status != Status.Finished && !app.isHidden(prefs, it) }
+        ?: d.upcoming.firstOrNull { it.brief.isNotBlank() && it.involves(prefs.teams) }
+        ?: d.upcoming.firstOrNull { it.brief.isNotBlank() }
+        ?: d.matches.firstOrNull { it.brief.isNotBlank() && !app.isHidden(prefs, it) }
     val tiles = buildList<@Composable (Modifier) -> Unit> {
         if (d.table.isNotEmpty()) add { m -> StandingsTile(d.tableLeague?.name ?: "Table", d.table, prefs.teams.toSet(), { actions.openLeague(d.tableLeague?.id ?: d.table.first().team.leagueId) }, m) }
         if (next != null) add { m -> NextKickoffTile(next, next.id in prefs.matchAlerts, { app.toggleMatchAlert(next.id) }, { addMatchToCalendar(ctx, next) }, { actions.openMatch(next.id) }, m) }
         d.scorers.firstOrNull()?.let { s -> add { m -> PlayerStatTile(s, { actions.openPlayer(s.playerId) }, m) } }
         insightMatch?.let { im -> add { m -> AiInsightTile(im.brief, "${im.home.short} v ${im.away.short} · ${im.leagueName}", { actions.openMatch(im.id) }, m) } }
+        val perComp = countsByCompetition(d.matches)
+        if (perComp.isNotEmpty()) add { m -> TodayByCompetitionTile(perComp, actions.openLeague, actions.openMatches, m) }
+        val hot = inForm(d.tables)
+        if (hot.isNotEmpty()) add { m -> FormGuideTile(hot, actions.openTeam, m) }
+        if (d.matches.isNotEmpty()) add { m -> TodayNumbersTile(d.matches, actions.openMatches, m) }
     }
     if (tiles.isEmpty()) return
     Column(Modifier.testTag("bento"), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
@@ -305,6 +371,62 @@ private fun BentoGrid(d: HomeData, live: List<Match>, actions: HomeActions) {
                 row.forEach { tile -> tile(Modifier.weight(1f).fillMaxHeight()) }
             }
         }
+    }
+}
+
+/** How many games each competition has today, with its logo; busiest first. */
+@Composable
+private fun TodayByCompetitionTile(rows: List<CompetitionCount>, openLeague: (String) -> Unit, openMatches: () -> Unit, modifier: Modifier) {
+    com.innovativeinside.pitchside.ui.components.BentoTile(
+        "Today by competition", modifier, openMatches,
+        description = "Today by competition: " + rows.joinToString("; ") { "${it.name}, ${it.count} matches" },
+    ) {
+        rows.take(4).forEach { c ->
+            Row(Modifier.fillMaxWidth().heightIn(min = 28.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LeagueBadge(c.name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 22, c.logo)
+                Text(c.name, style = PcType.Label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (c.live > 0) Box(Modifier.size(6.dp).clip(CircleShape).background(Pc.Live))
+                Text(c.count.toString(), style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+            }
+        }
+        if (rows.size > 4) Text("+${rows.size - 4} more", style = PcType.Caption)
+    }
+}
+
+/** Sides with the best last-five record across the covered tables. */
+@Composable
+private fun FormGuideTile(rows: List<com.innovativeinside.pitchside.data.model.StandingRow>, openTeam: (String) -> Unit, modifier: Modifier) {
+    com.innovativeinside.pitchside.ui.components.BentoTile(
+        "In form", modifier, { openTeam(rows.first().team.id) },
+        description = "Teams in form: " + rows.joinToString("; ") { "${it.team.name}, ${it.form.toList().joinToString(" ")}" },
+    ) {
+        rows.forEach { r ->
+            Row(Modifier.fillMaxWidth().heightIn(min = 30.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.innovativeinside.pitchside.ui.components.TeamCrest(r.team, 20.dp)
+                Text(r.team.short, style = PcType.LabelStrong, maxLines = 1, modifier = Modifier.weight(1f))
+                com.innovativeinside.pitchside.ui.components.FormDots(r.form.takeLast(5), size = 14.dp)
+            }
+        }
+        Text("Last five league games", style = PcType.Caption)
+    }
+}
+
+/** Today's matchday in numbers: games, goals so far, finished and still to come. */
+@Composable
+private fun TodayNumbersTile(matches: List<Match>, openMatches: () -> Unit, modifier: Modifier) {
+    val goals = matches.filter { it.status != Status.Upcoming }.sumOf { (it.homeScore ?: 0) + (it.awayScore ?: 0) }
+    val done = matches.count { it.status == Status.Finished }
+    val toCome = matches.count { it.status == Status.Upcoming }
+    com.innovativeinside.pitchside.ui.components.BentoTile(
+        "Matchday", modifier, openMatches,
+        description = "Today: ${matches.size} matches, $goals goals, $done finished, $toCome to come",
+    ) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(goals.toString(), style = PcType.ScoreCompact)
+            Text("GOALS", style = PcType.Overline, modifier = Modifier.padding(bottom = 5.dp))
+        }
+        Text("${matches.size} matches today", style = PcType.LabelStrong)
+        Text(listOfNotNull("$done finished".takeIf { done > 0 }, "$toCome to come".takeIf { toCome > 0 }).joinToString(" · ").ifBlank { "All under way" }, style = PcType.Caption)
     }
 }
 

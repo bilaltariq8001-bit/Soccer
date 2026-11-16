@@ -11,6 +11,8 @@ data class Team(
     /** ARGB club colour used for the monogram crest. */
     val color: Long,
     val leagueId: String = "",
+    /** Crest image URL from the data source; the monogram is the fallback. */
+    val logo: String? = null,
 )
 
 data class League(
@@ -21,6 +23,9 @@ data class League(
     val teamCount: Int,
     val season: String,
     val currentRound: String,
+    /** Competition logo and country flag URLs, when the source has them. */
+    val logo: String? = null,
+    val countryLogo: String? = null,
 )
 
 data class Match(
@@ -42,6 +47,9 @@ data class Match(
     val brief: String,
     /** Pre-match win probability when the data source has one. */
     val probs: WinProbability? = null,
+    /** Competition logo URL, for league headers in match lists. */
+    val leagueLogo: String? = null,
+    val country: String = "",
 ) {
     val hasScore: Boolean get() = homeScore != null && awayScore != null
     fun involves(teamIds: Collection<String>) = home.id in teamIds || away.id in teamIds
@@ -75,9 +83,16 @@ data class MatchEvent(
 data class StatRow(val label: String, val home: Int, val away: Int, val homeText: String, val awayText: String)
 
 /** Pitch position as a fraction of the pitch, y = 0 is the opponent goal. */
-data class LineupPlayer(val playerId: String, val number: Int, val name: String, val position: String, val x: Float, val y: Float, val scored: Boolean = false)
+data class LineupPlayer(val playerId: String, val number: Int, val name: String, val position: String, val x: Float, val y: Float, val scored: Boolean = false, val photo: String? = null)
 
-data class Lineup(val teamId: String, val formation: String, val coach: String, val starters: List<LineupPlayer>, val bench: List<LineupPlayer>)
+/**
+ * [hasPositions] is false when the source gave no formation and no usable positions, so the pitch view would only be a
+ * guess. [shapeFromSquad] marks a formation worked out from each starter's squad position rather than published.
+ */
+data class Lineup(
+    val teamId: String, val formation: String, val coach: String, val starters: List<LineupPlayer>, val bench: List<LineupPlayer>,
+    val hasPositions: Boolean = true, val shapeFromSquad: Boolean = false,
+)
 
 data class MatchLineups(val home: Lineup, val away: Lineup)
 
@@ -86,7 +101,7 @@ data class StandingRow(
     val goalsFor: Int, val goalsAgainst: Int, val goalDiff: Int, val points: Int, val form: String,
 )
 
-data class Scorer(val rank: Int, val playerId: String, val name: String, val team: Team, val goals: Int, val assists: Int)
+data class Scorer(val rank: Int, val playerId: String, val name: String, val team: Team, val goals: Int, val assists: Int, val photo: String? = null)
 
 data class NewsItem(
     val id: String,
@@ -136,11 +151,18 @@ data class PlayerSummary(
     val number: Int,
     val nationality: String,
     val rating: Double,
+    /** Player photo URL, when the source has one. */
+    val photo: String? = null,
 ) {
     val initials: String get() = name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
 }
 
-data class PlayerMatch(val matchId: String, val opponent: Team, val home: Boolean, val score: String, val minutes: Int, val rating: Double, val dateMs: Long)
+data class PlayerMatch(
+    val matchId: String, val opponent: Team, val home: Boolean, val score: String, val minutes: Int, val rating: Double, val dateMs: Long,
+    val goals: Int = 0, val started: Boolean = true,
+    /** "W", "D" or "L" from the player's team's point of view; blank when unknown. */
+    val result: String = "",
+)
 
 data class CareerStop(val club: String, val years: String, val apps: Int, val goals: Int, val current: Boolean = false)
 
@@ -160,9 +182,14 @@ data class PlayerProfile(
     val scoutingNote: String,
     val recentMatches: List<PlayerMatch>,
     val career: List<CareerStop>,
+    val yellowCards: Int = 0,
+    val redCards: Int = 0,
+    val starts: Int = 0,
+    /** Where the season numbers come from ("" = the source's own player stats). */
+    val statsNote: String = "",
 )
 
-data class SquadPlayer(val playerId: String, val name: String, val number: Int, val position: Position, val rating: Double?)
+data class SquadPlayer(val playerId: String, val name: String, val number: Int, val position: Position, val rating: Double?, val photo: String? = null, val age: Int = 0)
 
 enum class Position(val label: String) { Goalkeeper("Goalkeepers"), Defender("Defenders"), Midfielder("Midfielders"), Forward("Forwards") }
 

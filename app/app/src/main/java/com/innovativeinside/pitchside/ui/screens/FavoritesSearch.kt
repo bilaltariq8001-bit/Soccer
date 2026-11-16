@@ -145,7 +145,7 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
                         if (leagues.isEmpty()) EmptyState("No leagues yet", "Follow a league to pin its matches and table.", actionLabel = "Browse leagues", onAction = nav.openSearch, icon = Icons.Outlined.EmojiEvents)
                         else PcCard(Modifier.fillMaxWidth()) {
                             Column { leagues.forEachIndexed { i, l ->
-                                FollowRow({ LeagueBadge(l.short) }, l.name, "${l.country} · ${l.currentRound}", true, { app.toggleLeague(l.id, l.name) }) { nav.openLeague(l.id) }
+                                FollowRow({ LeagueBadge(l.short, logo = l.logo) }, l.name, listOf(l.country, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), true, { app.toggleLeague(l.id, l.name) }) { nav.openLeague(l.id) }
                                 if (i < leagues.lastIndex) Hairline()
                             } }
                         }
@@ -154,7 +154,7 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
                         if (d.players.isEmpty()) EmptyState("No players yet", "Follow players to track their form and goals.", actionLabel = "Find players", onAction = nav.openSearch, icon = Icons.Outlined.Person)
                         else PcCard(Modifier.fillMaxWidth()) {
                             Column { d.players.forEachIndexed { i, p ->
-                                FollowRow({ PlayerAvatar(p.name, p.team.color, 40.dp) }, p.name, "${p.position} · ${p.team.name}", true, { app.togglePlayer(p.id, p.name) }) { nav.openPlayer(p.id) }
+                                FollowRow({ PlayerAvatar(p.name, p.team.color, 40.dp, p.photo) }, p.name, listOf(p.position, p.team.name).filter { it.isNotBlank() }.joinToString(" · "), true, { app.togglePlayer(p.id, p.name) }) { nav.openPlayer(p.id) }
                                 if (i < d.players.lastIndex) Hairline()
                             } }
                         }
@@ -275,13 +275,13 @@ fun SearchRoute(
                     }
                     if ((all || tab == SearchTab.Leagues) && r.leagues.isNotEmpty()) ResultGroup("Competitions") {
                         r.leagues.forEachIndexed { i, l ->
-                            FollowRow({ LeagueBadge(l.short) }, l.name, l.country, l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) }) { saveQuery(); openLeague(l.id) }
+                            FollowRow({ LeagueBadge(l.short, logo = l.logo) }, l.name, l.country, l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) }) { saveQuery(); openLeague(l.id) }
                             if (i < r.leagues.lastIndex) Hairline()
                         }
                     }
                     if ((all || tab == SearchTab.Players) && r.players.isNotEmpty()) ResultGroup("Players") {
                         r.players.forEachIndexed { i, p ->
-                            FollowRow({ PlayerAvatar(p.name, p.team.color, 40.dp) }, p.name, "${p.position} · ${p.team.name}", p.id in prefs.players, { app.togglePlayer(p.id, p.name) }) { saveQuery(); openPlayer(p.id) }
+                            FollowRow({ PlayerAvatar(p.name, p.team.color, 40.dp, p.photo) }, p.name, listOf(p.position, p.team.name).filter { it.isNotBlank() }.joinToString(" · "), p.id in prefs.players, { app.togglePlayer(p.id, p.name) }) { saveQuery(); openPlayer(p.id) }
                             if (i < r.players.lastIndex) Hairline()
                         }
                     }

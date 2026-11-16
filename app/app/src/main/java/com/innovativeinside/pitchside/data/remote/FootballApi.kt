@@ -70,6 +70,8 @@ interface FootballApi {
     suspend fun prediction(fixtureId: String): PredictionDto? = null
     /** Previous meetings of the two teams in this fixture, newest first (default: unsupported). */
     suspend fun headToHead(fixtureId: String): List<FixtureDto> = emptyList()
+    /** Each team's latest finished results before this fixture, newest first: (home side, away side). */
+    suspend fun recentResults(fixtureId: String): Pair<List<FixtureDto>, List<FixtureDto>> = emptyList<FixtureDto>() to emptyList()
     /** Pre-match 1X2 odds for one fixture (default: unsupported). */
     suspend fun odds(fixtureId: String): OddsDto? = null
     /** Live commentary and live odds while a fixture is in play (default: unsupported). */

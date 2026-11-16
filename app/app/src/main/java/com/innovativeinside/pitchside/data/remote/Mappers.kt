@@ -58,6 +58,7 @@ object Mappers {
         short = d.short?.takeIf { it.isNotBlank() } ?: monogram(d.name),
         color = parseColor(d.color),
         leagueId = d.leagueId.orEmpty(),
+        logo = d.logo?.takeIf { it.startsWith("http") },
     )
 
     fun monogram(name: String): String {
@@ -104,6 +105,7 @@ object Mappers {
             awayScore = if (st == Status.Upcoming) null else d.awayScore,
             status = st, label = label, brief = d.brief.orEmpty(),
             probs = d.prediction?.let(::prediction),
+            leagueLogo = d.leagueLogo?.takeIf { it.startsWith("http") }, country = d.country,
         )
     }
 
@@ -155,10 +157,14 @@ object Mappers {
             } else {
                 ((i % 4) + 1) / 5f to (0.85f - (i / 4) * 0.3f)
             }
-            LineupPlayer(p.id, p.number ?: 0, p.name, p.pos.orEmpty(), x, y, p.name in scorers)
+            LineupPlayer(p.id, p.number ?: 0, p.name, p.pos.orEmpty(), x, y, p.name in scorers, p.photo?.takeIf { it.startsWith("http") })
         }
-        val bench = d.substitutes.map { LineupPlayer(it.id, it.number ?: 0, it.name, it.pos.orEmpty(), 0f, 0f) }
-        return Lineup(d.teamId, d.formation ?: "-", d.coach ?: "Not announced", players, bench)
+        val bench = d.substitutes.map { LineupPlayer(it.id, it.number ?: 0, it.name, it.pos.orEmpty(), 0f, 0f, photo = it.photo?.takeIf { u -> u.startsWith("http") }) }
+        val positioned = starters.isNotEmpty() && starters.all { it.grid != null }
+        return Lineup(
+            d.teamId, d.formation?.takeIf { it.isNotBlank() } ?: "-", d.coach ?: "Not announced", players, bench,
+            hasPositions = positioned, shapeFromSquad = positioned && d.derived,
+        )
     }
 
     fun lineups(d: LineupsDto, homeId: String, awayId: String, scorers: Set<String> = emptySet()): MatchLineups? {
@@ -173,9 +179,11 @@ object Mappers {
         d.form.orEmpty().filter { it == 'W' || it == 'D' || it == 'L' }.takeLast(5),
     )
 
-    fun league(d: LeagueDto) = League(d.id, d.name, d.short ?: monogram(d.name), d.country, d.teamCount, d.season, d.currentRound)
+    private fun url(u: String?) = u?.takeIf { it.startsWith("http") }
 
-    fun scorer(d: ScorerDto) = Scorer(d.rank, d.playerId, d.name, team(d.team), d.goals, d.assists)
+    fun league(d: LeagueDto) = League(d.id, d.name, d.short ?: monogram(d.name), d.country, d.teamCount, d.season, d.currentRound, url(d.logo), url(d.countryLogo))
+
+    fun scorer(d: ScorerDto) = Scorer(d.rank, d.playerId, d.name, team(d.team), d.goals, d.assists, url(d.photo))
 
     fun newsCategory(s: String): NewsCategory = when (s.lowercase()) {
         "transfers" -> NewsCategory.Transfers
@@ -188,9 +196,9 @@ object Mappers {
     /** Fixes the mojibake seen in the competitor's feed ("men,Äôs") when a UTF-8 apostrophe was read as Mac Roman. */
     fun cleanText(s: String): String = s.replace(",Äô", "’").replace(",Äú", "“").replace(",Äù", "”").replace(",Äî", "—").trim()
 
-    fun playerSummary(d: PlayerSummaryDto) = PlayerSummary(d.id, d.name, team(d.team), d.position, d.number, d.nationality, d.rating)
+    fun playerSummary(d: PlayerSummaryDto) = PlayerSummary(d.id, d.name, team(d.team), d.position, d.number, d.nationality, d.rating, url(d.photo))
 
-    private fun playerMatch(d: PlayerMatchDto) = PlayerMatch(d.matchId, team(d.opponent), d.home, d.score, d.minutes, d.rating, d.dateMs)
+    private fun playerMatch(d: PlayerMatchDto) = PlayerMatch(d.matchId, team(d.opponent), d.home, d.score, d.minutes, d.rating, d.dateMs, d.goals, d.started, d.result)
     private fun career(d: CareerStopDto) = CareerStop(d.club, d.years, d.apps, d.goals, d.current)
 
     fun player(d: PlayerDto) = PlayerProfile(
@@ -198,6 +206,7 @@ object Mappers {
         goals = d.goals, assists = d.assists, matches = d.matches, minutes = d.minutes,
         shotsPer90 = d.shotsPer90, keyPassesPer90 = d.keyPassesPer90, xg = d.xg, scoutingNote = d.scoutingNote,
         recentMatches = d.recentMatches.map(::playerMatch), career = d.career.map(::career),
+        yellowCards = d.yellowCards, redCards = d.redCards, starts = d.starts, statsNote = d.statsNote,
     )
 
     fun position(s: String): Position = when (s.uppercase().take(1)) {
@@ -207,7 +216,7 @@ object Mappers {
         else -> Position.Forward
     }
 
-    private fun squad(d: SquadPlayerDto) = SquadPlayer(d.playerId, d.name, d.number, position(d.position), d.rating)
+    private fun squad(d: SquadPlayerDto) = SquadPlayer(d.playerId, d.name, d.number, position(d.position), d.rating, url(d.photo), d.age)
 
     fun team(d: TeamDto) = TeamDetail(team(d.team), d.leagueName, d.coach, d.stadium, d.city, d.capacity, d.founded, d.squad.map(::squad))
 

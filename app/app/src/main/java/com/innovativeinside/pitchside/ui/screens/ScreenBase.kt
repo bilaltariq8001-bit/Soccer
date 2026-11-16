@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.border
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -207,14 +209,14 @@ fun FollowTeamsSheet(m: Match, onDismiss: () -> Unit) {
 
 /** Matches of one competition under a collapsible header (badge, name, count). */
 @Composable
-fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit, modifier: Modifier = Modifier, openLeague: (() -> Unit)? = null, short: String? = null) {
+fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit, modifier: Modifier = Modifier, openLeague: (() -> Unit)? = null, short: String? = null, logo: String? = null) {
     var open by rememberSaveable(name) { mutableStateOf(true) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = PcSpace.touch).pcClickable(PcShape.Control, if (open) "Collapse $name" else "Expand $name") { open = !open }.padding(horizontal = PcSpace.xxs),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs),
         ) {
-            LeagueBadge(short ?: name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 28)
+            LeagueBadge(short ?: name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 28, logo)
             Text(name, style = PcType.BodyStrong, modifier = Modifier.weight(1f).semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("${matches.size}", style = PcType.Numeric, color = Pc.Text2)
             if (openLeague != null) Text("Table", style = PcType.LabelStrong, color = Pc.Accent, modifier = Modifier.pcClickable(PcShape.Chip, "Open $name", onClick = openLeague).padding(horizontal = PcSpace.xs, vertical = 14.dp))
@@ -224,11 +226,21 @@ fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit,
     }
 }
 
-/** League badge: the competition short code on a neutral rounded square. */
+/** League badge: the competition logo on a light rounded square, or its short code while loading / when there is none. */
 @Composable
-fun LeagueBadge(short: String, size: Int = 40) {
-    Box(Modifier.size(size.dp).clip(PcShape.Small).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
-        Text(short.take(3), style = if (size >= 48) PcType.BodyStrong else PcType.Overline.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Pc.Accent, maxLines = 1)
+fun LeagueBadge(short: String, size: Int = 40, logo: String? = null) {
+    val code: @Composable () -> Unit = {
+        Box(Modifier.fillMaxSize().background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
+            Text(short.take(3), style = if (size >= 48) PcType.BodyStrong else PcType.Overline.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Pc.Accent, maxLines = 1)
+        }
+    }
+    Box(Modifier.size(size.dp).clip(PcShape.Small).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+        if (logo == null) code()
+        else com.innovativeinside.pitchside.ui.components.RemoteImage(
+            logo, code,
+            Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.White).border(1.dp, Pc.Outline, PcShape.Small).padding((size * 0.1f).dp),
+            androidx.compose.ui.layout.ContentScale.Fit,
+        )
     }
 }
 

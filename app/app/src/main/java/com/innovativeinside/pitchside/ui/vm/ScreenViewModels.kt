@@ -14,6 +14,7 @@ import com.innovativeinside.pitchside.data.model.StandingRow
 import com.innovativeinside.pitchside.data.model.Status
 import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.data.repository.FootballRepository
+import com.innovativeinside.pitchside.data.insight.MatchBrief
 import com.innovativeinside.pitchside.data.repository.LeagueDetail
 import com.innovativeinside.pitchside.data.repository.MatchDetail
 import com.innovativeinside.pitchside.data.repository.TeamPage
@@ -46,9 +47,38 @@ data class HomeData(
     val scorers: List<Scorer> = emptyList(),
     /** Upcoming fixtures today and the next few days, for the next-kickoff tile. */
     val upcoming: List<Match> = emptyList(),
+    /** Standings of each competition the source covers (by league id), for ranks, form and the spotlight pick. */
+    val tables: Map<String, List<StandingRow>> = emptyMap(),
 ) {
     val live: List<Match> get() = matches.filter { it.status == Status.Live }
 }
+
+/**
+ * The match Home features when nothing is live: a followed team's next match, else the upcoming match between the
+ * best-placed sides (lowest combined table rank) in the next few days, earliest first on ties. Falls back to today's
+ * latest result when nothing is scheduled.
+ */
+fun pickSpotlight(upcoming: List<Match>, today: List<Match>, followedTeams: Collection<String>, tables: Map<String, List<StandingRow>>, nowMs: Long): Match? {
+    val future = upcoming.filter { it.status == Status.Upcoming && it.kickoffMs >= nowMs }
+    future.filter { it.involves(followedTeams) }.minByOrNull { it.kickoffMs }?.let { return it }
+    fun rank(m: Match, teamId: String) = tables[m.leagueId]?.firstOrNull { it.team.id == teamId }?.rank ?: 99
+    val soon = future.filter { it.kickoffMs - nowMs <= 3L * 24 * 3_600_000 }.ifEmpty { future }
+    soon.minWithOrNull(compareBy<Match>({ rank(it, it.home.id) + rank(it, it.away.id) }, { it.kickoffMs }))?.let { return it }
+    return today.filter { it.status == Status.Finished }.maxByOrNull { it.kickoffMs }
+}
+
+/** Today's matches per competition, busiest first: (league id, name, logo, count). */
+fun countsByCompetition(matches: List<Match>): List<CompetitionCount> =
+    matches.groupBy { it.leagueId }.map { (id, ms) -> CompetitionCount(id, ms.first().leagueName, ms.firstNotNullOfOrNull { it.leagueLogo }, ms.size, ms.count { it.status == Status.Live }) }
+        .sortedWith(compareByDescending<CompetitionCount> { it.count }.thenBy { it.name })
+
+data class CompetitionCount(val leagueId: String, val name: String, val logo: String?, val count: Int, val live: Int)
+
+/** Teams in the best recent form across [tables]: 3 points a win, 1 a draw, over the last five. */
+fun inForm(tables: Map<String, List<StandingRow>>, max: Int = 3): List<StandingRow> =
+    tables.values.flatten().filter { it.form.length >= 3 }
+        .sortedWith(compareByDescending<StandingRow> { r -> r.form.count { it == 'W' } * 3 + r.form.count { it == 'D' } }.thenBy { it.rank })
+        .take(max)
 
 /**
  * Which competitions to try for the Home standings tile: followed ones the data source knows, then the source's own
@@ -78,9 +108,16 @@ class HomeViewModel(
             val candidates = tableCandidates(followedLeagues(), leagues.await().getOrDefault(emptyList()).map { it.id })
             candidates.firstNotNullOfOrNull { id -> repo.leagueDetail(id, refresh).getOrNull()?.takeIf { it.standings.isNotEmpty() } }
         }
+        val tables = async {
+            val ids = leagues.await().getOrDefault(emptyList()).map { it.id }.take(6)
+            ids.map { id -> async { id to repo.standings(id, refresh).getOrDefault(emptyList()) } }.map { it.await() }.filter { it.second.isNotEmpty() }.toMap()
+        }
         // Matches are the point of the page: if they fail, the page fails. The rest degrade to empty.
-        matches.await().map { m ->
+        matches.await().map { raw ->
             val detail = table.await()
+            val t = tables.await()
+            fun brief(x: Match) = if (x.brief.isNotBlank()) x else x.copy(brief = MatchBrief.of(x, t[x.leagueId].orEmpty()))
+            val m = raw.map(::brief)
             HomeData(
                 matches = m,
                 news = news.await().getOrNull()?.items.orEmpty().take(3),
@@ -88,7 +125,8 @@ class HomeViewModel(
                 leagues = leagues.await().getOrDefault(emptyList()),
                 tableLeague = detail?.league,
                 scorers = detail?.scorers.orEmpty(),
-                upcoming = (m + ahead.flatMap { it.await() }).filter { it.status == Status.Upcoming }.sortedBy { it.kickoffMs },
+                upcoming = (m + ahead.flatMap { it.await() }.map(::brief)).filter { it.status == Status.Upcoming }.distinctBy { it.id }.sortedBy { it.kickoffMs },
+                tables = t,
             )
         }
     }
