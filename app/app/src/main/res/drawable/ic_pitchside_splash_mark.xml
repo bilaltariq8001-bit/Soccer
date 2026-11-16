@@ -12,7 +12,7 @@
         android:strokeLineJoin="round"
         android:pathData="M54,25 A29,29 0,1 1,54 83 A29,29 0,1 1,54 25 M54,25 L54,43 M81,44 L64,50 M71,78 L60,62 M37,78 L48,62 M27,44 L44,50 M54,43 L64,50 L60,62 L48,62 L44,50 Z" />
     <path
-        android:fillColor="@color/pitchside_window_background"
+        android:fillColor="@color/pitchside_splash_stage"
         android:pathData="M65.3,36.5 A7.2,7.2 0,1 1,79.7 36.5 A7.2,7.2 0,1 1,65.3 36.5" />
     <path
         android:fillColor="@android:color/transparent"
