@@ -2,6 +2,15 @@
 
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.testTag
+import com.innovativeinside.pitchside.ui.components.GlowCard
+import com.innovativeinside.pitchside.ui.components.PillTabs
+import com.innovativeinside.pitchside.ui.components.ScoreHero
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -107,7 +116,6 @@ import com.innovativeinside.pitchside.ui.components.StatBar
 import com.innovativeinside.pitchside.ui.components.StateContent
 import com.innovativeinside.pitchside.ui.components.TeamCrest
 import com.innovativeinside.pitchside.ui.components.TextAction
-import com.innovativeinside.pitchside.ui.components.UnderlineTabs
 import com.innovativeinside.pitchside.ui.components.matchDescription
 import com.innovativeinside.pitchside.ui.components.pcClickable
 import com.innovativeinside.pitchside.ui.preview.PreviewData
@@ -150,7 +158,7 @@ fun MatchRoute(nav: MatchNav, vm: MatchDetailViewModel = viewModel(factory = Mat
         }
         // Collapsing header: once the score stage scrolls away, a compact bar keeps the score in view.
         val density = LocalDensity.current
-        val collapsed by remember { derivedStateOf { scroll.value > with(density) { 220.dp.toPx() } } }
+        val collapsed by remember { derivedStateOf { scroll.value > with(density) { 300.dp.toPx() } } }
         val match = (state as? UiState.Success)?.data?.match
         AnimatedVisibility(collapsed && match != null, enter = fadeIn(), exit = fadeOut()) {
             if (match != null) CompactMatchBar(match, nav)
@@ -163,19 +171,20 @@ private fun CompactMatchBar(m: Match, nav: MatchNav) {
     val app = LocalApp.current
     val prefs = LocalPrefs.current
     val hidden = app.isHidden(prefs, m)
-    Column(Modifier.fillMaxWidth().background(Pc.Hero).statusBarsPadding()) {
+    val glowLine = Pc.HeroOutline
+    Column(Modifier.fillMaxWidth().background(Pc.Hero).statusBarsPadding().drawBehind { drawLine(glowLine, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(end = PcSpace.md).semantics(mergeDescendants = true) { contentDescription = matchDescription(m, hidden) },
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs),
         ) {
             IconAction(Icons.AutoMirrored.Outlined.ArrowBack, "Back", nav.back, tint = Pc.OnHero)
             TeamCrest(m.home, CrestSize.S.dp, onHero = true)
-            Text(m.home.short, style = PcType.LabelStrong, color = Pc.OnHero)
-            Text(if (m.hasScore && !hidden) "${m.homeScore} – ${m.awayScore}" else "v", style = PcType.ScoreRow, color = Pc.OnHero)
-            Text(m.away.short, style = PcType.LabelStrong, color = Pc.OnHero)
+            Text(m.home.short.uppercase(), style = PcType.TeamNameSmall, color = Pc.OnHero)
+            Text(if (m.hasScore && !hidden) "${m.homeScore} – ${m.awayScore}" else "v", style = PcType.ScoreRow.copy(fontSize = 22.sp), color = Pc.OnHero)
+            Text(m.away.short.uppercase(), style = PcType.TeamNameSmall, color = Pc.OnHero)
             TeamCrest(m.away, CrestSize.S.dp, onHero = true)
             Spacer(Modifier.weight(1f))
-            if (m.status == Status.Live) LiveBadge(m.label, onHero = true) else Text(if (m.status == Status.Finished) "FT" else m.label, style = PcType.LabelStrong, color = Pc.OnHero2)
+            if (m.status == Status.Live) LiveBadge(m.label, onHero = true, compact = true) else Text(if (m.status == Status.Finished) "FT" else m.label, style = PcType.Tag, color = Pc.OnHero2)
         }
     }
 }
@@ -193,15 +202,15 @@ fun MatchContent(state: UiState<MatchDetail>, nav: MatchNav, onRetry: () -> Unit
                     Modifier.pcClickable(PcShape.Chip, "Open ${match.leagueName}") { nav.openLeague(match.leagueId) }.padding(horizontal = PcSpace.xs, vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    if (match.leagueLogo != null) LeagueBadge(match.leagueName.take(2).uppercase(), 20, match.leagueLogo)
-                    Text(match.leagueName, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (match.leagueLogo != null) LeagueBadge(match.leagueName.take(2).uppercase(), 22, match.leagueLogo)
+                    Text(match.leagueName.uppercase(), style = PcType.Tag.copy(fontSize = 17.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(listOf(match.country, match.round).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, maxLines = 1)
-            } else Text("Match", style = PcType.LabelStrong)
+                Text(listOf(match.country, match.round).filter { it.isNotBlank() }.joinToString(" · ").uppercase(), style = PcType.Kicker.copy(fontSize = 11.sp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            } else Text("MATCH", style = PcType.Tag.copy(fontSize = 17.sp))
         }
         if (match != null && match.status != Status.Finished) {
             val on = match.id in prefs.matchAlerts
-            IconAction(if (on) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (on) "Turn off match alerts" else "Turn on match alerts", { app.toggleMatchAlert(match.id) }, tint = if (on) Pc.Accent else Pc.Text2)
+            IconAction(if (on) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (on) "Turn off match alerts" else "Turn on match alerts", { app.toggleMatchAlert(match.id) }, tint = if (on) Pc.Accent else Pc.Text2, filled = true)
         } else Spacer(Modifier.width(48.dp))
     }
     StateContent(state, onRetry, loading = { DetailSkeleton() }) { d -> MatchBody(d, nav) }
@@ -218,8 +227,8 @@ private fun MatchBody(d: MatchDetail, nav: MatchNav) {
     var tabName by rememberSaveable { mutableStateOf(if (prefs.persona?.name == "Nerd" && d.stats.isNotEmpty()) MatchTab.Stats.name else MatchTab.Overview.name) }
     val tab = tabs.firstOrNull { it.name == tabName } ?: MatchTab.Overview
     MatchHeader(d, hidden, nav)
-    Spacer(Modifier.height(PcSpace.xs))
-    UnderlineTabs(tabs.map { it.label }, tabs.indexOf(tab), { tabName = tabs[it].name })
+    Spacer(Modifier.height(PcSpace.sm))
+    PillTabs(tabs.map { it.label }, tabs.indexOf(tab), { tabName = tabs[it].name }, Modifier.testTag("match_tabs"))
     Column(Modifier.padding(PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         when (tab) {
             MatchTab.Overview -> OverviewTab(d, hidden, onStats = { tabName = MatchTab.Stats.name }) { app.reveal(match.id) }
@@ -235,29 +244,33 @@ private fun MatchBody(d: MatchDetail, nav: MatchNav) {
     }
 }
 
-/** The score stage: deep green, both clubs (tap to open), score with flash on change, status and venue. */
+/**
+ * The score hero on a [GlowCard]: both clubs (tap to open) with large crests and uppercase names, the animated
+ * score with the LIVE minute / FT / kickoff day under it, the goalscorers, a divider and the possession / shots
+ * strip when the source has stats, then venue and kickoff.
+ */
 @Composable
 private fun MatchHeader(d: MatchDetail, hidden: Boolean, nav: MatchNav) {
     val app = LocalApp.current
     val match = d.match
-    PcCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth(), container = Pc.Hero, border = Pc.HeroOutline) {
-        Column(Modifier.padding(PcSpace.md), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+    GlowCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth().testTag("match_header")) {
+        Column(Modifier.padding(PcSpace.md), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 HeaderTeam(match.home) { nav.openTeam(match.home.id) }
-                Column(Modifier.widthIn(min = 120.dp).padding(top = PcSpace.xs), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                Column(Modifier.widthIn(min = 112.dp).padding(top = PcSpace.sm), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
                     if (hidden) {
                         Text("– –", style = PcType.ScoreDisplay, color = Pc.OnHero2)
-                        TextAction("Reveal score", { app.reveal(match.id) }, color = Pc.OnHero)
+                        TextAction("Reveal score", { app.reveal(match.id) }, color = Pc.HeroAccent)
                     } else {
-                        if (match.hasScore) ScoreText(
-                            match.homeScore, match.awayScore, color = Pc.OnHero, flashKey = "${match.homeScore}-${match.awayScore}", flashColor = Pc.OnHero,
+                        if (match.hasScore) ScoreHero(
+                            match.homeScore, match.awayScore,
                             modifier = Modifier.semantics { contentDescription = "Score ${match.homeScore} to ${match.awayScore}" },
-                        ) else Text(match.label, style = PcType.ScoreCompact, color = Pc.OnHero)
+                        ) else Text(match.label, style = PcType.ScoreCompact.copy(fontSize = 40.sp, lineHeight = 42.sp), color = Pc.OnHero)
                         when (match.status) {
                             Status.Live -> LiveBadge(match.label, onHero = true)
-                            Status.Finished -> Text("Full time", style = PcType.LabelStrong, color = Pc.OnHero2)
-                            Status.Postponed -> Text("Postponed", style = PcType.LabelStrong, color = Pc.OnHero2)
-                            Status.Upcoming -> Text(formatDay(match.kickoffMs), style = PcType.LabelStrong, color = Pc.OnHero2)
+                            Status.Finished -> Text("FULL TIME", style = PcType.Tag, color = Pc.OnHero2)
+                            Status.Postponed -> Text("POSTPONED", style = PcType.Tag, color = Pc.Warning)
+                            Status.Upcoming -> Text(formatDay(match.kickoffMs).uppercase(), style = PcType.Tag, color = Pc.OnHero2)
                         }
                     }
                 }
@@ -267,8 +280,19 @@ private fun MatchHeader(d: MatchDetail, hidden: Boolean, nav: MatchNav) {
                 val goals = d.events.filter { it.kind == EventKind.Goal }.sortedBy { it.minute }
                 if (goals.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.md)) {
                     Text(goals.filter { it.isHome }.joinToString("\n") { "${it.player.substringAfterLast(' ')} ${it.minuteLabel}" }, style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                    Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.OnHero2, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.HeroAccent, modifier = Modifier.size(14.dp))
                     Text(goals.filter { !it.isHome }.joinToString("\n") { "${it.player.substringAfterLast(' ')} ${it.minuteLabel}" }, style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                }
+            }
+            val strip = if (hidden) emptyList() else d.stats.filter { it.label == "Possession" || it.label == "Shots" }
+            Hairline(color = Pc.OnHero.copy(alpha = 0.10f))
+            if (strip.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.lg, Alignment.CenterHorizontally)) {
+                strip.forEach { st ->
+                    val t = androidx.compose.ui.text.buildAnnotatedString {
+                        withStyle(androidx.compose.ui.text.SpanStyle(color = Pc.OnHero2, fontWeight = FontWeight.Medium)) { append(st.label.uppercase() + " ") }
+                        withStyle(androidx.compose.ui.text.SpanStyle(color = Pc.OnHero, fontWeight = FontWeight.Bold)) { append("${st.homeText} - ${st.awayText}") }
+                    }
+                    Text(t, style = PcType.Tag.copy(fontSize = 16.sp), maxLines = 1)
                 }
             }
             Text(listOf(match.venue, formatKickoff(match.kickoffMs)).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, color = Pc.OnHero2, textAlign = TextAlign.Center)
@@ -283,7 +307,7 @@ private fun RowScope.HeaderTeam(team: Team, onClick: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs),
     ) {
         TeamCrest(team, CrestSize.XL.dp, onHero = true)
-        Text(team.name, style = PcType.BodyStrong, color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(team.name.uppercase(), style = PcType.TeamName, color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
@@ -582,8 +606,12 @@ private fun EventRow(e: MatchEvent) {
         Column(Modifier.weight(1f).padding(horizontal = PcSpace.sm), horizontalAlignment = Alignment.End) { if (e.isHome) EventText(title, e.player, e.detail, true) }
         Box(Modifier.width(56.dp).fillMaxHeight(), contentAlignment = Alignment.Center) {
             Box(Modifier.width(2.dp).fillMaxHeight().background(Pc.Outline))
-            Column(Modifier.clip(PcShape.Chip).background(Pc.SurfaceVariant).padding(horizontal = 6.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(e.minuteLabel, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+            val goal = e.kind == EventKind.Goal
+            Column(
+                Modifier.clip(PcShape.Chip).background(if (goal) Pc.AccentContainer else Pc.SurfaceVariant).border(1.dp, if (goal) Pc.Accent.copy(alpha = 0.6f) else Pc.Outline, PcShape.Chip).padding(horizontal = 7.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(e.minuteLabel, style = PcType.Tag.copy(fontSize = 14.sp), color = if (goal) Pc.Accent else Pc.Text)
                 EventIcon(e.kind, 14)
             }
         }
@@ -594,7 +622,7 @@ private fun EventRow(e: MatchEvent) {
 @Composable
 private fun EventText(title: String, player: String, sub: String, end: Boolean) {
     Column(horizontalAlignment = if (end) Alignment.End else Alignment.Start) {
-        Text(player, style = PcType.LabelStrong, textAlign = if (end) TextAlign.End else TextAlign.Start, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(player.uppercase(), style = PcType.TeamNameSmall, textAlign = if (end) TextAlign.End else TextAlign.Start, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Text(listOf(title, sub).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, textAlign = if (end) TextAlign.End else TextAlign.Start, maxLines = 2)
     }
 }
@@ -627,8 +655,8 @@ private fun LineupsTab(d: MatchDetail, nav: MatchNav) {
                 Column(Modifier.padding(PcSpace.sm), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TeamCrest(team, CrestSize.S.dp)
-                        Text(team.short, style = PcType.LabelStrong)
-                        Text(lineup.formation, style = PcType.Numeric, color = Pc.Text2)
+                        Text(team.short.uppercase(), style = PcType.TeamNameSmall)
+                        Text(lineup.formation, style = PcType.Tag, color = Pc.Accent)
                     }
                     Text("Coach ${lineup.coach}", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     val order = mapOf("G" to 0, "D" to 1, "M" to 2, "F" to 3)
@@ -675,7 +703,7 @@ fun LineupRoute(back: () -> Unit, openPlayer: (String) -> Unit, vm: MatchDetailV
     Screen(maxWidth = 640) {
         Row(Modifier.fillMaxWidth().padding(PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
             BackButton(back)
-            Text("Lineups", style = PcType.Subtitle, modifier = Modifier.weight(1f).semantics { heading() })
+            Text("LINEUPS", style = PcType.ScreenTitle.copy(fontSize = 26.sp), modifier = Modifier.weight(1f).padding(start = PcSpace.xs).semantics { heading() })
         }
         StateContent(state, vm::retry, Modifier.padding(horizontal = PcSpace.screen), loading = { DetailSkeleton() }) { d ->
             val l = d.lineups
@@ -691,12 +719,19 @@ private fun PitchView(d: MatchDetail, home: Lineup, away: Lineup, openPlayer: (S
     val l = if (showHome) home else away
     val team = if (showHome) d.match.home else d.match.away
     val line = Pc.PitchLine
+    val stripe = Color.White.copy(alpha = 0.035f)
+    val glow = Pc.Glow
     Column(verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
         SegmentedTabs(listOf("${d.match.home.short} · ${home.formation}", "${d.match.away.short} · ${away.formation}"), if (showHome) 0 else 1, { showHome = it == 0 })
-        BoxWithConstraints(Modifier.fillMaxWidth().height(470.dp).clip(PcShape.Tile).background(Pc.Pitch).border(1.dp, Pc.HeroOutline, PcShape.Tile)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().height(470.dp).clip(PcShape.Hero).background(Pc.Pitch).border(1.dp, Pc.HeroOutline, PcShape.Hero)) {
             val w = maxWidth
             val h = maxHeight
             Canvas(Modifier.fillMaxSize()) {
+                // Mowing stripes, then a soft emerald glow from the centre circle.
+                val bands = 8
+                val bandH = size.height / bands
+                for (b in 0 until bands) if (b % 2 == 0) drawRect(stripe, Offset(0f, b * bandH), Size(size.width, bandH))
+                drawCircle(Brush.radialGradient(listOf(glow.copy(alpha = 0.18f), Color.Transparent), center = Offset(size.width / 2, size.height / 2), radius = size.width * 0.6f), radius = size.width * 0.6f, center = Offset(size.width / 2, size.height / 2))
                 val st = Stroke(width = 2.dp.toPx())
                 val m = 14.dp.toPx()
                 drawRoundRect(line, Offset(m, m), Size(size.width - 2 * m, size.height - 2 * m), CornerRadius(4.dp.toPx()), st)
@@ -747,7 +782,7 @@ private val previewNav = MatchNav({}, {}, {}, {}, {})
 @Composable
 private fun MatchPreview() = PreviewHost(dark = false) { Column { MatchContent(UiState.Success(previewDetail), previewNav) {} } }
 
-@Preview(name = "Match · dark", showBackground = true, widthDp = 380, heightDp = 1200, backgroundColor = 0xFF0C0F0D)
+@Preview(name = "Match · dark", showBackground = true, widthDp = 380, heightDp = 1200, backgroundColor = 0xFF0E1110)
 @Composable
 private fun MatchDarkPreview() = PreviewHost(dark = true) { Column { MatchContent(UiState.Success(previewDetail), previewNav) {} } }
 

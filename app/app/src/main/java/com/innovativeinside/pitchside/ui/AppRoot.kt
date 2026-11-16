@@ -198,7 +198,7 @@ fun AppRoot(app: AppViewModel, prefs: UserPrefs) {
 
                     // Tabs
                     composable(Routes.Home) {
-                        HomeRoute(HomeActions(openMatch, openSearch, { nav.navigate(Routes.Ask) }, { nav.goTab(Routes.News) }, openArticle, openLeague, openTeam, { nav.goTab(Routes.Matches) }, { nav.navigate(Routes.Notifications) }, openPlayer))
+                        HomeRoute(HomeActions(openMatch, openSearch, { nav.navigate(Routes.Ask) }, { nav.goTab(Routes.News) }, openArticle, openLeague, openTeam, { nav.goTab(Routes.Matches) }, { nav.navigate(Routes.Notifications) }, openPlayer, { nav.navigate(Routes.Settings) }))
                     }
                     composable(Routes.Matches) { MatchesRoute(openMatch, openLeague, openSearch) }
                     composable(Routes.Leagues) { LeaguesRoute(openLeague, openPlayer, openSearch, openTeam, openMatch) }

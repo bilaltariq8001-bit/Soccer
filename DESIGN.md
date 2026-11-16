@@ -1,15 +1,14 @@
-# Pitchside visual system (v3, "Matchday Hub")
+# Pitchside visual system (v4, "Football Today", 0.6.0)
 
 ## Direction
 
-Football intelligence + live broadcast + modern editorial. Calm, sharp, scannable. The live match is the
-strongest element on any screen it appears on: it sits on a deep-green stage with light text while every
-other tile shares one neutral surface. Reporting gets a quieter reading surface; tables and settings stay
-low-noise. No pastel-per-tile, no gradients, no glass, no heavy shadows.
+Premium dark sports app. Charcoal canvas, charcoal cards with 1dp white-alpha borders and large radii, one
+emerald accent, and a soft emerald glow behind hero areas. Condensed UPPERCASE sports headings (Barlow
+Condensed), Manrope for body, tabular numbers for every score and stat. Dark is the primary theme; the light
+variant keeps the same structure (and the hero cards stay dark in both).
 
-This version keeps Muhammad's v2 foundations (warm ivory canvas, pitch-green stage, Manrope + Barlow
-Condensed, animated splash, 4dp rhythm) and replaces the v2 lime/coral accents with the redesign brief's
-palette: one brand green and a red that means LIVE and nothing else.
+The reference is the "Football Today" home mock: big screen title with the date, a glowing LIVE MATCH hero
+card, TOP MATCHES cards, a TODAY'S HIGHLIGHTS list, MINI STANDINGS & NEWS, and a floating bottom bar.
 
 ## Where the tokens live
 
@@ -17,79 +16,62 @@ palette: one brand green and a red that means LIVE and nothing else.
 
 | Kind | API | Example |
 | --- | --- | --- |
-| Colour | `Pc.<Role>` (follows light/dark) | `Pc.Surface`, `Pc.Accent`, `Pc.LiveText` |
-| Type | `PcType.<Role>` | `PcType.ScoreDisplay`, `PcType.Overline` |
-| Spacing | `PcSpace.<step>` | `PcSpace.md` (16), `PcSpace.gutter` (12) |
-| Shape | `PcShape.<shape>` | `PcShape.Tile` (16), `PcShape.Control` (12), `PcShape.Chip` (pill) |
+| Colour | `Pc.<Role>` (follows light/dark) | `Pc.Surface`, `Pc.Accent`, `Pc.Glow`, `Pc.HeroAccent` |
+| Type | `PcType.<Role>` | `PcType.ScreenTitle`, `PcType.SectionTitle`, `PcType.TeamName`, `PcType.ScoreDisplay`, `PcType.Tag` |
+| Spacing | `PcSpace.<step>` | `PcSpace.md` (16), `PcSpace.section` (28), `PcSpace.touch` (48) |
+| Shape | `PcShape.<shape>` | `Tile` (20), `Hero` (24), `Control` (14), `Chip` (pill), `Nav` (24) |
 
 Window/splash colours that must exist before Compose runs are mirrored in `res/values/colors.xml` and
-`res/values-night/colors.xml`.
+`res/values-night/colors.xml` (charcoal stage, emerald glow and accent).
 
-## Colour roles
+## Colour roles (dark / light)
 
-| Role | Light | Dark | Use |
+| Role | Dark | Light | Use |
 | --- | --- | --- | --- |
-| bg | `#F4F3EC` | `#0C0F0D` | Page canvas |
-| surface | `#FFFFFF` | `#151915` | Tiles, rows, sheets |
-| surfaceVariant | `#ECEBE2` | `#1D221D` | Secondary tiles, unselected chips, skeletons |
-| outline | `#E0DED3` | `#2A302A` | 1dp borders (instead of shadows) |
-| text / text2 | `#14181F` / `#5F6670` | `#F2F4F1` / `#A4ABA3` | Primary and secondary text |
-| text3 | `#8A9099` | `#7E857D` | Decorative only (dividers, placeholders) |
-| accent / accentContainer / onAccent | `#1F4D35` / `#E3EBDD` / `#FFFFFF` | `#4FBF86` / `#1B3427` / `#0C0F0D` | Brand, selection, primary buttons |
-| live / liveContainer | `#D94841` / `#FBE9E7` | `#FF5A52` / `#3A1A18` | LIVE state only (dot, progress, counters) |
-| liveText / liveFill | `#B83A33` | `#FF6B63` / `#FF5A52` | LIVE text and solid LIVE pill (AA contrast) |
-| success / warning / error | `#2E7D4F` / `#C98A1B` / `#C0392B` | `#5CC48A` / `#E0A93A` / `#FF6B5E` | Form dots, zones, errors. Sparingly |
-| hero / onHero / onHero2 | `#1F4D35` / `#FFFFFF` / `#B9CDBF` | `#17432F` / `#F2F4F1` / `#B5C9BC` | Live hero tile and match header stage |
-
-Team colours (`Team.color`) are accents only: a 3dp crest ring, a 3dp edge on the next-kickoff tile, the
-pitch-view shirts. Never large fills.
-
-Contrast: every text/background pair used for information is at least 4.5:1 (checked: text2 on bg 5.2,
-liveText on surface 5.7, onHero2 on hero 5.8, accent on accentContainer 7.9). `#D94841` on white is 4.2,
-so red text uses `liveText`; `#D94841` itself is used for the dot, bars and pulse.
+| bg | `#0E1110` | `#F2F4F2` | Canvas (with the emerald radial glow at the top) |
+| surface / surfaceVariant | `#1A1F1C` / `#232A26` | `#FFFFFF` / `#E8ECE9` | Cards, rows / table headers, skeletons, tracks |
+| outline / outlineStrong | white 9% / 17% | ink 10% / 20% | 1dp borders and dividers (no shadows) |
+| text / text2 / text3 | `#F3F5F4` / `#9AA39E` / `#6E7772` | `#0E1110` / `#5A635E` / `#8A928D` | Primary, secondary (dates, labels), decorative |
+| accent / accentContainer / onAccent | `#2EE06E` / `#143323` / `#06140B` | `#0F7D3B` / `#DDF5E5` / `#FFFFFF` | SEE ALL, active nav, selection, primary buttons |
+| live / liveText | `#2EE06E` | `#16A34A` / `#0F7D3B` | LIVE dot and label (LIVE is green, as in the reference) |
+| hero / heroRaised / heroOutline | `#18201C` / `#222C27` / emerald 20% | same (always dark) | GlowCard gradient and border |
+| glow / heroAccent | `#22C55E` / `#2EE06E` | same | Radial glows (low alpha) / accent on hero cards |
+| success / warning / error | `#22C55E` / `#F5B83D` / `#FF6467` | `#16A34A` / `#B7791F` / `#D03A3A` | Form W / play-off zone, yellow cards / L, relegation, red cards |
 
 ## Type
 
-Manrope (bundled variable font) for UI, Barlow Condensed (bundled) for scores. All score roles and
-`Numeric` set `fontFeatureSettings = "tnum"` so digits are tabular.
-
-| Role | Size | Use |
+| Role | Face | Use |
 | --- | --- | --- |
-| ScoreDisplay | 56 condensed bold | Hero score, match header |
-| ScoreCompact | 28 condensed bold | Mini live tiles, tile numbers, countdown |
-| ScoreRow | 20 condensed bold | Row scores, table points |
-| Title | 24 semibold | Screen titles, lead headlines |
-| Subtitle | 18 semibold | Section headers, card titles |
-| Body / BodyStrong / BodyMuted | 15 | Reading, team names, secondary copy |
-| Reading | 16 / 26 line | Article dek and description |
-| Label / LabelStrong | 13 medium / bold | Chips, tabs, buttons, row meta |
-| Caption | 12 | Timestamps, sources |
-| Overline | 11 medium, 0.8 tracking, uppercase | Competition labels, tile kickers |
+| ScreenTitle 30sp | Barlow Condensed Bold, uppercase | "FOOTBALL TODAY", "MATCHES", "NEWS" |
+| Kicker 13sp | Manrope SemiBold, tracked, grey, uppercase | Date under the title ("SUNDAY, NOV 15") |
+| SectionTitle 22sp | Barlow Condensed Bold, uppercase | "LIVE MATCH", "TOP MATCHES", with a grey Manrope count suffix |
+| TeamName 18sp / TeamNameSmall 16sp | Barlow Condensed | Team names in hero cards and rows (uppercase) |
+| ScoreDisplay 64sp / ScoreCompact 28sp / ScoreRow 20sp | Barlow Condensed Bold, tabular | Scores, big numbers |
+| Tag 15sp | Barlow Condensed Bold, tracked | SEE ALL, nav labels, pill tabs, LIVE, minutes |
+| Body / Caption / Label | Manrope | Reading text, meta, controls |
 
-## Spacing, shape, elevation
+## Components (`ui/components/`)
 
-- Spacing 4, 8, 12, 16, 24, 32. Screen padding 16. Bento gutter 12.
-- Tiles 16dp radius, buttons/controls 12dp, chips fully rounded, crests circular.
-- No elevation. Surfaces separate by contrast and a 1dp outline. The bottom bar is docked, not floating.
-- Touch targets at least 48dp. Icons: Material outlined set, 24dp (20dp inside dense rows).
-
-## Components (ui/components)
-
-AppTopBar, BottomNavBar (Home, Matches, Leagues, News, Favorites; accent pill on the selected tab),
-FilterChipRow, SegmentedControl (with counts), TeamCrest (initials, team-colour ring, S/M/L/XL), LiveBadge
-(pulsing dot, reduced-motion aware), ScoreText, LiveMatchTile (deep green hero), MiniLiveTile, MatchRow,
-FixtureRailItem, StandingsTile/StandingsRow, NextKickoffTile (countdown), PlayerStatTile, AiInsightTile,
-NewsCard (lead/compact, Coil image), SectionHeader, EmptyState, ErrorState, LoadingSkeleton (shimmer),
-OfflineBanner, PcDialog, PcSheet. Previews live next to each component and in `ComponentPreviews.kt`.
+ScreenHeader, AppTopBar (alias), Avatar, SectionHeader (count + SEE ALL), PremiumCard / PcCard, GlowCard,
+glowBackground, LiveBadge, ScoreHero / ScoreText (animated), LiveMatchTile (live hero), MatchCardCompact,
+HighlightRow, MatchRow, MiniLiveTile, CrestImage / TeamCrest (Coil + initials fallback), LeagueLogo /
+LeagueBadge, FormPills (compact pills and lettered squares), StandingsRow / StandingsHeader / StandingsTable with
+zone markers and ZoneLegend, MiniStandingsCard, MatchedHeightPair, StatBar, ProbabilityBar, NewsHeroCard,
+NewsRow, NewsImage, PillTabs, SegmentedControl, Chip / ChipRow / FilterChipRow / FlowChips, PrimaryButton,
+SecondaryButton, TextAction, IconAction, BackButton, InfoBanner / OfflineBanner, EmptyState, ErrorState,
+StateCard, StateContent (crossfades), skeleton shimmer + Home/News/Detail/List skeletons, BottomNavBar (floating),
+SideRail, PcDialog, PcSheet, SearchField, PcTextField, BentoTile, NextKickoffTile, PlayerAvatar, PlayerStatTile.
 
 ## Motion
 
-Purposeful only: tile press ripple, hero swap (250ms cross-fade + slide), score-change flash (600ms),
-slow LIVE pulse, collapsing match header, skeleton shimmer. When the system animator duration scale is 0
-("Remove animations"), pulses, shimmer and the hero swap are disabled (`rememberReducedMotion()`).
+Pulsing live dot, score slide + flash on change, 0.97 press scale on cards and primary buttons, crossfade between
+loading / empty / error / content, dark shimmer skeletons, pager for several live matches. All of it is skipped
+when the system "Remove animations" setting is on (`rememberReducedMotion`).
 
-## Hierarchy rules
+## Accessibility
 
-1. Live match state (hero tile) first; nothing else uses the hero stage on Home.
-2. Today's fixtures, then glanceable bento tiles on one neutral surface; tiles without data are hidden.
-3. Filters and the full match list, then the latest news, visually lighter than the live section.
+Touch targets 48dp (pills draw 38-40dp inside a 48dp target). Every match, card and row has a spoken summary;
+colour is never the only signal (form pills carry letters or a spoken summary, LIVE always says LIVE, table zones
+are named in the legend and in the row description). Bottom-nav labels cap their font scaling at 1.15x; the mini
+standings / news pair stacks on narrow screens or large fonts; the hero's competition mark moves to its own line
+with large fonts.

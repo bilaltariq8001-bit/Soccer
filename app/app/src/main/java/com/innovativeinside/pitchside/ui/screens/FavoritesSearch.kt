@@ -2,6 +2,8 @@
 
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -106,8 +108,8 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
     var unfollow by remember { mutableStateOf<Team?>(null) }
     RefreshScreen(refreshing, vm::refresh, refreshError, vm::dismissRefreshError) {
         AppTopBar("Favorites", subtitle = "Your teams, leagues and players", actions = {
-            IconAction(Icons.Outlined.Settings, "Settings", nav.openSettings)
-            IconAction(Icons.Outlined.Add, "Add favorites", nav.openSearch, tint = Pc.Accent)
+            IconAction(Icons.Outlined.Settings, "Settings", nav.openSettings, tint = Pc.Text2)
+            IconAction(Icons.Outlined.Add, "Add favorites", nav.openSearch, tint = Pc.Accent, filled = true)
         })
         StateContent(state, vm::retry, Modifier.padding(horizontal = PcSpace.screen)) { d ->
             Column(Modifier.padding(top = PcSpace.xs), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
@@ -129,7 +131,7 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
                             EmptyState("No teams yet", "Follow teams to see their matches first and get alerts.", actionLabel = "Find teams", onAction = nav.openSearch, icon = Icons.Outlined.Groups)
                             val suggested = d.teams.filter { it.id !in prefs.teams }.take(4)
                             if (suggested.isNotEmpty()) {
-                                Overline("Suggested teams")
+                                Text("SUGGESTED TEAMS", style = PcType.SectionTitle.copy(fontSize = 18.sp), modifier = Modifier.semantics { heading() })
                                 PcCard(Modifier.fillMaxWidth()) {
                                     Column { suggested.forEachIndexed { i, t ->
                                         FollowRow({ TeamCrest(t, CrestSize.M.dp) }, t.name, "Popular club", false, { app.toggleTeam(t.id, t.name) }) { nav.openTeam(t.id) }
@@ -175,7 +177,7 @@ fun FavoritesRoute(nav: FavoritesNav, vm: FavoritesViewModel = viewModel(factory
 private fun FollowMeter(prefs: UserPrefs) {
     val limit = UserPrefs.FREE_TEAM_LIMIT
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        Text("${prefs.teams.size} of $limit free follows", style = PcType.Caption)
+        Text("${prefs.teams.size} of $limit free follows", style = PcType.Caption.copy(color = Pc.Text))
         Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Pc.SurfaceVariant)) {
             Box(Modifier.fillMaxWidth((prefs.teams.size / limit.toFloat()).coerceAtMost(1f)).height(6.dp).clip(CircleShape).background(Pc.Accent))
         }
@@ -190,11 +192,11 @@ private fun FollowedTeamCard(t: Team, prefs: UserPrefs, nav: FavoritesNav, onUnf
         Column(Modifier.padding(start = PcSpace.md, end = PcSpace.xs, top = PcSpace.sm, bottom = PcSpace.xs), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
                 TeamCrest(t, CrestSize.L.dp)
-                Text(t.name, style = PcType.Subtitle, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(t.name.uppercase(), style = PcType.TeamName.copy(fontSize = 22.sp, lineHeight = 25.sp), modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 val on = t.id in prefs.shielded
                 IconAction(if (on) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility, if (on) "Spoiler Shield on for ${t.name}" else "Spoiler Shield off for ${t.name}", { app.toggleShield(t.id) }, tint = if (on) Pc.Accent else Pc.Text2)
             }
-            Overline("Alerts")
+            Text("ALERTS", style = PcType.Overline)
             FlowChips(AlertLevel.entries.map { it.label }, level.label, { label -> app.setTeamAlert(t.id, AlertLevel.entries.first { it.label == label }) })
             TextAction("Unfollow", onUnfollow, color = Pc.Error)
         }
@@ -235,8 +237,10 @@ fun SearchRoute(
     val state by vm.state.collectAsStateWithLifecycle()
     val saveQuery: () -> Unit = { app.addRecentSearch(query) }
     Screen {
+        Text("SEARCH", style = PcType.ScreenTitle, modifier = Modifier.padding(start = PcSpace.screen + 2.dp, top = PcSpace.md).semantics { heading() })
         Row(Modifier.fillMaxWidth().padding(start = PcSpace.xs, end = PcSpace.xxs, top = PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
             BackButton(back)
+            Spacer(Modifier.width(PcSpace.xxs))
             SearchField(query, vm::onQuery, "Teams, leagues, players, matches", Modifier.weight(1f), autoFocus = true, onSearch = saveQuery)
             TextAction(stringResource(R.string.action_cancel), { if (query.isEmpty()) back() else vm.onQuery("") }, color = Pc.Text2)
         }
@@ -286,7 +290,7 @@ fun SearchRoute(
                         }
                     }
                     if (all && s.matches.isNotEmpty()) {
-                        Overline("Matches today", Modifier.padding(top = PcSpace.xs).semantics { heading() })
+                        Text("MATCHES TODAY", style = PcType.SectionTitle.copy(fontSize = 18.sp), modifier = Modifier.padding(top = PcSpace.sm).semantics { heading() })
                         MatchList(s.matches, { id -> saveQuery(); openMatch(id) })
                     }
                     val shownNone = when (tab) { SearchTab.Teams -> r.teams.isEmpty(); SearchTab.Leagues -> r.leagues.isEmpty(); SearchTab.Players -> r.players.isEmpty(); else -> false }
@@ -299,6 +303,6 @@ fun SearchRoute(
 
 @Composable
 private fun ResultGroup(title: String, content: @Composable () -> Unit) {
-    Overline(title, Modifier.padding(top = PcSpace.xs).semantics { heading() })
+    Text(title.uppercase(), style = PcType.SectionTitle.copy(fontSize = 18.sp), modifier = Modifier.padding(top = PcSpace.sm).semantics { heading() })
     PcCard(Modifier.fillMaxWidth()) { Column { content() } }
 }

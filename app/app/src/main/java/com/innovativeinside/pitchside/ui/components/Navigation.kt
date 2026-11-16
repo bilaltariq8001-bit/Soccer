@@ -31,6 +31,9 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -59,10 +62,7 @@ import com.innovativeinside.pitchside.ui.theme.PcType
 
 // ---------------- Top bar ----------------
 
-/**
- * Tab-level top bar: title (or greeting) with a date/subtitle line, then search and notifications.
- * The notifications action shows a red dot when [unread] is true.
- */
+/** Tab-level top bar. In 0.6 this is the [ScreenHeader] (uppercase title, date, search, bell, avatar). */
 @Composable
 fun AppTopBar(
     title: String,
@@ -71,18 +71,10 @@ fun AppTopBar(
     onSearch: (() -> Unit)? = null,
     onNotifications: (() -> Unit)? = null,
     unread: Boolean = false,
+    onAvatar: (() -> Unit)? = null,
+    avatarInitial: String? = null,
     actions: @Composable () -> Unit = {},
-) {
-    Row(modifier.fillMaxWidth().padding(start = PcSpace.screen, end = PcSpace.xs, top = PcSpace.sm, bottom = PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            if (subtitle != null) Text(subtitle.uppercase(), style = PcType.Overline, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(title, style = PcType.Title, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
-        }
-        actions()
-        if (onSearch != null) IconAction(Icons.Outlined.Search, stringResource(R.string.action_search), onSearch)
-        if (onNotifications != null) IconAction(Icons.Outlined.Notifications, if (unread) "Notifications, unread" else "Notifications", onNotifications, dot = unread)
-    }
-}
+) = ScreenHeader(title, modifier, subtitle, null, onSearch, onNotifications, unread, onAvatar, avatarInitial, actions)
 
 // ---------------- Bottom navigation ----------------
 
@@ -93,34 +85,40 @@ val navItems = listOf(
     NavItem("matches", R.string.nav_matches, Icons.Outlined.SportsSoccer, Icons.Filled.SportsSoccer),
     NavItem("leagues", R.string.nav_leagues, Icons.Outlined.EmojiEvents, Icons.Filled.EmojiEvents),
     NavItem("news", R.string.nav_news, Icons.Outlined.Newspaper, Icons.Filled.Newspaper),
-    NavItem("following", R.string.nav_favorites, Icons.Outlined.FavoriteBorder, Icons.Filled.Favorite),
+    NavItem("following", R.string.nav_favorites, Icons.Outlined.StarBorder, Icons.Filled.Star),
 )
 
 /**
- * Docked bottom bar with the five tabs. The selected tab gets an accent pill behind its icon and an
- * accent label. Content above it gets its own bottom padding (the bar is outside the scroll area).
+ * Floating bottom bar with the five tabs: a rounded charcoal bar with a 1dp border, inset from the screen edges.
+ * The selected tab is an emerald icon and emerald uppercase label with an emerald underline; the others are grey.
  */
 @Composable
 fun BottomNavBar(current: String?, onNavigate: (String) -> Unit, badges: Map<String, Int> = emptyMap()) {
-    Column(Modifier.background(Pc.Nav).navigationBarsPadding()) {
-        Hairline()
-        Row(Modifier.fillMaxWidth().padding(horizontal = PcSpace.xxs, vertical = 6.dp)) {
+    Box(Modifier.fillMaxWidth().background(Pc.Bg).navigationBarsPadding().padding(start = PcSpace.sm, end = PcSpace.sm, top = PcSpace.xxs, bottom = PcSpace.xs)) {
+        Row(
+            Modifier.fillMaxWidth().clip(PcShape.Nav).background(Pc.Nav).border(1.dp, Pc.Outline, PcShape.Nav).padding(horizontal = PcSpace.xxs),
+        ) {
+            // Labels scale with the font setting up to 1.15x so five uppercase labels never clip at 360dp.
+            val fs = androidx.compose.ui.platform.LocalDensity.current.fontScale
+            val labelSize = (12f * minOf(fs, 1.15f) / fs).sp
             navItems.forEach { item ->
                 val on = item.route == current
                 val label = stringResource(item.label)
                 val n = badges[item.route] ?: 0
                 Column(
-                    Modifier.weight(1f).heightIn(min = 56.dp).testTag("nav_${item.route}").pcClickable(PcShape.Control, role = Role.Tab) { onNavigate(item.route) }
+                    Modifier.weight(1f).heightIn(min = 64.dp).testTag("nav_${item.route}").pcClickable(PcShape.Control, role = Role.Tab) { onNavigate(item.route) }
                         .semantics(mergeDescendants = true) { selected = on; contentDescription = if (n > 0) "$label, $n live" else label },
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom,
                 ) {
+                    Spacer(Modifier.height(10.dp))
                     Box(contentAlignment = Alignment.Center) {
-                        Box(Modifier.size(width = 56.dp, height = 30.dp).clip(PcShape.Chip).background(if (on) Pc.AccentContainer else Color.Transparent))
-                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Accent else Pc.Text2, modifier = Modifier.size(22.dp))
-                        if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = (-2).dp))
+                        Icon(if (on) item.selectedIcon else item.icon, null, tint = if (on) Pc.Accent else Pc.Text2, modifier = Modifier.size(24.dp))
+                        if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = 10.dp, y = (-6).dp))
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(label, style = if (on) PcType.LabelStrong else PcType.Label, color = if (on) Pc.Accent else Pc.Text2, maxLines = 1)
+                    Spacer(Modifier.height(3.dp))
+                    Text(label.uppercase(), style = PcType.Tag.copy(fontSize = labelSize, lineHeight = labelSize * 1.2f, letterSpacing = 0.5.sp), color = if (on) Pc.Accent else Pc.Text2, maxLines = 1, overflow = TextOverflow.Clip)
+                    Spacer(Modifier.height(6.dp))
+                    Box(Modifier.size(width = 28.dp, height = 3.dp).clip(PcShape.Chip).background(if (on) Pc.Accent else Color.Transparent))
                 }
             }
         }
@@ -140,8 +138,8 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
             horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xxs),
         ) {
             Row(Modifier.padding(bottom = PcSpace.lg, start = if (wide) PcSpace.xs else 0.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.size(36.dp).clip(PcShape.Control).background(Pc.Hero), contentAlignment = Alignment.Center) { Text("P", style = PcType.Subtitle, color = Pc.OnHero) }
-                if (wide) Text("Pitchside", style = PcType.Subtitle)
+                Box(Modifier.size(36.dp).clip(PcShape.Control).background(Pc.Accent), contentAlignment = Alignment.Center) { Text("P", style = PcType.TeamName, color = Pc.OnAccent) }
+                if (wide) Text("PITCHSIDE", style = PcType.SectionTitle)
             }
             navItems.forEach { item ->
                 val on = item.route == current
@@ -156,7 +154,7 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
                         val n = badges[item.route] ?: 0
                         if (n > 0) LiveCountBadge(n, Modifier.align(Alignment.TopEnd).offset(x = 10.dp, y = (-6).dp))
                     }
-                    if (wide) Text(stringResource(item.label), style = if (on) PcType.LabelStrong else PcType.Label, color = if (on) Pc.Accent else Pc.Text2)
+                    if (wide) Text(stringResource(item.label).uppercase(), style = PcType.Tag, color = if (on) Pc.Accent else Pc.Text2)
                 }
             }
             Spacer(Modifier.weight(1f))
@@ -183,11 +181,11 @@ fun LiveCountBadge(count: Int, modifier: Modifier = Modifier) {
     ) { Text(if (count > 9) "9+" else count.toString(), style = PcType.Micro, color = Pc.OnLive) }
 }
 
-@Preview(name = "Top bar + bottom nav", showBackground = true, widthDp = 380)
+@Preview(name = "Top bar + bottom nav", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
 @Composable
-private fun NavPreview() = PreviewHost(dark = false) {
+private fun NavPreview() = PreviewHost(dark = true) {
     Column {
-        AppTopBar("Football today", subtitle = "Friday 13 November", onSearch = {}, onNotifications = {}, unread = true)
+        AppTopBar("Football today", subtitle = "Friday, Nov 13", onSearch = {}, onNotifications = {}, unread = true, onAvatar = {})
         Spacer(Modifier.height(PcSpace.lg))
         BottomNavBar("home", {}, mapOf("matches" to 3))
     }

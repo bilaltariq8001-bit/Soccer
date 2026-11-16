@@ -120,6 +120,8 @@ data class StandingRowDto(
     val goalDiff: Int,
     val points: Int,
     val form: String? = null,
+    /** Qualification / relegation label from the source ("Promotion - ...", "Relegation"); null when none. */
+    val zone: String? = null,
 )
 
 @Serializable

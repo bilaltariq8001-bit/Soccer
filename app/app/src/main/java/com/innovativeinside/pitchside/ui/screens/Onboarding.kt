@@ -1,5 +1,10 @@
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.innovativeinside.pitchside.ui.components.glowBackground
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -96,18 +101,21 @@ private fun OnbScaffold(
     onSecondary: () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().glowBackground().statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (onBack != null) BackButton(onBack) else Spacer(Modifier.size(48.dp))
-            Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(Pc.Outline)) {
-                Box(Modifier.fillMaxWidth(step / TOTAL_STEPS.toFloat()).height(4.dp).clip(CircleShape).background(Pc.Accent))
+            // Segmented step progress: one pill per step, done steps in emerald.
+            Row(Modifier.weight(1f).padding(horizontal = 8.dp).semantics { contentDescription = "Step $step of $TOTAL_STEPS" }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                repeat(TOTAL_STEPS) { i -> Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (i < step) Pc.Accent else Pc.Outline)) }
             }
             if (onSkip != null) TextAction("Skip", onSkip, color = Pc.Text2) else Spacer(Modifier.size(48.dp))
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp).widthIn(max = 560.dp)) {
             if (title.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
-                Text(title, style = PcType.Title)
+                Text("STEP $step OF $TOTAL_STEPS", style = PcType.Kicker.copy(color = Pc.Accent, fontSize = 12.sp))
+                Spacer(Modifier.height(4.dp))
+                Text(title, style = PcType.Display.copy(fontSize = 34.sp, lineHeight = 36.sp), modifier = Modifier.semantics { heading() })
                 Spacer(Modifier.height(8.dp))
                 Text(subtitle, style = PcType.BodyMuted)
                 Spacer(Modifier.height(24.dp))
@@ -125,14 +133,14 @@ private fun OnbScaffold(
 @Composable
 private fun OptionCard(title: String, desc: String, selected: Boolean, onClick: () -> Unit, icon: ImageVector? = null) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(PcShape.Card).background(if (selected) Pc.SurfaceVariant else Pc.Surface)
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(PcShape.Card).background(if (selected) Pc.AccentContainer else Pc.Surface)
             .border(if (selected) 1.5.dp else 1.dp, if (selected) Pc.Accent else Pc.Outline, PcShape.Card)
             .pcClickable(PcShape.Card, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick).padding(16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (icon != null) Box(Modifier.size(48.dp).clip(PcShape.Control).background(Pc.Outline), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (selected) Pc.Accent else Pc.Text2) }
+        if (icon != null) Box(Modifier.size(48.dp).clip(CircleShape).background(if (selected) Pc.AccentContainer else Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (selected) Pc.Accent else Pc.Text2) }
         Column(Modifier.weight(1f)) {
-            Text(title, style = PcType.Subtitle)
+            Text(title, style = PcType.TeamName)
             Text(desc, style = PcType.Caption)
         }
         Box(Modifier.size(24.dp).clip(CircleShape).background(if (selected) Pc.Accent else Color.Transparent).border(1.5.dp, if (selected) Pc.Accent else Pc.OutlineStrong, CircleShape), contentAlignment = Alignment.Center) {
@@ -143,31 +151,32 @@ private fun OptionCard(title: String, desc: String, selected: Boolean, onClick: 
 
 @Composable
 fun WelcomeScreen(onStart: () -> Unit, onRestore: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 24.dp)) {
+    Column(Modifier.fillMaxSize().glowBackground().statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
         Row(Modifier.padding(top = 28.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(32.dp).clip(PcShape.Chip).background(Pc.Accent), contentAlignment = Alignment.Center) { Text("P", color = Pc.OnAccent, fontWeight = FontWeight.ExtraBold) }
-            Text("Pitchside", style = PcType.Subtitle)
+            Box(Modifier.size(34.dp).clip(PcShape.Chip).background(Pc.Accent), contentAlignment = Alignment.Center) { Text("P", style = PcType.TeamName, color = Pc.OnAccent) }
+            Text("PITCHSIDE", style = PcType.SectionTitle)
         }
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(40.dp))
         // What the app does, without inventing a match: the real fixtures load right after onboarding.
-        PcCard(Modifier.widthIn(max = 520.dp).fillMaxWidth(), shape = PcShape.Hero, border = Pc.OutlineStrong) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        com.innovativeinside.pitchside.ui.components.GlowCard(Modifier.widthIn(max = 520.dp).fillMaxWidth()) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                com.innovativeinside.pitchside.ui.components.LiveBadge(null, onHero = true)
                 listOf(
                     "Live scores, goals and cards as they happen",
                     "Tables, lineups, stats and head-to-head",
                     "Win probability before every kickoff",
                 ).forEach { line ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Outlined.Check, null, tint = Pc.Accent, modifier = Modifier.size(16.dp))
+                        Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.HeroRaised), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.Check, null, tint = Pc.HeroAccent, modifier = Modifier.size(16.dp))
                         }
-                        Text(line, style = PcType.Body)
+                        Text(line, style = PcType.Body, color = Pc.OnHero)
                     }
                 }
             }
         }
-        Spacer(Modifier.weight(1f))
-        Text("Every match,\nexplained.", style = PcType.Display)
+        Spacer(Modifier.height(48.dp))
+        Text("EVERY MATCH,\nEXPLAINED.", style = PcType.Display.copy(fontSize = 48.sp, lineHeight = 48.sp))
         Spacer(Modifier.height(12.dp))
         Text("Live scores, match alerts, tables and form for the teams you follow.", style = PcType.BodyMuted)
         Spacer(Modifier.height(28.dp))
@@ -214,7 +223,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit, vm: OnboardingTeamsViewM
         if (!bigOnly) {
             SearchField(query, { query = it }, "Search clubs")
             Spacer(Modifier.height(20.dp))
-            Text(if (query.isBlank()) "POPULAR" else "RESULTS", style = PcType.Overline.copy(color = Pc.Text3))
+            Text(if (query.isBlank()) "POPULAR" else "RESULTS", style = PcType.SectionTitle.copy(fontSize = 18.sp))
             Spacer(Modifier.height(12.dp))
             StateContent(state, vm::retry) { all ->
                 val teams = all.filter { query.isBlank() || it.name.contains(query, true) }
@@ -225,7 +234,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit, vm: OnboardingTeamsViewM
                             row.forEach { t ->
                                 val on = t.id in prefs.teams
                                 Column(
-                                    Modifier.weight(1f).height(112.dp).clip(PcShape.Card).background(if (on) Pc.SurfaceVariant else Pc.Surface)
+                                    Modifier.weight(1f).height(116.dp).clip(PcShape.Card).background(if (on) Pc.AccentContainer else Pc.Surface)
                                         .border(if (on) 1.5.dp else 1.dp, if (on) Pc.Accent else Pc.Outline, PcShape.Card)
                                         .pcClickable(PcShape.Card, if (on) "Unfollow ${t.name}" else "Follow ${t.name}") { app.toggleTeam(t.id, t.name) },
                                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
@@ -235,7 +244,7 @@ fun TeamsScreen(onBack: () -> Unit, onNext: () -> Unit, vm: OnboardingTeamsViewM
                                         if (on) Box(Modifier.align(Alignment.TopEnd).size(18.dp).clip(CircleShape).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(12.dp)) }
                                     }
                                     Spacer(Modifier.height(10.dp))
-                                    Text(t.name, style = PcType.Label, maxLines = 1)
+                                    Text(t.name, style = PcType.Label, maxLines = 2, textAlign = TextAlign.Center, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
                                 }
                             }
                             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -313,8 +322,8 @@ fun PersonaScreen(onBack: () -> Unit, onNext: () -> Unit) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Spacer(Modifier.height(12.dp))
             Box(Modifier.size(96.dp).clip(PcShape.Hero).background(Pc.SurfaceVariant).border(1.5.dp, Pc.Accent, PcShape.Hero), contentAlignment = Alignment.Center) { Icon(personaIcon(p), null, tint = Pc.Accent, modifier = Modifier.size(44.dp)) }
-            Text("YOUR STYLE", style = PcType.Overline.copy(color = Pc.Text2))
-            Text(p.title, style = PcType.Display, textAlign = TextAlign.Center)
+            Text("YOUR STYLE", style = PcType.Overline.copy(color = Pc.Accent))
+            Text(p.title.uppercase(), style = PcType.Display, textAlign = TextAlign.Center)
             Text(p.tagline, style = PcType.BodyMuted)
         }
         Spacer(Modifier.height(24.dp))

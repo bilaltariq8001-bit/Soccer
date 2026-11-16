@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.innovativeinside.pitchside.ui.theme.Pc
@@ -56,23 +57,23 @@ fun PcDialog(
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().clip(PcShape.Tile).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Tile).padding(24.dp),
+            Modifier.fillMaxWidth().clip(PcShape.Hero).background(Pc.Surface).border(1.dp, Pc.OutlineStrong, PcShape.Hero).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (icon != null) Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = Pc.Accent) }
-            Text(title, style = PcType.Subtitle)
+            Text(title, style = PcType.TeamName.copy(fontSize = 24.sp, lineHeight = 28.sp))
             Text(body, style = PcType.BodyMuted)
             Spacer(Modifier.height(4.dp))
             Box(
-                Modifier.fillMaxWidth().heightIn48().clip(PcShape.Control).background(if (danger) Pc.Error else Pc.Accent).pcClickable(PcShape.Control, onClick = onConfirm),
+                Modifier.fillMaxWidth().heightIn48().pcClickable(PcShape.Chip, onClick = onConfirm).background(if (danger) Pc.Error else Pc.Accent),
                 contentAlignment = Alignment.Center,
-            ) { Text(confirmLabel, style = PcType.LabelStrong, color = Pc.OnAccent) }
+            ) { Text(confirmLabel, style = PcType.BodyStrong.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold), color = Pc.OnAccent) }
             TextAction(dismissLabel, onDismiss, Modifier.fillMaxWidth(), color = Pc.Text2)
         }
     }
 }
 
-private fun Modifier.heightIn48(): Modifier = this.then(Modifier.height(48.dp))
+private fun Modifier.heightIn48(): Modifier = this.then(Modifier.height(52.dp))
 
 /** Bottom sheet built on a dialog so it works without experimental Material APIs. */
 @Composable

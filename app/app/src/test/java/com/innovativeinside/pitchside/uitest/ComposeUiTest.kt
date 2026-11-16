@@ -115,12 +115,12 @@ class AppNavigationTest {
     private fun waitText(t: String) = rule.waitUntil(10_000) { rule.onAllNodesWithText(t, substring = true).fetchSemanticsNodes().isNotEmpty() }
 
     @Test fun launchHomeThenTabsAndMatchDetail() {
-        waitText("Live now")
+        waitText("LIVE MATCH")
         rule.onNodeWithTag("live_hero").assertExists()
-        rule.onNodeWithText("Football today").assertExists()
+        rule.onNodeWithText("FOOTBALL TODAY").assertExists()
 
         rule.onNodeWithTag("nav_matches").performClick()
-        waitText("Yesterday")
+        waitText("YESTERDAY")
         rule.onNodeWithText("Live").performClick()
         waitText("Premier Division")
 
@@ -129,7 +129,7 @@ class AppNavigationTest {
         rule.onNodeWithText("Top scorers").performSemanticsAction(SemanticsActions.OnClick)
         waitText("Leo Marsh")
         rule.onNodeWithContentDescription("Open Premier Division").performClick()
-        waitText("Teams")
+        waitText("TEAMS")
         rule.activity.onBackPressedDispatcher.onBackPressed()
         waitText("Tables, fixtures and top scorers".uppercase())
 
@@ -137,11 +137,11 @@ class AppNavigationTest {
         waitText("FROM 90MIN")
         rule.onNodeWithTag("nav_following").performClick()
         waitText("free follows")
-        assertTrue(rule.onAllNodesWithText("Northgate").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithText("NORTHGATE").fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test fun backOnHomeAsksBeforeExit() {
-        waitText("Live now")
+        waitText("LIVE MATCH")
         rule.activity.onBackPressedDispatcher.onBackPressed()
         waitText("Leave Pitchside?")
         rule.onNodeWithText("Cancel").performClick()
@@ -171,6 +171,6 @@ class OnboardingFlowTest {
         rule.onNodeWithText("Not now").performClick()
         waitText("Build my home")
         rule.onNodeWithText("Build my home").performClick()
-        waitText("Live now")
+        waitText("LIVE MATCH")
     }
 }

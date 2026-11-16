@@ -177,6 +177,7 @@ object Mappers {
     fun standing(d: StandingRowDto) = StandingRow(
         d.rank, team(d.team), d.played, d.won, d.drawn, d.lost, d.goalsFor, d.goalsAgainst, d.goalDiff, d.points,
         d.form.orEmpty().filter { it == 'W' || it == 'D' || it == 'L' }.takeLast(5),
+        zone = d.zone.orEmpty(),
     )
 
     private fun url(u: String?) = u?.takeIf { it.startsWith("http") }

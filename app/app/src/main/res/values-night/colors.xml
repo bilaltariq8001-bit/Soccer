@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Window and splash colours (0.6 "Football Today"): charcoal stage, emerald glow and accent. They mirror the
+     Compose tokens in ui/theme/Theme.kt (bg / glow / accent / live). The intro is dark in both themes. -->
 <resources>
-    <color name="pitchside_splash_stage">#17432F</color>
-    <color name="pitchside_splash_ink">#F2F4F1</color>
-    <color name="pitchside_splash_background_glow">#1F503A</color>
-    <color name="pitchside_splash_primary">#4FBF86</color>
-    <color name="pitchside_splash_live">#FF5A52</color>
+    <color name="pitchside_splash_stage">#0E1110</color>
+    <color name="pitchside_splash_ink">#F3F5F4</color>
+    <color name="pitchside_splash_background_glow">#123A24</color>
+    <color name="pitchside_splash_primary">#2EE06E</color>
+    <color name="pitchside_splash_live">#2EE06E</color>
 </resources>

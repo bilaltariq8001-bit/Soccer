@@ -1,5 +1,10 @@
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import com.innovativeinside.pitchside.ui.components.ScreenHeader
+import com.innovativeinside.pitchside.ui.components.glowBackground
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -101,7 +106,7 @@ fun AskRoute(back: () -> Unit, openPaywall: () -> Unit, vm: AskViewModel = viewM
     val s by vm.state.collectAsStateWithLifecycle()
     AskContent(s, back, vm::onInput, vm::send, vm::retryLast)
     if (s.quotaHit) PcSheet(vm::dismissQuota) {
-        Text("You've used today's free questions", style = PcType.Subtitle)
+        Text("You've used today's free questions", style = PcType.TeamName.copy(fontSize = 22.sp))
         Text("They refresh at midnight. Pro gives you ${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} a day.", style = PcType.BodyMuted)
         PrimaryButton("See Pro", { vm.dismissQuota(); openPaywall() }, Modifier.fillMaxWidth())
         TextAction("Maybe later", vm::dismissQuota, Modifier.fillMaxWidth(), color = Pc.Text2)
@@ -112,10 +117,10 @@ fun AskRoute(back: () -> Unit, openPaywall: () -> Unit, vm: AskViewModel = viewM
 fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend: (String) -> Unit, onRetry: () -> Unit) {
     val listState = rememberLazyListState()
     LaunchedEffect(s.messages.size, s.sending) { if (s.messages.isNotEmpty()) listState.animateScrollToItem(s.messages.size) }
-    Column(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding().imePadding()) {
+    Column(Modifier.fillMaxSize().glowBackground().statusBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BackButton(back)
-            Column(Modifier.weight(1f)) { Text(stringResource(R.string.action_ask), style = PcType.Subtitle); Text("Answers from match data", style = PcType.Caption) }
+            Column(Modifier.weight(1f)) { Text(stringResource(R.string.action_ask).uppercase(), style = PcType.ScreenTitle.copy(fontSize = 26.sp)); Text("ANSWERS FROM MATCH DATA", style = PcType.Kicker.copy(fontSize = 11.sp)) }
             Box(Modifier.heightIn(min = 32.dp).clip(PcShape.Chip).background(Pc.SurfaceVariant).border(1.dp, Pc.Outline, PcShape.Chip).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                 Text("${s.left} of ${s.limit} left today", style = PcType.Caption.copy(color = Pc.Text))
             }
@@ -124,7 +129,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
             if (s.messages.isEmpty()) item {
                 PcCard(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Ask about any match, team or table", style = PcType.Subtitle)
+                        Text("ASK ABOUT ANY MATCH, TEAM OR TABLE", style = PcType.TeamName)
                         Text("Numbers come from match data, never guesses. Try one of these:", style = PcType.BodyMuted)
                     }
                 }
@@ -133,7 +138,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.fromUser) Arrangement.End else Arrangement.Start) {
                     val bubble = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomStart = if (m.fromUser) 20.dp else 6.dp, bottomEnd = if (m.fromUser) 6.dp else 20.dp)
                     Column(
-                        Modifier.widthIn(max = 340.dp).clip(bubble).background(if (m.fromUser) Pc.SurfaceVariant else Pc.Surface)
+                        Modifier.widthIn(max = 340.dp).clip(bubble).background(if (m.fromUser) Pc.AccentContainer else Pc.Surface)
                             .border(1.dp, if (m.failed) Pc.Error else Pc.Outline, bubble).padding(horizontal = 16.dp, vertical = 12.dp),
                     ) {
                         Text(m.text, style = PcType.Body.copy(color = if (m.failed) Pc.Error else Pc.Text))
@@ -153,13 +158,13 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { onSend(s.input) }),
                     modifier = Modifier.weight(1f).height(52.dp).testTag("ask_input"),
                     decorationBox = { inner ->
-                        Box(Modifier.fillMaxSize().clip(PcShape.Control).background(Pc.Surface).border(1.dp, if (s.inputError != null) Pc.Error else Pc.Outline, PcShape.Control).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterStart) {
+                        Box(Modifier.fillMaxSize().clip(PcShape.Chip).background(Pc.Surface).border(1.dp, if (s.inputError != null) Pc.Error else Pc.Outline, PcShape.Chip).padding(horizontal = 20.dp), contentAlignment = Alignment.CenterStart) {
                             if (s.input.isEmpty()) Text("Ask about a match or team", style = PcType.BodyMuted, maxLines = 1)
                             inner()
                         }
                     },
                 )
-                Box(Modifier.size(52.dp).clip(PcShape.Control).background(if (s.sending) Pc.SurfaceVariant else Pc.Accent).pcClickable(PcShape.Control, "Send") { onSend(s.input) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(52.dp).pcClickable(androidx.compose.foundation.shape.CircleShape, "Send", pressScale = true) { onSend(s.input) }.background(if (s.sending) Pc.SurfaceVariant else Pc.Accent), contentAlignment = Alignment.Center) {
                     Icon(Icons.AutoMirrored.Outlined.Send, null, tint = if (s.sending) Pc.Text3 else Pc.OnAccent)
                 }
             }
@@ -185,7 +190,7 @@ fun PaywallScreen(onClose: () -> Unit) {
         }
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(56.dp).clip(PcShape.Hero).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent, modifier = Modifier.size(28.dp)) }
-            Text("Pitchside Pro", style = PcType.Display)
+            Text("PITCHSIDE PRO", style = PcType.Display)
             Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more football.", style = PcType.BodyMuted)
             Spacer(Modifier.height(8.dp))
             listOf("No ads anywhere", "${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} Ask questions a day", "Follow unlimited teams").forEach {
@@ -235,20 +240,20 @@ fun SettingsScreen(nav: SettingsNav) {
     var reset by remember { mutableStateOf(false) }
     var privacy by remember { mutableStateOf(false) }
     Screen {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(nav.back); Text("Settings", style = PcType.Subtitle) }
+        ScreenHeader("Settings", subtitle = "Account, alerts and app", onBack = nav.back)
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val s = session
             PcCard(Modifier.fillMaxWidth(), onClick = if (s != null) nav.openAccount else nav.openAuth) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(44.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Text((s?.displayName?.firstOrNull() ?: 'G').uppercase(), style = PcType.BodyStrong) }
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(Pc.AccentContainer).border(1.5.dp, Pc.Accent.copy(alpha = 0.55f), CircleShape), contentAlignment = Alignment.Center) { Text((s?.displayName?.firstOrNull() ?: 'G').uppercase(), style = PcType.TeamName) }
                     Column(Modifier.weight(1f)) {
-                        Text(s?.displayName ?: "Guest", style = PcType.BodyStrong)
+                        Text((s?.displayName ?: "Guest").uppercase(), style = PcType.TeamName)
                         Text(s?.email ?: "Sign in to back up your follows", style = PcType.Caption)
                     }
                     Icon(Icons.Filled.ChevronRight, null, tint = Pc.Text3)
                 }
             }
-            if (!prefs.isPro) PcCard(Modifier.fillMaxWidth(), border = Pc.OutlineStrong, onClick = nav.openPaywall) {
+            if (!prefs.isPro) PcCard(Modifier.fillMaxWidth(), border = Pc.Accent.copy(alpha = 0.45f), onClick = nav.openPaywall) {
                 Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(40.dp).clip(PcShape.Control).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent) }
                     Column(Modifier.weight(1f)) { Text("Go Pro", style = PcType.BodyStrong); Text("No ads, more Ask questions, unlimited follows", style = PcType.Caption) }
@@ -288,7 +293,7 @@ fun SettingsScreen(nav: SettingsNav) {
         }
     }
     if (langSheet) PcSheet({ langSheet = false }) {
-        Text("App language", style = PcType.Subtitle)
+        Text("APP LANGUAGE", style = PcType.SectionTitle)
         Text("Ask answers use this language where available. Screens are in English for now.", style = PcType.Caption)
         Languages.all.forEach { l ->
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).pcClickable(PcShape.Control) { app.setLanguage(l.code); langSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -298,7 +303,7 @@ fun SettingsScreen(nav: SettingsNav) {
         }
     }
     if (alertSheet) PcSheet({ alertSheet = false }) {
-        Text("Default alert level", style = PcType.Subtitle)
+        Text("DEFAULT ALERT LEVEL", style = PcType.SectionTitle)
         AlertLevel.entries.forEach { lvl ->
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).pcClickable(PcShape.Control) { app.setAlertLevel(lvl); alertSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { Text(lvl.label, style = PcType.BodyStrong); Text(lvl.desc, style = PcType.Caption) }
@@ -316,7 +321,7 @@ fun SettingsScreen(nav: SettingsNav) {
 @Composable
 private fun SettingsGroup(title: String, content: @Composable () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = PcType.Overline.copy(color = Pc.Text3), modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+        Text(title, style = PcType.Overline, modifier = Modifier.padding(start = 4.dp, top = 8.dp).semantics { heading() })
         PcCard(Modifier.fillMaxWidth()) { Column { content() } }
     }
 }
@@ -364,8 +369,8 @@ fun AuthContent(
         Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(back) }
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(
-                when (f.mode) { AuthMode.SignIn -> stringResource(R.string.auth_sign_in); AuthMode.SignUp -> stringResource(R.string.auth_sign_up); AuthMode.Reset -> stringResource(R.string.auth_reset) },
-                style = PcType.Title,
+                when (f.mode) { AuthMode.SignIn -> stringResource(R.string.auth_sign_in); AuthMode.SignUp -> stringResource(R.string.auth_sign_up); AuthMode.Reset -> stringResource(R.string.auth_reset) }.uppercase(),
+                style = PcType.ScreenTitle, modifier = Modifier.semantics { heading() },
             )
             Text(if (f.mode == AuthMode.Reset) "We'll email you a link to choose a new password." else stringResource(R.string.auth_why), style = PcType.BodyMuted)
             if (f.formError != null) InfoBanner(f.formError, BannerKind.Error, Modifier.testTag("auth_form_error"))
@@ -412,17 +417,17 @@ fun AccountRoute(back: () -> Unit, requireSignIn: () -> Unit) {
     LaunchedEffect(s) { if (s == null) requireSignIn() }
     if (s == null) return
     Screen(maxWidth = 560) {
-        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically) { BackButton(back); Text("Account", style = PcType.Subtitle) }
+        ScreenHeader("Account", subtitle = s.email, onBack = back)
         Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             PcCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(s.displayName, style = PcType.Subtitle)
+                    Text(s.displayName.uppercase(), style = PcType.Title)
                     Text(s.email, style = PcType.BodyMuted)
                 }
             }
             PcCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Backed up with this account", style = PcType.Subtitle)
+                    Text("BACKED UP WITH THIS ACCOUNT", style = PcType.TeamName)
                     Text("${prefs.teams.size} teams, ${prefs.leagues.size} leagues, ${prefs.players.size} players, alert levels and Spoiler Shield.", style = PcType.BodyMuted)
                 }
             }
@@ -432,12 +437,12 @@ fun AccountRoute(back: () -> Unit, requireSignIn: () -> Unit) {
     if (signOut) PcDialog("Sign out?", "Your follows stay on this device. Sign in again any time to sync them.", stringResource(R.string.auth_sign_out), { signOut = false; app.signOut() }, stringResource(R.string.action_cancel), { signOut = false }, danger = true)
 }
 
-@Preview(name = "Auth · sign in errors", showBackground = true, backgroundColor = 0xFF07111F)
+@Preview(name = "Auth · sign in errors", showBackground = true, backgroundColor = 0xFF0E1110)
 @Composable
 private fun AuthPreview() = PreviewHost {
     AuthContent(AuthForm(email = "bad", emailError = "Enter a valid email, like name@example.com.", passwordError = "Enter your password."), {}, {}, {}, {}, {}, {}, {})
 }
 
-@Preview(name = "Ask · empty", showBackground = true, backgroundColor = 0xFF07111F)
+@Preview(name = "Ask · empty", showBackground = true, backgroundColor = 0xFF0E1110)
 @Composable
 private fun AskPreview() = PreviewHost { AskContent(AskState(left = 5, limit = 5), {}, {}, {}, {}) }

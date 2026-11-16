@@ -47,7 +47,8 @@ enum class Persona(val title: String, val tagline: String, val bullets: List<Str
 data class UserPrefs(
     val onboarded: Boolean = false,
     val language: String = "en",
-    val theme: ThemeChoice = ThemeChoice.System,
+    /** Dark is the primary look (0.6.0); System and Light stay available in Settings. */
+    val theme: ThemeChoice = ThemeChoice.Dark,
     val followKind: FollowKind = FollowKind.Clubs,
     val watchStyle: WatchStyle = WatchStyle.Live,
     val alertLevel: AlertLevel = AlertLevel.Key,

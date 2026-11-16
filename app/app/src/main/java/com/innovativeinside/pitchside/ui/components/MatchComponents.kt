@@ -1,33 +1,29 @@
 package com.innovativeinside.pitchside.ui.components
 
 import androidx.compose.animation.Animatable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Visibility
@@ -46,13 +42,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.innovativeinside.pitchside.data.model.Match
 import com.innovativeinside.pitchside.data.model.StatRow
 import com.innovativeinside.pitchside.data.model.Status
@@ -102,15 +102,15 @@ fun matchDescription(m: Match, hidden: Boolean = false): String = buildString {
 }
 
 /**
- * Home win / draw / away win as one thin three-part bar (home in the accent colour, draw muted, away neutral, the same
- * colours the stats use for each side). Decorative: callers put the numbers in text or the content description.
+ * Home win / draw / away win as one thin three-part bar (home emerald, draw grey, away muted). Decorative:
+ * callers put the numbers in text or the content description.
  */
 @Composable
-fun ProbabilityBar(p: com.innovativeinside.pitchside.data.model.WinProbability, modifier: Modifier = Modifier, height: Dp = 6.dp) {
+fun ProbabilityBar(p: com.innovativeinside.pitchside.data.model.WinProbability, modifier: Modifier = Modifier, height: Dp = 6.dp, onHero: Boolean = false) {
     Row(modifier.height(height).clip(CircleShape).clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        Box(Modifier.weight(p.home.coerceAtLeast(1).toFloat()).fillMaxHeight().background(Pc.Accent))
-        Box(Modifier.weight(p.draw.coerceAtLeast(1).toFloat()).fillMaxHeight().background(Pc.OutlineStrong))
-        Box(Modifier.weight(p.away.coerceAtLeast(1).toFloat()).fillMaxHeight().background(Pc.Neutral))
+        Box(Modifier.weight(p.home.coerceAtLeast(1).toFloat()).fillMaxHeight().background(if (onHero) Pc.HeroAccent else Pc.Accent))
+        Box(Modifier.weight(p.draw.coerceAtLeast(1).toFloat()).fillMaxHeight().background(if (onHero) Pc.OnHero2 else Pc.Text3))
+        Box(Modifier.weight(p.away.coerceAtLeast(1).toFloat()).fillMaxHeight().background(if (onHero) Pc.HeroRaised else Pc.Neutral))
     }
 }
 
@@ -119,36 +119,36 @@ fun ProbabilityBar(p: com.innovativeinside.pitchside.data.model.WinProbability, 
 enum class CrestSize(val dp: Dp) { S(24.dp), M(32.dp), L(48.dp), XL(64.dp) }
 
 /**
- * Circular team badge. Shows the club crest from the data source (through Coil, cached) on a light disc; while it
- * loads, or when there is no crest, the club initials on a neutral disc with a team-colour ring. Decorative for
- * TalkBack: the team name is always next to it.
+ * CrestImage: the club crest from the data source through Coil (cached), drawn straight on the dark surface like
+ * the reference. While it loads, or when there is none, the club initials on a charcoal disc with a team-colour
+ * ring. Decorative for TalkBack: the team name is always next to it.
  */
 @Composable
 fun TeamCrest(team: Team, size: Dp = CrestSize.M.dp, modifier: Modifier = Modifier, onHero: Boolean = false, ring: Boolean = true) {
-    val ringWidth = if (size >= 48.dp) 3.dp else 2.dp
+    val ringWidth = if (size >= 48.dp) 2.5.dp else 1.5.dp
     val style = when {
-        size >= 64.dp -> PcType.Subtitle
-        size >= 48.dp -> PcType.BodyStrong
+        size >= 64.dp -> PcType.TeamName.copy(fontSize = 22.sp)
+        size >= 48.dp -> PcType.TeamName
         size >= 32.dp -> PcType.LabelStrong
         else -> PcType.Micro
     }
     val initials: @Composable () -> Unit = {
         Box(
-            Modifier.fillMaxSize().background(if (onHero) Pc.HeroRaised else Pc.SurfaceVariant)
+            Modifier.fillMaxSize().clip(CircleShape).background(if (onHero) Pc.HeroRaised else Pc.SurfaceVariant)
                 .let { if (ring) it.border(ringWidth, Pc.team(team.color), CircleShape) else it },
             contentAlignment = Alignment.Center,
-        ) { Text(team.short.take(3), style = style, color = if (onHero) Pc.OnHero else Pc.Text, maxLines = 1) }
+        ) { Text(team.short.take(3).uppercase(), style = style, color = if (onHero) Pc.OnHero else Pc.Text, maxLines = 1) }
     }
-    Box(modifier.size(size).clip(CircleShape).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
+    Box(modifier.size(size).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
         val logo = team.logo
         if (logo == null) initials()
-        else RemoteImage(
-            logo, initials,
-            Modifier.fillMaxSize().background(Color.White).border(1.dp, if (onHero) Pc.HeroOutline else Pc.Outline, CircleShape).padding(size * 0.12f),
-            ContentScale.Fit,
-        )
+        else RemoteImage(logo, initials, Modifier.fillMaxSize(), ContentScale.Fit)
     }
 }
+
+/** The design-system name for [TeamCrest]. */
+@Composable
+fun CrestImage(team: Team, size: Dp = CrestSize.M.dp, modifier: Modifier = Modifier, onHero: Boolean = false) = TeamCrest(team, size, modifier, onHero)
 
 /**
  * A remote image (crest, logo, player photo) through Coil with [fallback] shown while loading and on error, so a slow or
@@ -174,28 +174,30 @@ fun Crest(team: Team, size: Dp = 24.dp) = TeamCrest(team, size)
 // ---------------- Live badge and status ----------------
 
 /**
- * Red LIVE badge: a slowly pulsing dot, "LIVE" and the minute ("LIVE 74'"). The text always says LIVE,
- * so colour is never the only signal. The pulse stops when the user has reduced motion.
+ * LiveBadge: "● LIVE 73'" with a softly pulsing emerald dot, emerald LIVE and the minute in white. The text
+ * always says LIVE, so colour is never the only signal. The pulse stops when the user has reduced motion.
  */
 @Composable
-fun LiveBadge(minute: String?, modifier: Modifier = Modifier, onHero: Boolean = false) {
+fun LiveBadge(minute: String?, modifier: Modifier = Modifier, onHero: Boolean = false, compact: Boolean = false) {
     val reduced = rememberReducedMotion()
-    val bg = if (onHero) Pc.LiveFill else Pc.LiveContainer
-    val fg = if (onHero) Pc.OnLive else Pc.LiveText
-    val dot = if (onHero) Pc.OnLive else Pc.Live
+    val green = if (onHero) Pc.HeroAccent else Pc.LiveText
+    val minuteColor = if (onHero) Pc.OnHero else Pc.Text
     val pulse = if (reduced) 1f else {
         val t = rememberInfiniteTransition(label = "live")
-        val a by t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(1100), RepeatMode.Reverse), label = "pulse")
+        val a by t.animateFloat(1f, 0.35f, infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "pulse")
         a
     }
+    val style = if (compact) PcType.Tag.copy(fontSize = 13.sp) else PcType.Tag.copy(fontSize = 17.sp)
     Row(
-        modifier.heightIn(min = 24.dp).clip(PcShape.Chip).background(bg).padding(horizontal = 9.dp, vertical = 3.dp)
-            .semantics(mergeDescendants = true) { contentDescription = if (minute.isNullOrBlank()) "Live" else "Live, $minute" },
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier.heightIn(min = 22.dp).semantics(mergeDescendants = true) { contentDescription = if (minute.isNullOrBlank()) "Live" else "Live, $minute" },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
     ) {
-        Box(Modifier.size(7.dp).scale(if (reduced) 1f else 0.85f + 0.15f * pulse).clip(CircleShape).background(dot.copy(alpha = pulse)))
-        Text("LIVE", style = PcType.Overline.copy(fontWeight = FontWeight.Bold), color = fg)
-        if (!minute.isNullOrBlank()) Text(minute, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = fg)
+        Box(contentAlignment = Alignment.Center) {
+            if (!reduced) Box(Modifier.size(if (compact) 11.dp else 14.dp).scale(1.6f - 0.6f * pulse).clip(CircleShape).background(green.copy(alpha = 0.25f * pulse)))
+            Box(Modifier.size(if (compact) 7.dp else 10.dp).clip(CircleShape).background(green))
+        }
+        Text("LIVE", style = style, color = green)
+        if (!minute.isNullOrBlank()) Text(minute, style = style.copy(fontWeight = FontWeight.SemiBold), color = minuteColor)
     }
 }
 
@@ -203,9 +205,9 @@ fun LiveBadge(minute: String?, modifier: Modifier = Modifier, onHero: Boolean = 
 @Composable
 fun StatusBadge(status: Status, label: String, modifier: Modifier = Modifier) {
     when (status) {
-        Status.Live -> LiveBadge(label, modifier)
-        Status.Upcoming -> Text(label, style = PcType.Numeric.copy(fontWeight = FontWeight.SemiBold), color = Pc.Text, modifier = modifier)
-        Status.Finished -> Text("FT", style = PcType.LabelStrong, color = Pc.Text2, modifier = modifier)
+        Status.Live -> LiveBadge(label, modifier, compact = true)
+        Status.Upcoming -> Text(label, style = PcType.Tag, color = Pc.Text, modifier = modifier)
+        Status.Finished -> Text("FT", style = PcType.Tag, color = Pc.Text2, modifier = modifier)
         Status.Postponed -> Box(modifier.clip(PcShape.Chip).background(Pc.WarningContainer).padding(horizontal = 8.dp, vertical = 2.dp)) {
             Text("Postponed", style = PcType.Caption, color = Pc.Text)
         }
@@ -215,23 +217,37 @@ fun StatusBadge(status: Status, label: String, modifier: Modifier = Modifier) {
 // ---------------- Score ----------------
 
 /**
- * Shared score typography ("2 – 1"): condensed bold, tabular figures. When [flashKey] changes after the
- * first composition, the score briefly lights up (600ms) so a new goal is noticed; skipped on reduced motion.
+ * ScoreHero / shared score typography ("2 – 1"): condensed bold, tabular figures. A changed score slides in
+ * from below (old one slides up and out) and briefly lights up, so a new goal is noticed. Both are skipped
+ * on reduced motion.
  */
 @Composable
-fun ScoreText(home: Int?, away: Int?, modifier: Modifier = Modifier, style: TextStyle = PcType.ScoreDisplay, color: Color = Pc.Text, flashKey: Any? = null, flashColor: Color = Pc.Live) {
+fun ScoreText(home: Int?, away: Int?, modifier: Modifier = Modifier, style: TextStyle = PcType.ScoreDisplay, color: Color = Pc.Text, flashKey: Any? = null, flashColor: Color = Pc.Accent) {
     val reduced = rememberReducedMotion()
     val flash = remember { Animatable(Color.Transparent) }
     val first = remember { booleanArrayOf(true) }
     LaunchedEffect(flashKey) {
         if (first[0]) { first[0] = false; return@LaunchedEffect }
         if (reduced || flashKey == null) return@LaunchedEffect
-        flash.snapTo(flashColor.copy(alpha = 0.35f))
-        flash.animateTo(Color.Transparent, tween(600))
+        flash.snapTo(flashColor.copy(alpha = 0.30f))
+        flash.animateTo(Color.Transparent, tween(700))
     }
     val text = if (home != null && away != null) "$home – $away" else "–"
-    Text(text, style = style, color = color, maxLines = 1, modifier = modifier.clip(PcShape.Small).background(flash.value).padding(horizontal = 4.dp))
+    AnimatedContent(
+        targetState = text,
+        transitionSpec = {
+            if (reduced) ContentTransform(EnterTransition.None, ExitTransition.None)
+            else (slideInVertically(tween(280)) { it / 2 } + fadeIn(tween(280))) togetherWith (slideOutVertically(tween(200)) { -it / 2 } + fadeOut(tween(200)))
+        },
+        label = "score",
+        modifier = modifier.clip(PcShape.Small).background(flash.value).padding(horizontal = 6.dp),
+    ) { t -> Text(t, style = style, color = color, maxLines = 1) }
 }
+
+/** The design-system name for the big animated score. */
+@Composable
+fun ScoreHero(home: Int?, away: Int?, modifier: Modifier = Modifier, color: Color = Pc.OnHero) =
+    ScoreText(home, away, modifier, PcType.ScoreDisplay, color, flashKey = "$home-$away", flashColor = Pc.HeroAccent)
 
 /** Single number score for rows (keeps the old signature). */
 @Composable
@@ -239,11 +255,12 @@ fun ScoreText(value: String, modifier: Modifier = Modifier, bold: Boolean = true
     Text(value, style = PcType.ScoreRow, color = if (bold) Pc.Text else Pc.Text2, modifier = modifier.widthIn(min = 18.dp), textAlign = TextAlign.End, maxLines = 1)
 }
 
-// ---------------- Live hero tile ----------------
+// ---------------- Live hero card ----------------
 
 /**
- * The dominant 2x2 live tile: deep-green stage, competition and venue overline, LIVE badge, both crests
- * and names, the 56sp score, an optional possession/shots strip.
+ * The live hero (reference "LIVE MATCH" card) on a [GlowCard]: "● LIVE 73'" top left, competition logo centred on
+ * top, overflow menu top right, large crests, uppercase team names, the huge score, a divider and a stats strip
+ * (POSSESSION 52% - 48%   SHOTS 9 - 7) when the data source has stats for the match.
  */
 @Composable
 fun LiveMatchTile(
@@ -253,32 +270,46 @@ fun LiveMatchTile(
     onReveal: () -> Unit,
     modifier: Modifier = Modifier,
     stats: List<StatRow> = emptyList(),
-    /** Replaces the status text at the top right for non-live matches ("Tomorrow", "Sat 16 Nov"). */
+    /** Replaces the status text at the top left for non-live matches ("Tomorrow", "Sat 16 Nov"). */
     topRight: String? = null,
-    footer: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit = {},
+    onMenu: (() -> Unit)? = null,
+    /** Spoken summary; defaults to "Featured match: <match>". */
+    description: String? = null,
+    footer: @Composable ColumnScope.() -> Unit = {},
 ) {
-    PcCard(
-        modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = "Featured match: " + matchDescription(match, hidden) },
-        container = Pc.Hero, border = Pc.HeroOutline, onClick = onClick,
-    ) {
-        Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    listOf(match.leagueName, match.venue).filter { it.isNotBlank() }.joinToString(" · ").uppercase(),
-                    style = PcType.Overline, color = Pc.OnHero2, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                )
-                Spacer(Modifier.width(PcSpace.xs))
-                when (match.status) {
-                    Status.Live -> LiveBadge(match.label, onHero = true)
-                    else -> Text(topRight ?: if (match.status == Status.Finished) "FT" else match.label, style = PcType.LabelStrong, color = Pc.OnHero)
+    val spoken = description ?: ("Featured match: " + matchDescription(match, hidden))
+    GlowCard(modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = spoken }, onClick = onClick) {
+        Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+            // Status left, competition centred, menu right. Equal side weights keep the mark centred; with a large
+            // font the mark moves to its own line so nothing overlaps.
+            val roomy = androidx.compose.ui.platform.LocalDensity.current.fontScale <= 1.15f
+            Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    when (match.status) {
+                        Status.Live -> LiveBadge(match.label, onHero = true)
+                        Status.Finished -> Text(topRight ?: "FT", style = PcType.Tag.copy(fontSize = 17.sp), color = Pc.OnHero2)
+                        else -> Text((topRight ?: match.label).uppercase(), style = PcType.Tag.copy(fontSize = 15.sp), color = Pc.OnHero2, maxLines = 2)
+                    }
+                }
+                if (roomy) CompetitionMark(match, Modifier.widthIn(max = 116.dp))
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    if (onMenu != null) Box(
+                        Modifier.size(PcSpace.touch).pcClickable(PcShape.Control, "More options for this match", onClick = onMenu),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(Modifier.size(32.dp).clip(PcShape.Small).background(Pc.HeroRaised), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Outlined.MoreVert, "More options", tint = Pc.OnHero2, modifier = Modifier.size(20.dp))
+                        }
+                    }
                 }
             }
-            Row(Modifier.fillMaxWidth().padding(vertical = PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
+            if (!roomy) CompetitionMark(match, Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 HeroTeam(match.home)
-                Box(Modifier.widthIn(min = 112.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier.widthIn(min = 104.dp), contentAlignment = Alignment.Center) {
                     if (hidden) {
                         Box(
-                            Modifier.heightIn(min = PcSpace.touch).clip(PcShape.Control).background(Pc.HeroRaised).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal).padding(horizontal = PcSpace.md),
+                            Modifier.heightIn(min = PcSpace.touch).pcClickable(PcShape.Chip, "Reveal score", onClick = onReveal).background(Pc.HeroRaised).padding(horizontal = PcSpace.md),
                             contentAlignment = Alignment.Center,
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -287,28 +318,24 @@ fun LiveMatchTile(
                             }
                         }
                     } else if (match.hasScore) {
-                        ScoreText(match.homeScore, match.awayScore, color = Pc.OnHero, flashKey = "${match.homeScore}-${match.awayScore}", flashColor = Pc.OnHero)
+                        ScoreHero(match.homeScore, match.awayScore)
                     } else {
-                        Text(match.label, style = PcType.ScoreCompact, color = Pc.OnHero)
+                        Text(match.label, style = PcType.ScoreCompact.copy(fontSize = 40.sp, lineHeight = 42.sp), color = Pc.OnHero, maxLines = 1)
                     }
                 }
                 HeroTeam(match.away)
             }
             val strip = if (hidden) emptyList() else stats.filter { it.label == "Possession" || it.label == "Shots" }
             if (strip.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().clip(PcShape.Control).background(Pc.HeroRaised).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs), horizontalArrangement = Arrangement.SpaceEvenly) {
+                Hairline(color = Pc.OnHero.copy(alpha = 0.10f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.lg, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
                     strip.forEach { s ->
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(s.homeText, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.OnHero)
-                            Text(s.label.uppercase(), style = PcType.Overline, color = Pc.OnHero2)
-                            Text(s.awayText, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.OnHero)
+                        val t = buildAnnotatedString {
+                            withStyle(SpanStyle(color = Pc.OnHero2, fontWeight = FontWeight.Medium)) { append(s.label.uppercase() + " ") }
+                            withStyle(SpanStyle(color = Pc.OnHero, fontWeight = FontWeight.Bold)) { append("${s.homeText} - ${s.awayText}") }
                         }
+                        Text(t, style = PcType.Tag.copy(fontSize = 16.sp), maxLines = 1)
                     }
-                }
-            }
-            if (match.status == Status.Live) liveProgress(match.label)?.let { p ->
-                Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(Pc.HeroRaised)) {
-                    Box(Modifier.fillMaxWidth(p).fillMaxHeight().clip(CircleShape).background(Pc.Live))
                 }
             }
             footer()
@@ -316,31 +343,35 @@ fun LiveMatchTile(
     }
 }
 
+/** Competition logo (or monogram) with the name in small uppercase under it, centred on top of hero cards. */
+@Composable
+private fun CompetitionMark(match: Match, modifier: Modifier = Modifier) {
+    Column(modifier.clearAndSetSemantics {}, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        val logo = match.leagueLogo
+        if (logo != null) RemoteImage(logo, { Box(Modifier.fillMaxSize()) }, Modifier.size(30.dp), ContentScale.Fit)
+        Text(match.leagueName.uppercase(), style = PcType.Overline.copy(fontSize = 11.sp, lineHeight = 13.sp), color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+    }
+}
+
 @Composable
 private fun RowScope.HeroTeam(team: Team) {
     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-        TeamCrest(team, CrestSize.L.dp, onHero = true)
-        Text(team.name, style = PcType.BodyStrong, color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        TeamCrest(team, CrestSize.XL.dp, onHero = true)
+        Text(team.name.uppercase(), style = PcType.TeamName, color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
 // ---------------- Mini live tile ----------------
 
-/** Compact tile for the other live matches; tapping promotes it into the hero. */
+/** Compact card for another live match; tapping promotes it into the hero. */
 @Composable
 fun MiniLiveTile(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     PcCard(
-        modifier.width(168.dp).semantics(mergeDescendants = true) { contentDescription = matchDescription(match, hidden) + ". Show as featured match" },
+        modifier.width(176.dp).semantics(mergeDescendants = true) { contentDescription = matchDescription(match, hidden) + ". Show as featured match" },
         onClick = onClick,
     ) {
         Column(Modifier.padding(PcSpace.sm), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(6.dp).clip(CircleShape).background(Pc.Live))
-                Spacer(Modifier.width(6.dp))
-                Text(match.label, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.LiveText)
-                Spacer(Modifier.width(6.dp))
-                Text(match.leagueName.uppercase(), style = PcType.Overline, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            }
+            LiveBadge(match.label, compact = true)
             MiniTeamLine(match.home, if (hidden) null else match.homeScore, lead = (match.homeScore ?: 0) > (match.awayScore ?: 0))
             MiniTeamLine(match.away, if (hidden) null else match.awayScore, lead = (match.awayScore ?: 0) > (match.homeScore ?: 0))
         }
@@ -351,7 +382,7 @@ fun MiniLiveTile(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: M
 private fun MiniTeamLine(team: Team, score: Int?, lead: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
         TeamCrest(team, CrestSize.S.dp)
-        Text(team.short, style = PcType.LabelStrong, color = if (lead) Pc.Text else Pc.Text2, modifier = Modifier.weight(1f), maxLines = 1)
+        Text(team.short.uppercase(), style = PcType.TeamNameSmall, color = if (lead) Pc.Text else Pc.Text2, modifier = Modifier.weight(1f), maxLines = 1)
         Text(score?.toString() ?: "–", style = PcType.ScoreCompact, color = if (lead) Pc.Text else Pc.Text2)
     }
 }
@@ -359,9 +390,9 @@ private fun MiniTeamLine(team: Team, score: Int?, lead: Boolean) {
 // ---------------- Match row ----------------
 
 /**
- * One match in a list. Left: live minute (red, with a thin progress bar under the row), kickoff time,
- * FT or Postponed. Middle: both teams on two lines (winner emphasised once finished). Right: scores,
- * then a favourite star (follow a team in this match), a reminder bell for upcoming games, and a chevron.
+ * One match in a list. Left: LIVE minute (emerald, with a thin progress bar under the row), kickoff time, FT or
+ * Postponed. Middle: both teams in uppercase condensed on two lines (winner bright once finished). Right: scores,
+ * then the follow star, a kickoff reminder bell for upcoming games and a chevron.
  */
 @Composable
 fun MatchRow(
@@ -384,42 +415,42 @@ fun MatchRow(
         modifier.fillMaxWidth().heightIn(min = 72.dp).pcClickable(PcShape.Control, "Open match", onClick = onClick)
             .semantics(mergeDescendants = true) { contentDescription = matchDescription(match, hidden) },
     ) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 70.dp).padding(start = PcSpace.sm, end = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(52.dp), contentAlignment = Alignment.CenterStart) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 70.dp).padding(start = PcSpace.md, end = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.width(54.dp), contentAlignment = Alignment.CenterStart) {
                 when (match.status) {
                     Status.Live -> Column {
+                        Text(match.label, style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.LiveText, maxLines = 1)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(6.dp).clip(CircleShape).background(Pc.Live)); Spacer(Modifier.width(4.dp))
-                            Text(match.label, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.LiveText, maxLines = 1)
+                            Text("LIVE", style = PcType.Overline.copy(fontSize = 11.sp), color = Pc.LiveText)
                         }
-                        Text("LIVE", style = PcType.Overline, color = Pc.LiveText)
                     }
-                    Status.Upcoming -> Text(match.label, style = PcType.Numeric.copy(fontWeight = FontWeight.SemiBold), maxLines = 1)
-                    Status.Finished -> Text("FT", style = PcType.LabelStrong, color = Pc.Text2)
-                    Status.Postponed -> Text("PPD", style = PcType.LabelStrong, color = Pc.Warning)
+                    Status.Upcoming -> Text(match.label, style = PcType.Tag.copy(fontSize = 16.sp), maxLines = 1)
+                    Status.Finished -> Text("FT", style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text2)
+                    Status.Postponed -> Text("PPD", style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Warning)
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                RowTeam(match.home, hs, hidden, emphasise = homeWin || (!finished), dim = awayWin)
-                RowTeam(match.away, aw, hidden, emphasise = awayWin || (!finished), dim = homeWin)
+                RowTeam(match.home, hs, hidden, dim = awayWin)
+                RowTeam(match.away, aw, hidden, dim = homeWin)
                 val probs = match.probs
                 if (probs != null && match.status == Status.Upcoming) ProbabilityBar(probs, Modifier.fillMaxWidth(0.55f), height = 3.dp)
             }
             if (hidden) {
-                Box(Modifier.size(PcSpace.touch).pcClickable(PcShape.Control, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Visibility, "Reveal score", tint = Pc.Text2, modifier = Modifier.size(20.dp))
                 }
             }
-            if (onFavorite != null) Box(Modifier.size(PcSpace.touch).pcClickable(PcShape.Control, if (favorite) "Following a team in this match" else "Follow a team in this match", onClick = onFavorite), contentAlignment = Alignment.Center) {
-                Icon(if (favorite) Icons.Filled.Star else Icons.Outlined.StarBorder, if (favorite) "Following" else "Follow", tint = if (favorite) Pc.Accent else Pc.Text2, modifier = Modifier.size(20.dp))
+            if (onFavorite != null) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (favorite) "Following a team in this match" else "Follow a team in this match", onClick = onFavorite), contentAlignment = Alignment.Center) {
+                Icon(if (favorite) Icons.Filled.Star else Icons.Outlined.StarBorder, if (favorite) "Following" else "Follow", tint = if (favorite) Pc.Accent else Pc.Text2, modifier = Modifier.size(22.dp))
             }
-            if (onReminder != null && match.status == Status.Upcoming) Box(Modifier.size(PcSpace.touch).pcClickable(PcShape.Control, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onClick = onReminder), contentAlignment = Alignment.Center) {
+            if (onReminder != null && match.status == Status.Upcoming) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onClick = onReminder), contentAlignment = Alignment.Center) {
                 Icon(if (reminderOn) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (reminderOn) "Reminder on" else "Reminder off", tint = if (reminderOn) Pc.Accent else Pc.Text2, modifier = Modifier.size(20.dp))
             }
             Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = Pc.Text3, modifier = Modifier.size(18.dp))
         }
         if (match.status == Status.Live) liveProgress(match.label)?.let { p ->
-            Box(Modifier.fillMaxWidth().padding(horizontal = PcSpace.sm).height(2.dp).clip(CircleShape).background(Pc.LiveContainer)) {
+            Box(Modifier.fillMaxWidth().padding(horizontal = PcSpace.md).height(2.dp).clip(CircleShape).background(Pc.LiveContainer)) {
                 Box(Modifier.fillMaxWidth(p).fillMaxHeight().clip(CircleShape).background(Pc.Live))
             }
         }
@@ -427,11 +458,11 @@ fun MatchRow(
 }
 
 @Composable
-private fun RowTeam(team: Team, score: Int?, hidden: Boolean, emphasise: Boolean, dim: Boolean) {
+private fun RowTeam(team: Team, score: Int?, hidden: Boolean, dim: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
         TeamCrest(team, CrestSize.S.dp)
         Text(
-            team.name, style = if (emphasise && !dim) PcType.BodyStrong else PcType.Body, color = if (dim) Pc.Text2 else Pc.Text,
+            team.name.uppercase(), style = PcType.TeamNameSmall, color = if (dim) Pc.Text2 else Pc.Text,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
         when {
@@ -447,57 +478,137 @@ private fun RowTeam(team: Team, score: Int?, hidden: Boolean, emphasise: Boolean
 fun MatchCard(match: Match, hidden: Boolean, onClick: () -> Unit, onReveal: () -> Unit, modifier: Modifier = Modifier) =
     MatchRow(match, hidden, onClick, onReveal, modifier)
 
-// ---------------- Fixture rail ----------------
+// ---------------- Highlight row ----------------
 
-/** Compact horizontal fixture: competition overline, time / LIVE / FT, two crests with abbreviations. */
+/**
+ * HighlightRow (reference "TODAY'S HIGHLIGHTS"): "crest MAN UNITED vs COPENHAGEN • 21:00" / "• FT 2 - 1" / "• LIVE 67'"
+ * on one line that wraps to two when names are long, the follow star on the right and, for upcoming games, the
+ * kickoff reminder bell. Live games get the thin emerald minute bar.
+ */
 @Composable
-fun FixtureRailItem(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    PcCard(modifier.width(132.dp).semantics(mergeDescendants = true) { contentDescription = match.leagueName + ", " + matchDescription(match, hidden) }, onClick = onClick) {
-        Column(Modifier.padding(PcSpace.sm), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(match.leagueName.uppercase(), style = PcType.Overline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+fun HighlightRow(
+    match: Match,
+    hidden: Boolean,
+    onClick: () -> Unit,
+    onReveal: () -> Unit,
+    modifier: Modifier = Modifier,
+    favorite: Boolean = false,
+    onFavorite: (() -> Unit)? = null,
+    reminderOn: Boolean = false,
+    onReminder: (() -> Unit)? = null,
+) {
+    val name = PcType.TeamNameSmall.copy(fontSize = 17.sp)
+    val grey = Pc.Text2
+    val green = Pc.LiveText
+    val text = buildAnnotatedString {
+        append(match.home.name.uppercase())
+        withStyle(SpanStyle(color = grey, fontWeight = FontWeight.Medium)) { append(" vs ") }
+        append(match.away.name.uppercase())
+        withStyle(SpanStyle(color = grey, fontWeight = FontWeight.Medium)) {
+            append(" • ")
             when (match.status) {
-                Status.Live -> Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(6.dp).clip(CircleShape).background(Pc.Live)); Spacer(Modifier.width(4.dp))
-                    Text(match.label, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = Pc.LiveText)
-                }
-                Status.Finished -> Text("FT", style = PcType.LabelStrong, color = Pc.Text2)
-                Status.Postponed -> Text("Postponed", style = PcType.LabelStrong, color = Pc.Warning, maxLines = 1)
-                Status.Upcoming -> Text(match.label, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+                Status.Upcoming -> append(match.label)
+                Status.Finished -> append(if (match.hasScore && !hidden) "FT ${match.homeScore} - ${match.awayScore}" else "FT")
+                Status.Postponed -> append("Postponed")
+                Status.Live -> Unit
             }
-            listOf(match.home to match.homeScore, match.away to match.awayScore).forEach { (t, s) ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TeamCrest(t, CrestSize.S.dp)
-                    Text(t.short, style = PcType.LabelStrong, modifier = Modifier.weight(1f), maxLines = 1)
-                    if (s != null && !hidden) Text(s.toString(), style = PcType.ScoreRow)
-                }
+        }
+        if (match.status == Status.Live) withStyle(SpanStyle(color = green, fontWeight = FontWeight.Bold)) {
+            append("LIVE ${match.label}")
+            if (match.hasScore && !hidden) append("  ${match.homeScore} - ${match.awayScore}")
+        }
+    }
+    Column(
+        modifier.fillMaxWidth().heightIn(min = 60.dp).pcClickable(PcShape.Control, "Open match", onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = matchDescription(match, hidden) },
+    ) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).padding(start = PcSpace.md, end = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+            TeamCrest(match.home, 30.dp)
+            Text(text, style = name, modifier = Modifier.weight(1f).padding(vertical = PcSpace.xs), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (hidden && match.hasScore) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.Visibility, "Reveal score", tint = Pc.Text2, modifier = Modifier.size(20.dp))
+            }
+            if (onReminder != null && match.status == Status.Upcoming) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onClick = onReminder), contentAlignment = Alignment.Center) {
+                Icon(if (reminderOn) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (reminderOn) "Reminder on" else "Reminder off", tint = if (reminderOn) Pc.Accent else Pc.Text3, modifier = Modifier.size(20.dp))
+            }
+            if (onFavorite != null) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (favorite) "Following a team in this match" else "Follow a team in this match", onClick = onFavorite), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Star, if (favorite) "Following" else "Follow", tint = if (favorite) Pc.Accent else Pc.Text3, modifier = Modifier.size(24.dp))
+            }
+        }
+        if (match.status == Status.Live) liveProgress(match.label)?.let { p ->
+            Box(Modifier.fillMaxWidth().padding(horizontal = PcSpace.md).height(2.dp).clip(CircleShape).background(Pc.LiveContainer)) {
+                Box(Modifier.fillMaxWidth(p).fillMaxHeight().clip(CircleShape).background(Pc.Live))
             }
         }
     }
 }
 
-// ---------------- Previews ----------------
+// ---------------- Compact match card ----------------
 
-@Preview(name = "Live tile · light", showBackground = true, widthDp = 380)
+/**
+ * MatchCardCompact (reference "TOP MATCHES"): crest, competition logo over the big kickoff time (or score / LIVE),
+ * crest; uppercase names underneath.
+ */
 @Composable
-private fun LiveTilePreview() = PreviewHost(dark = false) {
-    Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        LiveMatchTile(PreviewData.live, false, {}, {}, stats = listOf(StatRow("Possession", 58, 42, "58%", "42%"), StatRow("Shots", 8, 5, "8", "5")))
-        MiniLiveTile(PreviewData.live, false, {})
+fun MatchCardCompact(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    PcCard(modifier.width(232.dp).semantics(mergeDescendants = true) { contentDescription = match.leagueName + ", " + matchDescription(match, hidden) }, onClick = onClick) {
+        Column(Modifier.padding(horizontal = PcSpace.sm, vertical = PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { TeamCrest(match.home, 44.dp) }
+                Column(Modifier.widthIn(min = 76.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    val logo = match.leagueLogo
+                    if (logo != null) RemoteImage(logo, { Box(Modifier.fillMaxSize()) }, Modifier.size(22.dp), ContentScale.Fit)
+                    else Text(match.leagueName.uppercase(), style = PcType.Overline.copy(fontSize = 10.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 76.dp))
+                    when (match.status) {
+                        Status.Upcoming -> Text(match.label, style = PcType.ScoreCompact, maxLines = 1)
+                        Status.Live -> {
+                            if (match.hasScore && !hidden) Text("${match.homeScore} – ${match.awayScore}", style = PcType.ScoreCompact, maxLines = 1)
+                            LiveBadge(match.label, compact = true)
+                        }
+                        Status.Finished -> {
+                            Text(if (match.hasScore && !hidden) "${match.homeScore} – ${match.awayScore}" else "FT", style = PcType.ScoreCompact, maxLines = 1)
+                            if (match.hasScore && !hidden) Text("FT", style = PcType.Overline)
+                        }
+                        Status.Postponed -> Text("PPD", style = PcType.ScoreCompact, color = Pc.Warning, maxLines = 1)
+                    }
+                }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { TeamCrest(match.away, 44.dp) }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                Text(match.home.name.uppercase(), style = PcType.TeamNameSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+                Text(match.away.name.uppercase(), style = PcType.TeamNameSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+            }
+        }
     }
 }
 
-@Preview(name = "Live tile · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0C0F0D)
+/** Older name for [MatchCardCompact]. */
+@Composable
+fun FixtureRailItem(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) = MatchCardCompact(match, hidden, onClick, modifier)
+
+// ---------------- Previews ----------------
+
+@Preview(name = "Live hero · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
 @Composable
 private fun LiveTileDarkPreview() = PreviewHost(dark = true) {
+    Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+        LiveMatchTile(PreviewData.live, false, {}, {}, stats = listOf(StatRow("Possession", 52, 48, "52%", "48%"), StatRow("Shots", 9, 7, "9", "7")), onMenu = {})
+        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { PreviewData.matches.take(2).forEach { MatchCardCompact(it, false, {}) } }
+    }
+}
+
+@Preview(name = "Live hero · light", showBackground = true, widthDp = 380)
+@Composable
+private fun LiveTileLightPreview() = PreviewHost(dark = false) {
     Column(Modifier.padding(PcSpace.md)) { LiveMatchTile(PreviewData.live, false, {}, {}) }
 }
 
-@Preview(name = "Match rows", showBackground = true, widthDp = 360)
+@Preview(name = "Match rows", showBackground = true, widthDp = 360, backgroundColor = 0xFF0E1110)
 @Composable
-private fun MatchRowsPreview() = PreviewHost(dark = false) {
+private fun MatchRowsPreview() = PreviewHost(dark = true) {
     Column(Modifier.padding(PcSpace.md)) {
         PreviewData.matches.forEach { MatchRow(it, false, {}, {}, onFavorite = {}, onReminder = {}) }
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { PreviewData.matches.forEach { FixtureRailItem(it, false, {}) } }
+        PreviewData.matches.forEach { HighlightRow(it, false, {}, {}, onFavorite = {}) }
         Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
             CrestSize.entries.forEach { TeamCrest(PreviewData.live.home, it.dp) }
             LiveBadge("74'")

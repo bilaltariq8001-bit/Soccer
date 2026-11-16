@@ -1,5 +1,6 @@
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.border
@@ -214,14 +215,14 @@ private fun DaySummary(ms: List<Match>) {
         ("$live" to "live").takeIf { live > 0 },
     )
     Row(
-        Modifier.fillMaxWidth().clip(PcShape.Control).background(Pc.SurfaceVariant).padding(horizontal = PcSpace.sm, vertical = PcSpace.xs)
+        Modifier.fillMaxWidth().clip(PcShape.Tile).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Tile).padding(horizontal = PcSpace.sm, vertical = PcSpace.sm)
             .semantics(mergeDescendants = true) { contentDescription = items.joinToString(", ") { "${it.first} ${it.second}" } },
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         items.forEach { (n, label) ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(n, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), color = if (label == "live") Pc.LiveText else Pc.Text)
-                Text(label, style = PcType.Caption)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(n, style = PcType.ScoreRow.copy(fontSize = 22.sp), color = if (label == "live") Pc.LiveText else Pc.Text)
+                Text(label.uppercase(), style = PcType.Overline.copy(fontSize = 11.sp))
             }
         }
     }
@@ -239,14 +240,14 @@ private fun DateStrip(date: LocalDate, today: LocalDate, onDate: (LocalDate) -> 
             val on = d == date
             val name = when (d) { today -> "Today"; today.minusDays(1) -> "Yesterday"; today.plusDays(1) -> "Tomorrow"; else -> d.format(dayName) }
             Column(
-                Modifier.widthIn(min = 72.dp).heightIn(min = 52.dp).pcClickable(PcShape.Control, role = Role.Tab) { onDate(d) }
-                    .background(if (on) Pc.Accent else Pc.Surface, PcShape.Control).border(1.dp, if (on) Pc.Accent else Pc.Outline, PcShape.Control)
+                Modifier.widthIn(min = 76.dp).heightIn(min = 56.dp).pcClickable(PcShape.Tile, role = Role.Tab, pressScale = true) { onDate(d) }
+                    .background(if (on) Pc.Accent else Pc.Surface, PcShape.Tile).border(1.dp, if (on) Pc.Accent else Pc.Outline, PcShape.Tile)
                     .semantics(mergeDescendants = true) { selected = on; contentDescription = "$name, ${d.format(dayNum)}" }
-                    .padding(horizontal = PcSpace.sm, vertical = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .padding(horizontal = PcSpace.sm, vertical = 7.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
             ) {
-                Text(name, style = PcType.LabelStrong, color = if (on) Pc.OnAccent else Pc.Text, maxLines = 1)
-                Text(d.format(dayNum), style = PcType.Caption.copy(fontWeight = FontWeight.Medium), color = if (on) Pc.OnAccent else Pc.Text2, maxLines = 1)
+                Text(name.uppercase(), style = PcType.Tag, color = if (on) Pc.OnAccent else Pc.Text, maxLines = 1)
+                Text(d.format(dayNum).uppercase(), style = PcType.Overline.copy(fontSize = 11.sp), color = if (on) Pc.OnAccent.copy(alpha = 0.75f) else Pc.Text2, maxLines = 1)
             }
         }
     }
@@ -259,13 +260,13 @@ fun dayLabel(d: LocalDate, today: LocalDate): String = when (d) {
     else -> longDate(d)
 }
 
-@Preview(name = "Matches · success", showBackground = true, widthDp = 380)
+@Preview(name = "Matches · success", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
 @Composable
-private fun MatchesPreview() = PreviewHost(dark = false) {
+private fun MatchesPreview() = PreviewHost(dark = true) {
     Column { MatchesContent(UiState.Success(PreviewData.matches), LocalDate.of(2026, 11, 12), LocalDate.of(2026, 11, 12), MatchFilter.All, {}, {}, {}, {}, {}, {}) }
 }
 
-@Preview(name = "Matches · empty · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0C0F0D)
+@Preview(name = "Matches · empty · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
 @Composable
 private fun MatchesEmptyPreview() = PreviewHost(dark = true) {
     Column { MatchesContent(UiState.Empty, LocalDate.of(2026, 11, 15), LocalDate.of(2026, 11, 15), MatchFilter.All, {}, {}, {}, {}, {}, {}, nextMatchDay = LocalDate.of(2026, 11, 21)) }

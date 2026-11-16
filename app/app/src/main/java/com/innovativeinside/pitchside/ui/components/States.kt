@@ -34,6 +34,8 @@ import com.innovativeinside.pitchside.ui.theme.PcSpace
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.border
 import com.innovativeinside.pitchside.R
 import com.innovativeinside.pitchside.core.AppError
 import com.innovativeinside.pitchside.core.UiState
@@ -56,12 +58,26 @@ fun <T> StateContent(
 ) {
     // A Column, not a Box: screen bodies emit several siblings (header, tabs, sections) and a Box
     // would draw them on top of each other.
-    Column(modifier) {
-        when (state) {
-            UiState.Loading -> Box(Modifier.testTag("state_loading")) { loading() }
-            UiState.Empty -> Box(Modifier.testTag("state_empty")) { empty() }
-            is UiState.Error -> ErrorState(state.error, onRetry, Modifier.testTag("state_error"))
-            is UiState.Success -> content(state.data)
+    // Crossfade between loading / empty / error / content (keyed on the kind of state, not the data, so a
+    // refresh that keeps showing content never flickers). Instant when motion is reduced.
+    val reduced = rememberReducedMotion()
+    androidx.compose.animation.AnimatedContent(
+        targetState = state,
+        contentKey = { it::class },
+        transitionSpec = {
+            if (reduced) androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None, androidx.compose.animation.ExitTransition.None)
+            else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)), androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)))
+        },
+        label = "state",
+        modifier = modifier,
+    ) { s ->
+        Column {
+            when (s) {
+                UiState.Loading -> Box(Modifier.testTag("state_loading")) { loading() }
+                UiState.Empty -> Box(Modifier.testTag("state_empty")) { empty() }
+                is UiState.Error -> ErrorState(s.error, onRetry, Modifier.testTag("state_error"))
+                is UiState.Success -> content(s.data)
+            }
         }
     }
 }
@@ -87,6 +103,10 @@ private fun errorVisual(e: AppError): Pair<ImageVector, String> = when (e) {
     else -> Icons.Outlined.ErrorOutline to stringResource(R.string.error_generic_title)
 }
 
+/**
+ * The shared state card (EmptyState and ErrorState): charcoal card, an icon in a glowing emerald disc, a condensed
+ * title, a muted explanation and an optional pill action. Crossfades in with its parent state.
+ */
 @Composable
 fun StateCard(
     icon: ImageVector,
@@ -99,9 +119,14 @@ fun StateCard(
 ) {
     PcCard(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(horizontal = PcSpace.lg, vertical = PcSpace.lg), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp)) }
+            Box(
+                Modifier.size(64.dp).background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(tint.copy(alpha = 0.22f), androidx.compose.ui.graphics.Color.Transparent)), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.size(48.dp).clip(CircleShape).background(Pc.SurfaceVariant).border(1.dp, tint.copy(alpha = 0.4f), CircleShape), contentAlignment = Alignment.Center) { Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp)) }
+            }
             Spacer(Modifier.height(PcSpace.xxs))
-            Text(title, style = PcType.Subtitle, textAlign = TextAlign.Center)
+            Text(title, style = PcType.TeamName.copy(fontSize = 22.sp, lineHeight = 26.sp), textAlign = TextAlign.Center)
             Text(body, style = PcType.BodyMuted, textAlign = TextAlign.Center)
             if (actionLabel != null) { Spacer(Modifier.height(PcSpace.xs)); PrimaryButton(actionLabel, onAction, Modifier.testTag("retry_button")) }
         }
@@ -122,13 +147,16 @@ fun ListSkeleton(rows: Int = 4, modifier: Modifier = Modifier) {
     }
 }
 
-/** Skeleton that mirrors the Home layout: hero, rail, two bento rows. */
+/** Skeleton that mirrors the Home layout: live hero, top-match cards, highlights list, mini standings and news. */
 @Composable
 fun HomeSkeleton(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
-        Box(Modifier.fillMaxWidth().height(236.dp).skeleton(PcShape.Tile))
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { repeat(3) { Box(Modifier.weight(1f).height(112.dp).skeleton(PcShape.Tile)) } }
-        repeat(2) { Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) { repeat(2) { Box(Modifier.weight(1f).height(156.dp).skeleton(PcShape.Tile)) } } }
+        Box(Modifier.fillMaxWidth(0.45f).height(24.dp).skeleton())
+        Box(Modifier.fillMaxWidth().height(250.dp).skeleton(PcShape.Hero))
+        Box(Modifier.fillMaxWidth(0.4f).height(24.dp).skeleton())
+        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) { repeat(2) { Box(Modifier.weight(1f).height(120.dp).skeleton(PcShape.Tile)) } }
+        Box(Modifier.fillMaxWidth().height(180.dp).skeleton(PcShape.Tile))
+        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) { repeat(2) { Box(Modifier.weight(1f).height(170.dp).skeleton(PcShape.Tile)) } }
     }
 }
 
@@ -136,12 +164,11 @@ fun HomeSkeleton(modifier: Modifier = Modifier) {
 @Composable
 fun NewsSkeleton(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).skeleton(PcShape.Tile))
-        Box(Modifier.fillMaxWidth(0.8f).height(20.dp).skeleton())
+        Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).skeleton(PcShape.Hero))
         repeat(3) {
             Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                Box(Modifier.size(width = 96.dp, height = 72.dp).skeleton(PcShape.Control))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) { Box(Modifier.fillMaxWidth(0.3f).height(10.dp).skeleton()); Box(Modifier.fillMaxWidth().height(16.dp).skeleton()); Box(Modifier.fillMaxWidth(0.7f).height(16.dp).skeleton()) }
-                Box(Modifier.size(width = 104.dp, height = 78.dp).skeleton(PcShape.Control))
             }
         }
     }
@@ -150,8 +177,8 @@ fun NewsSkeleton(modifier: Modifier = Modifier) {
 @Composable
 fun DetailSkeleton(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(PcSpace.md).semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.md)) {
-        Box(Modifier.fillMaxWidth().height(180.dp).skeleton(PcShape.Tile))
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { repeat(4) { Box(Modifier.weight(1f).height(32.dp).skeleton()) } }
+        Box(Modifier.fillMaxWidth().height(220.dp).skeleton(PcShape.Hero))
+        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) { repeat(4) { Box(Modifier.weight(1f).height(38.dp).skeleton(PcShape.Chip)) } }
         repeat(4) { Box(Modifier.fillMaxWidth().height(56.dp).skeleton(PcShape.Control)) }
     }
 }

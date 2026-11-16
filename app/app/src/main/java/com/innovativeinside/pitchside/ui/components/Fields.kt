@@ -60,7 +60,7 @@ fun PcTextField(
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = PcType.LabelStrong)
+        Text(label.uppercase(), style = PcType.Overline)
         BasicTextField(
             value = value, onValueChange = onValueChange, singleLine = true, enabled = enabled,
             textStyle = PcType.Body, cursorBrush = SolidColor(Pc.Accent),
@@ -99,8 +99,8 @@ fun PcTopBar(title: String, onBack: (() -> Unit)?, modifier: Modifier = Modifier
     Row(modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) BackButton(onBack) else Spacer(Modifier.width(8.dp))
         Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-            Text(title, style = PcType.Subtitle, maxLines = 1)
-            if (subtitle != null) Text(subtitle, style = PcType.Caption.copy(color = Pc.Text2), maxLines = 1)
+            Text(title.uppercase(), style = PcType.SectionTitle, maxLines = 1)
+            if (subtitle != null) Text(subtitle.uppercase(), style = PcType.Kicker, maxLines = 1)
         }
         actions()
     }

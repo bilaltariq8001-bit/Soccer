@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.sp
 import com.innovativeinside.pitchside.R
 
 /*
- * Pitchside design tokens, the single source of truth for colour, type, spacing and shape.
+ * Pitchside design tokens (0.6 "Football Today" language), the single source of truth for colour, type,
+ * spacing and shape. Dark charcoal is the primary theme; the light variant keeps the same structure.
  * Screens and components read them as Pc.<Color>, PcType.<Role>, PcSpace.<step> and PcShape.<shape>;
  * nothing outside this file declares a raw colour, font size or font family. See DESIGN.md.
  */
@@ -70,40 +71,48 @@ class PcColors(
     val onTeam: Color,
     val pitch: Color,
     val pitchLine: Color,
+    /** Emerald used only for soft radial glows behind hero areas (drawn at low alpha). */
+    val glow: Color,
+    /** Accent on the always-dark hero stage (the LIVE dot and label inside hero cards). */
+    val heroAccent: Color,
     val isDark: Boolean,
 )
 
+// Light variant: same structure as dark (charcoal hero stage, emerald accent), on a soft off-white page.
 val LightPc = PcColors(
-    bg = Color(0xFFF4F3EC), surface = Color(0xFFFFFFFF), surfaceVariant = Color(0xFFECEBE2),
-    outline = Color(0xFFE0DED3), outlineStrong = Color(0xFFC9C6B8),
-    text = Color(0xFF14181F), text2 = Color(0xFF5F6670), text3 = Color(0xFF8A9099),
-    accent = Color(0xFF1F4D35), accentContainer = Color(0xFFE3EBDD), onAccent = Color(0xFFFFFFFF),
-    live = Color(0xFFD94841), liveText = Color(0xFFB83A33), liveContainer = Color(0xFFFBE9E7), liveFill = Color(0xFFB83A33), onLive = Color(0xFFFFFFFF),
-    success = Color(0xFF2E7D4F), successContainer = Color(0xFFE1F0E6),
-    warning = Color(0xFFC98A1B), warningContainer = Color(0xFFF8EDD7),
-    error = Color(0xFFC0392B), errorContainer = Color(0xFFF9E3E0),
-    hero = Color(0xFF1F4D35), heroRaised = Color(0xFF2A5B41), onHero = Color(0xFFFFFFFF), onHero2 = Color(0xFFB9CDBF), heroOutline = Color(0xFF3A6A50),
-    neutral = Color(0xFFB9BCB2), nav = Color(0xFFFFFFFF), scrim = Color(0x99000000), onTeam = Color(0xFFFFFFFF),
-    pitch = Color(0xFF1F4D35), pitchLine = Color(0x47FFFFFF),
+    bg = Color(0xFFF2F4F2), surface = Color(0xFFFFFFFF), surfaceVariant = Color(0xFFE8ECE9),
+    outline = Color(0x1A0E1110), outlineStrong = Color(0x330E1110),
+    text = Color(0xFF0E1110), text2 = Color(0xFF5A635E), text3 = Color(0xFF8A928D),
+    accent = Color(0xFF0F7D3B), accentContainer = Color(0xFFDDF5E5), onAccent = Color(0xFFFFFFFF),
+    live = Color(0xFF16A34A), liveText = Color(0xFF0F7D3B), liveContainer = Color(0xFFDDF5E5), liveFill = Color(0xFF0F7D3B), onLive = Color(0xFFFFFFFF),
+    success = Color(0xFF16A34A), successContainer = Color(0xFFDDF5E5),
+    warning = Color(0xFFB7791F), warningContainer = Color(0xFFFBF0DA),
+    error = Color(0xFFD03A3A), errorContainer = Color(0xFFFBE4E4),
+    hero = Color(0xFF151B18), heroRaised = Color(0xFF212925), onHero = Color(0xFFF3F5F4), onHero2 = Color(0xFFA3ACA7), heroOutline = Color(0x332EE06E),
+    neutral = Color(0xFFC3C9C5), nav = Color(0xFFFFFFFF), scrim = Color(0x99000000), onTeam = Color(0xFFFFFFFF),
+    pitch = Color(0xFF0F3A22), pitchLine = Color(0x47FFFFFF),
+    glow = Color(0xFF22C55E), heroAccent = Color(0xFF2EE06E),
     isDark = false,
 )
 
+// Dark (default): premium charcoal, 1dp white-alpha borders, emerald accent and a soft emerald glow.
 val DarkPc = PcColors(
-    bg = Color(0xFF0C0F0D), surface = Color(0xFF151915), surfaceVariant = Color(0xFF1D221D),
-    outline = Color(0xFF2A302A), outlineStrong = Color(0xFF3A423A),
-    text = Color(0xFFF2F4F1), text2 = Color(0xFFA4ABA3), text3 = Color(0xFF7E857D),
-    accent = Color(0xFF4FBF86), accentContainer = Color(0xFF1B3427), onAccent = Color(0xFF0C0F0D),
-    live = Color(0xFFFF5A52), liveText = Color(0xFFFF6B63), liveContainer = Color(0xFF3A1A18), liveFill = Color(0xFFFF5A52), onLive = Color(0xFF0C0F0D),
-    success = Color(0xFF5CC48A), successContainer = Color(0xFF173226),
-    warning = Color(0xFFE0A93A), warningContainer = Color(0xFF33290F),
-    error = Color(0xFFFF6B5E), errorContainer = Color(0xFF3A1A17),
-    hero = Color(0xFF17432F), heroRaised = Color(0xFF1F503A), onHero = Color(0xFFF2F4F1), onHero2 = Color(0xFFB5C9BC), heroOutline = Color(0xFF2C5C44),
-    neutral = Color(0xFF4A524A), nav = Color(0xFF111411), scrim = Color(0xB3000000), onTeam = Color(0xFFFFFFFF),
-    pitch = Color(0xFF17432F), pitchLine = Color(0x47FFFFFF),
+    bg = Color(0xFF0E1110), surface = Color(0xFF1A1F1C), surfaceVariant = Color(0xFF232A26),
+    outline = Color(0x17FFFFFF), outlineStrong = Color(0x2BFFFFFF),
+    text = Color(0xFFF3F5F4), text2 = Color(0xFF9AA39E), text3 = Color(0xFF6E7772),
+    accent = Color(0xFF2EE06E), accentContainer = Color(0xFF143323), onAccent = Color(0xFF06140B),
+    live = Color(0xFF2EE06E), liveText = Color(0xFF2EE06E), liveContainer = Color(0xFF143323), liveFill = Color(0xFF2EE06E), onLive = Color(0xFF06140B),
+    success = Color(0xFF22C55E), successContainer = Color(0xFF143323),
+    warning = Color(0xFFF5B83D), warningContainer = Color(0xFF33290F),
+    error = Color(0xFFFF6467), errorContainer = Color(0xFF3A1A1B),
+    hero = Color(0xFF18201C), heroRaised = Color(0xFF222C27), onHero = Color(0xFFF3F5F4), onHero2 = Color(0xFF9AA39E), heroOutline = Color(0x332EE06E),
+    neutral = Color(0xFF3B443F), nav = Color(0xFF151A17), scrim = Color(0xB3000000), onTeam = Color(0xFFFFFFFF),
+    pitch = Color(0xFF0F3A22), pitchLine = Color(0x40FFFFFF),
+    glow = Color(0xFF22C55E), heroAccent = Color(0xFF2EE06E),
     isDark = true,
 )
 
-val LocalPc = staticCompositionLocalOf { LightPc }
+val LocalPc = staticCompositionLocalOf { DarkPc }
 
 /** Read colour tokens as Pc.Accent, Pc.Text2 and so on. They follow the active theme. */
 object Pc {
@@ -140,6 +149,8 @@ object Pc {
     val OnTeam: Color @Composable @ReadOnlyComposable get() = LocalPc.current.onTeam
     val Pitch: Color @Composable @ReadOnlyComposable get() = LocalPc.current.pitch
     val PitchLine: Color @Composable @ReadOnlyComposable get() = LocalPc.current.pitchLine
+    val Glow: Color @Composable @ReadOnlyComposable get() = LocalPc.current.glow
+    val HeroAccent: Color @Composable @ReadOnlyComposable get() = LocalPc.current.heroAccent
     val IsDark: Boolean @Composable @ReadOnlyComposable get() = LocalPc.current.isDark
 
     /** A club colour as a token-layer Color (team colours come from data as ARGB longs). */
@@ -158,25 +169,29 @@ object PcSpace {
     val gutter = 12.dp
     /** Minimum touch target. */
     val touch = 48.dp
+    /** Space between home sections. */
+    val section = 28.dp
 }
 
-/** Shapes: tiles 16, buttons and controls 12, chips fully rounded, crests circular. */
+/** Shapes: cards 20, hero cards 24, controls 14, chips and pills fully rounded, crests circular. */
 object PcShape {
-    val Tile = RoundedCornerShape(16.dp)
-    val Control = RoundedCornerShape(12.dp)
+    val Tile = RoundedCornerShape(20.dp)
+    val Hero = RoundedCornerShape(24.dp)
+    val Control = RoundedCornerShape(14.dp)
     val Chip = RoundedCornerShape(percent = 50)
     val Crest = CircleShape
-    /** Small inner marks (badges, bars) that sit inside a tile. */
-    val Small = RoundedCornerShape(6.dp)
-    val SheetTop = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+    /** Small inner marks (badges, bars, form pills) that sit inside a card. */
+    val Small = RoundedCornerShape(8.dp)
+    val SheetTop = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    /** The floating bottom bar. */
+    val Nav = RoundedCornerShape(24.dp)
 
     // Compatibility aliases for older call sites.
     val Card = Tile
-    val Hero = Tile
     val Badge = Small
 }
 
-/** Bundled fonts: Manrope (variable weight) for UI, Barlow Condensed for scores. Both SIL OFL. */
+/** Bundled fonts: Manrope (variable weight) for body, Barlow Condensed for display, headings and scores. Both SIL OFL. */
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 object PcFont {
     val Body: FontFamily = FontFamily(
@@ -190,6 +205,8 @@ object PcFont {
         Font(R.font.barlow_condensed_semibold, FontWeight.SemiBold),
         Font(R.font.barlow_condensed_bold, FontWeight.Bold),
     )
+    /** Condensed sports display face for screen titles, section headers and team names. */
+    val Display: FontFamily = Score
 }
 
 private const val TNUM = "tnum"
@@ -199,13 +216,26 @@ private const val TNUM = "tnum"
  * numerals (the Score* roles and [Numeric]), so digits line up and do not jiggle during live updates.
  */
 object PcType {
-    /** 56sp condensed bold: the hero score. */
-    val ScoreDisplay: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 56.sp, lineHeight = 56.sp, fontFeatureSettings = TNUM, color = Pc.Text)
+    /** 64sp condensed bold: the hero score ("2 - 1"). */
+    val ScoreDisplay: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 64.sp, lineHeight = 64.sp, fontFeatureSettings = TNUM, color = Pc.Text)
+    /** 30sp condensed bold UPPERCASE screen title ("FOOTBALL TODAY"). Callers pass uppercase text. */
+    val ScreenTitle: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 30.sp, lineHeight = 32.sp, letterSpacing = 0.4.sp, color = Pc.Text)
+    /** 22sp condensed bold UPPERCASE section header ("LIVE MATCH", "TOP MATCHES"). */
+    val SectionTitle: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 26.sp, letterSpacing = 0.3.sp, color = Pc.Text)
+    /** 18sp condensed bold: team names in hero cards and rows (uppercase), card titles. */
+    val TeamName: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 18.sp, lineHeight = 21.sp, letterSpacing = 0.3.sp, color = Pc.Text)
+    /** 16sp condensed semibold: team names in dense rows and compact cards. */
+    val TeamNameSmall: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 19.sp, letterSpacing = 0.3.sp, color = Pc.Text)
+    /** 13sp grey uppercase kicker under screen titles ("SUNDAY, NOV 15"). */
+    val Kicker: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp, letterSpacing = 1.sp, color = Pc.Text2)
+    /** 14sp condensed bold uppercase label with tracking: nav labels, SEE ALL, pill tabs, LIVE. */
+    val Tag: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 18.sp, letterSpacing = 0.6.sp, fontFeatureSettings = TNUM, color = Pc.Text)
     /** 28sp condensed bold: mini tiles, rail items, big numbers in tiles. */
     val ScoreCompact: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 30.sp, fontFeatureSettings = TNUM, color = Pc.Text)
     /** 20sp condensed: scores inside rows and table points. */
     val ScoreRow: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Score, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 22.sp, fontFeatureSettings = TNUM, color = Pc.Text)
-    val Title: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.SemiBold, fontSize = 24.sp, lineHeight = 30.sp, color = Pc.Text)
+    /** 28sp condensed bold: page titles on detail screens (team, league, player, auth). */
+    val Title: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 28.sp, lineHeight = 32.sp, letterSpacing = 0.3.sp, color = Pc.Text)
     /** 20sp: lead news headlines (between title and subtitle). */
     val Headline: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Bold, fontSize = 20.sp, lineHeight = 26.sp, color = Pc.Text)
     val Subtitle: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, lineHeight = 24.sp, color = Pc.Text)
@@ -218,17 +248,17 @@ object PcType {
     val LabelStrong: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 18.sp, color = Pc.Text)
     val Caption: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 16.sp, color = Pc.Text2)
     /** Uppercase kicker: competition labels, tile titles, section kickers. Callers pass uppercase text. */
-    val Overline: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.8.sp, color = Pc.Text2)
+    val Overline: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 13.sp, lineHeight = 16.sp, letterSpacing = 0.8.sp, color = Pc.Text2)
     /** UI-font numbers (times, table columns, counts) with tabular figures. */
     val Numeric: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = TNUM, color = Pc.Text)
     /** Tiny count bubbles (nav badge). */
     val Micro: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp, lineHeight = 12.sp, fontFeatureSettings = TNUM, color = Pc.Text)
-    /** Brand wordmark (onboarding welcome, splash). */
-    val Display: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Body, fontWeight = FontWeight.ExtraBold, fontSize = 32.sp, lineHeight = 38.sp, color = Pc.Text)
+    /** Brand wordmark and big statements (onboarding welcome, paywall). */
+    val Display: TextStyle @Composable @ReadOnlyComposable get() = TextStyle(fontFamily = PcFont.Display, fontWeight = FontWeight.Bold, fontSize = 40.sp, lineHeight = 42.sp, letterSpacing = 0.3.sp, color = Pc.Text)
 }
 
 @Composable
-fun PitchsideTheme(dark: Boolean = false, content: @Composable () -> Unit) {
+fun PitchsideTheme(dark: Boolean = true, content: @Composable () -> Unit) {
     val c = if (dark) DarkPc else LightPc
     val scheme = if (dark) {
         darkColorScheme(

@@ -211,6 +211,15 @@ class ApiFootballTest {
         assertTrue(table.all { it.team.leagueId == divisions.first().id })
     }
 
+    @Test fun standingsCarryTheSourceZoneLabelForTableMarkers() {
+        val parsed = rows("standings_177.json").map { ApiFootballParse.standingRow(it, "177") }
+        assertEquals(1, parsed.count { it.zone == "Promotion - CAF Champions League (Qualification)" })
+        assertEquals(parsed.size - 1, parsed.count { it.zone == null })
+        val mapped = parsed.map { com.innovativeinside.pitchside.data.remote.Mappers.standing(it) }
+        assertTrue(mapped.single { it.zone.isNotBlank() }.zone.startsWith("Promotion"))
+        assertTrue(rows("standings_149.json").map { ApiFootballParse.standingRow(it, "149") }.any { it.zone == "Relegation" })
+    }
+
     @Test fun noLiveMatchesIsEmptyNotAnError() = runTest {
         assertTrue(api().liveFixtures().isEmpty())
     }

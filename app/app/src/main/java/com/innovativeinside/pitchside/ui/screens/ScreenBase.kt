@@ -1,5 +1,7 @@
 package com.innovativeinside.pitchside.ui.screens
 
+import com.innovativeinside.pitchside.ui.components.glowBackground
+import com.innovativeinside.pitchside.ui.components.ZoneLegend
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -100,7 +102,7 @@ fun Screen(
     scrollState: ScrollState = rememberScrollState(),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
+    Box(modifier.fillMaxSize().glowBackground().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         val col = Modifier.widthIn(max = maxWidth.dp).fillMaxSize()
         Column(if (scroll) col.verticalScroll(scrollState) else col) {
             content()
@@ -147,11 +149,8 @@ fun longDate(d: LocalDate): String = d.format(DateTimeFormatter.ofPattern("EEEE 
 
 @Composable
 fun SectionTitle(text: String, modifier: Modifier = Modifier) =
-    Text(text, style = PcType.Subtitle, modifier = modifier.semantics { heading() })
+    Text(text.uppercase(), style = PcType.SectionTitle, modifier = modifier.semantics { heading() })
 
-/** Compact news row (old name). */
-@Composable
-fun NewsRow(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) = NewsCardCompact(item, onClick, modifier)
 
 /** Opens a calendar "new event" screen prefilled with the match (no calendar permission needed). */
 fun addMatchToCalendar(ctx: Context, m: Match) {
@@ -194,7 +193,7 @@ fun FollowTeamsSheet(m: Match, onDismiss: () -> Unit) {
     val app = LocalApp.current
     val prefs = LocalPrefs.current
     PcSheet(onDismiss) {
-        Text("Follow a team", style = PcType.Subtitle)
+        Text("FOLLOW A TEAM", style = PcType.SectionTitle)
         Text("Followed teams' matches come first on Home and in alerts.", style = PcType.BodyMuted)
         listOf(m.home, m.away).forEach { t ->
             val on = t.id in prefs.teams
@@ -217,32 +216,18 @@ fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit,
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs),
         ) {
             LeagueBadge(short ?: name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 28, logo)
-            Text(name, style = PcType.BodyStrong, modifier = Modifier.weight(1f).semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${matches.size}", style = PcType.Numeric, color = Pc.Text2)
-            if (openLeague != null) Text("Table", style = PcType.LabelStrong, color = Pc.Accent, modifier = Modifier.pcClickable(PcShape.Chip, "Open $name", onClick = openLeague).padding(horizontal = PcSpace.xs, vertical = 14.dp))
+            Text(name.uppercase(), style = PcType.TeamName, modifier = Modifier.weight(1f).semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${matches.size}", style = PcType.Tag, color = Pc.Text2)
+            if (openLeague != null) Text("TABLE", style = PcType.Tag, color = Pc.Accent, modifier = Modifier.pcClickable(PcShape.Chip, "Open $name", onClick = openLeague).padding(horizontal = PcSpace.xs, vertical = 14.dp))
             Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = Pc.Text2)
         }
         AnimatedVisibility(open) { MatchList(matches, openMatch) }
     }
 }
 
-/** League badge: the competition logo on a light rounded square, or its short code while loading / when there is none. */
+/** League badge: the competition logo, or its short code while loading / when there is none. See [LeagueLogo]. */
 @Composable
-fun LeagueBadge(short: String, size: Int = 40, logo: String? = null) {
-    val code: @Composable () -> Unit = {
-        Box(Modifier.fillMaxSize().background(Pc.SurfaceVariant), contentAlignment = Alignment.Center) {
-            Text(short.take(3), style = if (size >= 48) PcType.BodyStrong else PcType.Overline.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), color = Pc.Accent, maxLines = 1)
-        }
-    }
-    Box(Modifier.size(size.dp).clip(PcShape.Small).clearAndSetSemantics {}, contentAlignment = Alignment.Center) {
-        if (logo == null) code()
-        else com.innovativeinside.pitchside.ui.components.RemoteImage(
-            logo, code,
-            Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.White).border(1.dp, Pc.Outline, PcShape.Small).padding((size * 0.1f).dp),
-            androidx.compose.ui.layout.ContentScale.Fit,
-        )
-    }
-}
+fun LeagueBadge(short: String, size: Int = 40, logo: String? = null) = com.innovativeinside.pitchside.ui.components.LeagueLogo(short, size, logo)
 
 /** Full league table in one tile with a header row. [highlight] marks the clubs of the current match. */
 @Composable
@@ -255,13 +240,16 @@ fun StandingsTable(
     showForm: Boolean = false,
 ) {
     val followed = LocalPrefs.current.teams.toSet()
-    PcCard(modifier.fillMaxWidth()) {
-        Column {
-            StandingsHeader(showForm = showForm, compact = compact)
-            rows.forEachIndexed { i, r ->
-                StandingsRow(r, { openTeam(r.team.id) }, highlight = r.team.id in highlight, followed = r.team.id in followed, showForm = showForm, compact = compact)
-                if (i < rows.lastIndex) Hairline()
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+        PcCard(Modifier.fillMaxWidth()) {
+            Column {
+                StandingsHeader(showForm = showForm, compact = compact)
+                rows.forEachIndexed { i, r ->
+                    StandingsRow(r, { openTeam(r.team.id) }, highlight = r.team.id in highlight, followed = r.team.id in followed, showForm = showForm, compact = compact)
+                    if (i < rows.lastIndex) Hairline()
+                }
             }
         }
+        ZoneLegend(rows, Modifier.padding(horizontal = PcSpace.xxs))
     }
 }

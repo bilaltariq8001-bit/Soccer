@@ -13,6 +13,14 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.onNodeWithContentDescription
+import com.innovativeinside.pitchside.ui.components.PillTabs
+import com.innovativeinside.pitchside.ui.components.ScreenHeader
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.innovativeinside.pitchside.core.UiState
 import com.innovativeinside.pitchside.data.model.Match
@@ -35,13 +43,13 @@ private fun hasDescriptionContaining(s: String) = SemanticsMatcher("description 
     n.config.getOrElse(SemanticsProperties.ContentDescription) { emptyList() }.any { it.contains(s) }
 }
 
-/** Home bento with 0, 1 and 3 live matches, and the News list. Runs on Robolectric with motion reduced. */
+/** Home ("Football Today") with 0, 1 and 3 live matches, and the News list. Runs on Robolectric with motion reduced. */
 @RunWith(AndroidJUnit4::class)
 class RedesignUiTest {
     @get:Rule val rule = createComposeRule()
 
     private val opened = mutableListOf<String>()
-    private val actions = HomeActions({ opened += "match:$it" }, {}, {}, {}, { opened += "article:$it" }, {}, {}, {})
+    private val actions = HomeActions({ opened += "match:$it" }, {}, {}, {}, { opened += "article:$it" }, { opened += "league:$it" }, {}, {}, openAccount = { opened += "account" })
 
     private fun liveMatches(n: Int): List<Match> {
         val base = PreviewData.live
@@ -72,14 +80,17 @@ class RedesignUiTest {
         // The rest of the hub still renders.
         rule.onNodeWithTag("today_rail").assertExists()
         rule.onNodeWithTag("bento").assertExists()
-        rule.onNodeWithText("Latest").assertExists()
+        rule.onNodeWithTag("mini_standings_news").assertExists()
+        rule.onNodeWithTag("highlights").assertExists()
+        assertTrue(rule.onAllNodesWithText("LATEST NEWS").fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test fun homeWithOneLiveMatchShowsHeroWithoutMiniTiles() {
         setHome(1)
         rule.onNodeWithTag("live_hero").assertIsDisplayed()
-        rule.onNodeWithText("1 live").assertExists()
-        rule.onNodeWithTag("mini_live_row").assertDoesNotExist()
+        rule.onNodeWithText("1 live", substring = true).assertExists()
+        // One live match: a single hero card, no pager.
+        rule.onNodeWithTag("live_pager").assertDoesNotExist()
         rule.onNode(hasDescriptionContaining("Featured match: Northgate 2, Riverside 1, 74th minute, live")).assertExists()
         rule.onNodeWithTag("live_hero").performClick()
         assertEquals(listOf("match:m1"), opened)
@@ -87,11 +98,12 @@ class RedesignUiTest {
 
     @Test fun homeWithThreeLiveMatchesPromotesAMiniTile() {
         setHome(3)
-        rule.onNodeWithText("3 live").assertExists()
-        rule.onNodeWithTag("mini_live_row").assertExists()
+        rule.onNodeWithText("3 live", substring = true).assertExists()
+        // Several live matches: a pager with the next card peeking.
+        rule.onNodeWithTag("live_pager").assertExists()
         // Followed team (Northgate, "ng") leads the hero.
         rule.onNode(hasDescriptionContaining("Featured match: Northgate")).assertExists()
-        rule.onNode(hasDescriptionContaining("Kingsbridge 3, Olympia SC 0, 81st minute, live. Show as featured match")).performClick()
+        rule.onNode(hasDescriptionContaining("Kingsbridge 3, Olympia SC 0, 81st minute, live. Show as featured match")).performSemanticsAction(SemanticsActions.OnClick)
         rule.waitForIdle()
         rule.onNode(hasDescriptionContaining("Featured match: Kingsbridge")).assertExists()
         rule.onNode(hasDescriptionContaining("Northgate 2, Riverside 1, 74th minute, live. Show as featured match")).assertExists()
@@ -126,5 +138,26 @@ class RedesignUiTest {
         rule.onNodeWithTag("retry_button").performClick()
         assertEquals(1, retried)
     }
-}
 
+    @Test fun homeHeaderShowsTitleDateAndOpensAccountFromAvatar() {
+        setHome(1)
+        rule.onNodeWithText("FOOTBALL TODAY").assertExists()
+        rule.onNodeWithText("TOP MATCHES").assertExists()
+        rule.onNodeWithText("TODAY'S HIGHLIGHTS", substring = true).assertExists()
+        rule.onNodeWithContentDescription("Account and settings").performClick()
+        assertEquals("account", opened.last())
+    }
+
+    @Test fun miniStandingsOpensTheLeague() {
+        setHome(0)
+        rule.onNode(hasDescriptionContaining("table: 1, ")).performClick()
+        assertTrue(opened.last().startsWith("league:"))
+    }
+
+    @Test fun pillTabsSelectAndUppercaseLabels() {
+        var picked by androidx.compose.runtime.mutableIntStateOf(0)
+        rule.setContent { PreviewHost { PillTabs(listOf("Overview", "Stats", "Lineups"), picked, { picked = it }) } }
+        rule.onNodeWithText("STATS").performClick()
+        assertEquals(1, picked)
+    }
+}

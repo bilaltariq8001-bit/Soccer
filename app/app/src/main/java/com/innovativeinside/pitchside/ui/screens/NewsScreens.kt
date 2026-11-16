@@ -1,5 +1,15 @@
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.innovativeinside.pitchside.ui.components.NewsHeroCard
+import com.innovativeinside.pitchside.ui.components.NewsRow
+import com.innovativeinside.pitchside.ui.components.SectionHeader
+import com.innovativeinside.pitchside.ui.components.glowBackground
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -55,8 +65,6 @@ import com.innovativeinside.pitchside.ui.components.ErrorState
 import com.innovativeinside.pitchside.ui.components.FilterChipRow
 import com.innovativeinside.pitchside.ui.components.Hairline
 import com.innovativeinside.pitchside.ui.components.IconAction
-import com.innovativeinside.pitchside.ui.components.NewsCardCompact
-import com.innovativeinside.pitchside.ui.components.NewsCardLead
 import com.innovativeinside.pitchside.ui.components.NewsImage
 import com.innovativeinside.pitchside.ui.components.NewsSkeleton
 import com.innovativeinside.pitchside.ui.components.Overline
@@ -93,7 +101,7 @@ fun NewsContent(s: NewsState, onEdition: (NewsEdition?) -> Unit, onRetry: () -> 
     val nearEnd by remember { derivedStateOf { list.layoutInfo.visibleItemsInfo.lastOrNull()?.index?.let { it >= list.layoutInfo.totalItemsCount - 3 } == true } }
     LaunchedEffect(nearEnd, s.items.size) { if (nearEnd && s.nextCursor != null && !s.loadingMore && s.loadMoreError == null) onMore() }
     val labels = listOf("All") + NewsEdition.entries.map { it.label }
-    Box(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().glowBackground().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(Modifier.widthIn(max = 720.dp).fillMaxSize().testTag("news_list"), state = list, contentPadding = PaddingValues(bottom = PcSpace.lg)) {
             item(key = "top") { AppTopBar("News", subtitle = "From 90min · France, Italy, Spain, Brazil") }
             item(key = "chips") {
@@ -110,11 +118,12 @@ fun NewsContent(s: NewsState, onEdition: (NewsEdition?) -> Unit, onRetry: () -> 
                 }
                 else -> {
                     val lead = s.items.first()
-                    item(key = "lead-${lead.id}") { NewsCardLead(lead, { openArticle(lead.id) }, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs)) }
+                    item(key = "lead-${lead.id}") { NewsHeroCard(lead, { openArticle(lead.id) }, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs), aspect = 4f / 3.2f, headlineLines = 4) }
+                    if (s.items.size > 1) item(key = "latest-header") { SectionHeader("Latest stories", modifier = Modifier.padding(horizontal = PcSpace.screen).padding(top = PcSpace.xs)) }
                     itemsIndexed(s.items.drop(1), key = { _, n -> n.id }) { i, n ->
                         Column(Modifier.padding(horizontal = PcSpace.screen)) {
                             if (i > 0) Hairline()
-                            NewsCardCompact(n, { openArticle(n.id) })
+                            NewsRow(n, { openArticle(n.id) })
                         }
                     }
                     item(key = "footer") {
@@ -149,36 +158,53 @@ fun openInBrowser(ctx: Context, url: String) {
 fun ArticleRoute(back: () -> Unit, vm: ArticleViewModel = viewModel(factory = ArticleViewModel.Factory)) {
     val state by vm.state.collectAsStateWithLifecycle()
     val ctx = LocalContext.current
-    Screen(maxWidth = 680) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = PcSpace.xs, vertical = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically) {
+    val item = (state as? UiState.Success)?.data
+    Box(Modifier.fillMaxSize().glowBackground()) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 680.dp).fillMaxWidth()) {
+                if (item?.imageUrl == null) Spacer(Modifier.statusBarsPadding().height(64.dp))
+                StateContent(state, vm::retry, loading = { DetailSkeleton(Modifier.statusBarsPadding().padding(top = 56.dp)) }) { a -> ArticleBody(a) }
+                Spacer(Modifier.height(PcSpace.lg))
+            }
+        }
+        // Floating back / share over the image header.
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = PcSpace.xs, vertical = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically) {
             BackButton(back)
             Spacer(Modifier.weight(1f))
-            val item = (state as? UiState.Success)?.data
-            if (item != null) IconAction(Icons.Outlined.Share, "Share story", { shareStory(ctx, item) })
+            if (item != null) IconAction(Icons.Outlined.Share, "Share story", { shareStory(ctx, item) }, filled = true)
         }
-        StateContent(state, vm::retry, loading = { DetailSkeleton() }) { a -> ArticleBody(a) }
     }
 }
 
 /**
- * The story as the feed publishes it: image with credit, kicker, headline, author and date, and the
- * description. The full article lives on 90min, one tap away; it is not scraped into the app.
+ * The story as the feed publishes it: a big edge-to-edge image header with a dark gradient and the kicker and
+ * headline over it, then author and date, the description, and the way out to the full article. The full article
+ * lives on 90min, one tap away; it is not scraped into the app.
  */
 @Composable
 fun ArticleBody(a: NewsItem) {
     val ctx = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        if (a.imageUrl != null) Column(Modifier.padding(horizontal = PcSpace.screen), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            NewsImage(a.imageUrl, Modifier.fillMaxWidth().aspectRatio(16f / 9f), shape = PcShape.Tile, description = a.imageCaption)
-            a.imageCaption?.let { Text(it, style = PcType.Caption, maxLines = 2) }
+        if (a.imageUrl != null) {
+            Box(Modifier.fillMaxWidth().aspectRatio(4f / 3.4f)) {
+                NewsImage(a.imageUrl, Modifier.fillMaxSize(), shape = androidx.compose.ui.graphics.RectangleShape, description = a.imageCaption)
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.45f), 0.3f to Color.Transparent, 0.55f to Color.Transparent, 1f to Pc.Bg)))
+                Column(Modifier.align(Alignment.BottomStart).padding(horizontal = PcSpace.lg, vertical = PcSpace.xs), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(a.kicker.uppercase(), style = PcType.Tag, color = Pc.Accent)
+                    Text(a.title, style = PcType.Title.copy(lineHeight = 32.sp), modifier = Modifier.semantics { heading() })
+                }
+            }
+            a.imageCaption?.let { Text(it, style = PcType.Caption, maxLines = 2, modifier = Modifier.padding(horizontal = PcSpace.lg)) }
         }
         Column(Modifier.padding(horizontal = PcSpace.lg), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-            Overline(a.kicker, color = Pc.Accent)
-            Text(a.title, style = PcType.Title, modifier = Modifier.semantics { heading() })
-            Text(listOfNotNull(a.author?.takeIf { it.isNotBlank() }, a.source.ifBlank { null }, newsDate(a.publishedMs).ifBlank { null }).joinToString(" · "), style = PcType.Caption)
+            if (a.imageUrl == null) {
+                Text(a.kicker.uppercase(), style = PcType.Tag, color = Pc.Accent)
+                Text(a.title, style = PcType.Title.copy(lineHeight = 32.sp), modifier = Modifier.semantics { heading() })
+            }
+            Text(listOfNotNull(a.author?.takeIf { it.isNotBlank() }, a.source.ifBlank { null }, newsDate(a.publishedMs).ifBlank { null }).joinToString(" · ").uppercase(), style = PcType.Kicker.copy(fontSize = 12.sp))
             Hairline()
-            if (a.dek.isNotBlank()) Text(a.dek, style = PcType.Reading)
-            a.body.split("\n\n").filter { it.isNotBlank() }.forEach { Text(it, style = PcType.Reading) }
+            if (a.dek.isNotBlank()) Text(a.dek, style = PcType.Reading.copy(fontWeight = FontWeight.SemiBold))
+            a.body.split("\n\n").filter { it.isNotBlank() }.forEach { Text(it, style = PcType.Reading, color = Pc.Text) }
             if (a.url != null) {
                 Spacer(Modifier.height(PcSpace.xs))
                 PrimaryButton(if (a.edition != null) "Read on 90min" else "Read at source", { openInBrowser(ctx, a.url) }, Modifier.fillMaxWidth().testTag("read_source"), icon = Icons.AutoMirrored.Outlined.OpenInNew)
@@ -190,9 +216,9 @@ fun ArticleBody(a: NewsItem) {
 
 @Preview(name = "News · success", showBackground = true, widthDp = 380, heightDp = 900)
 @Composable
-private fun NewsPreview() = PreviewHost(dark = false) { NewsContent(NewsState(items = PreviewData.news, loading = false), {}, {}, {}, {}) }
+private fun NewsPreview() = PreviewHost(dark = true) { NewsContent(NewsState(items = PreviewData.news, loading = false), {}, {}, {}, {}) }
 
-@Preview(name = "News · error · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0C0F0D)
+@Preview(name = "News · error · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
 @Composable
 private fun NewsErrorPreview() = PreviewHost(dark = true) { NewsContent(NewsState(loading = false, error = com.innovativeinside.pitchside.core.AppError.Network()), {}, {}, {}, {}) }
 

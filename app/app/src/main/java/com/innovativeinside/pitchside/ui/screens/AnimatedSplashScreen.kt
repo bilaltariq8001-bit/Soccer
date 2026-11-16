@@ -383,7 +383,7 @@ private fun Wordmark(clock: Animatable<Float, *>, word: String, c: SplashColors,
 @Composable
 private fun Tagline(clock: Animatable<Float, *>, c: SplashColors, fontSize: TextUnit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // Live dot: the only red on screen, pulsing once the tagline lands.
+        // Live dot: emerald, pulsing once the tagline lands.
         Canvas(Modifier.size(8.dp)) {
             val t = clock.value
             val inP = ease(seg(t, T.TAGLINE_START, T.TAGLINE_END))
@@ -395,8 +395,8 @@ private fun Tagline(clock: Animatable<Float, *>, c: SplashColors, fontSize: Text
         }
         Spacer(Modifier.size(8.dp))
         Text(
-            text = stringResource(R.string.splash_tagline),
-            style = PcType.BodyMuted.copy(color = c.ink.copy(alpha = 0.78f), fontSize = fontSize, letterSpacing = 0.6.sp),
+            text = stringResource(R.string.splash_tagline).uppercase(),
+            style = PcType.Kicker.copy(color = c.ink.copy(alpha = 0.78f), fontSize = fontSize, letterSpacing = 1.4.sp),
             textAlign = TextAlign.Center,
             maxLines = 1,
             modifier = Modifier.graphicsLayer {

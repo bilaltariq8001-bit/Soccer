@@ -1,6 +1,11 @@
 package com.innovativeinside.pitchside.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -92,44 +97,59 @@ fun NewsImage(url: String?, modifier: Modifier = Modifier, shape: Shape = PcShap
     }
 }
 
-/** Lead story: 16:9 image, kicker, big headline, dek and meta. */
+/**
+ * NewsHeroCard (reference "LATEST NEWS"): full-bleed photo, dark bottom gradient, an optional uppercase label on
+ * top, the headline in bold white and the honest publish time ("3 h ago"). Text sits on the gradient, so it reads in
+ * both themes.
+ */
 @Composable
-fun NewsCardLead(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    PcCard(modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = "${item.kicker}. ${item.title}. ${newsMeta(item)}" }, onClick = onClick) {
-        Column {
-            NewsImage(item.imageUrl, Modifier.fillMaxWidth().aspectRatio(16f / 9f), shape = androidx.compose.ui.graphics.RectangleShape)
-            Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Overline(item.kicker, color = Pc.Accent)
-                Text(item.title, style = PcType.Headline, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                if (item.dek.isNotBlank()) Text(item.dek, style = PcType.BodyMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(newsMeta(item), style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+fun NewsHeroCard(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier, label: String? = null, aspect: Float? = 4f / 3f, headlineLines: Int = 3) {
+    val scrim = Pc.Scrim
+    Box(
+        modifier.fillMaxWidth().let { if (aspect != null) it.aspectRatio(aspect) else it.heightIn(min = 190.dp) }.semantics(mergeDescendants = true) { contentDescription = "${item.kicker}. ${item.title}. ${newsMeta(item)}" }
+            .pcClickable(PcShape.Tile, pressScale = true, onClick = onClick).border(1.dp, Pc.Outline, PcShape.Tile),
+    ) {
+        NewsImage(item.imageUrl, Modifier.fillMaxSize(), shape = PcShape.Tile)
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Transparent, 0.35f to scrim.copy(alpha = 0.15f), 1f to Color.Black.copy(alpha = 0.88f))))
+        if (label != null) Text(label.uppercase(), style = PcType.Tag.copy(fontSize = 17.sp), color = Color.White, modifier = Modifier.align(Alignment.TopStart).padding(PcSpace.md))
+        Column(Modifier.align(Alignment.BottomStart).padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (label == null) Text(item.kicker.uppercase(), style = PcType.Overline, color = Pc.HeroAccent, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.title, style = PcType.Headline.copy(fontWeight = FontWeight.ExtraBold, lineHeight = 24.sp), color = Color.White, maxLines = headlineLines, overflow = TextOverflow.Ellipsis)
+            Text(newsMeta(item), style = PcType.Caption, color = Color.White.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
-/** Compact story: small image left, kicker, headline (3 lines) and meta. */
+/** Older name for the lead story. */
 @Composable
-fun NewsCardCompact(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun NewsCardLead(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) = NewsHeroCard(item, onClick, modifier)
+
+/** NewsRow: rounded thumbnail on the left, emerald kicker, bold headline (3 lines) and the meta line. */
+@Composable
+fun NewsRow(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier.fillMaxWidth().heightIn(min = 88.dp).pcClickable(PcShape.Control, onClick = onClick).padding(vertical = PcSpace.xs)
+        modifier.fillMaxWidth().heightIn(min = 92.dp).pcClickable(PcShape.Control, onClick = onClick).padding(vertical = PcSpace.sm)
             .semantics(mergeDescendants = true) { contentDescription = "${item.kicker}. ${item.title}. ${newsMeta(item)}" },
         horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        NewsImage(item.imageUrl, Modifier.size(width = 96.dp, height = 72.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Overline(item.kicker, color = Pc.Accent)
-            Text(item.title, style = PcType.BodyStrong, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text(item.title, style = PcType.BodyStrong.copy(fontWeight = FontWeight.Bold), maxLines = 3, overflow = TextOverflow.Ellipsis)
             Text(newsMeta(item), style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        NewsImage(item.imageUrl, Modifier.size(width = 104.dp, height = 78.dp))
     }
 }
 
-@Preview(name = "News cards", showBackground = true, widthDp = 380)
+/** Older name for [NewsRow]. */
 @Composable
-private fun NewsCardsPreview() = PreviewHost(dark = false) {
+fun NewsCardCompact(item: NewsItem, onClick: () -> Unit, modifier: Modifier = Modifier) = NewsRow(item, onClick, modifier)
+
+@Preview(name = "News cards", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
+@Composable
+private fun NewsCardsPreview() = PreviewHost(dark = true) {
     Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        NewsCardLead(PreviewData.news.first(), {})
-        PreviewData.news.drop(1).forEach { NewsCardCompact(it, {}) }
+        NewsHeroCard(PreviewData.news.first(), {})
+        PreviewData.news.drop(1).forEach { NewsRow(it, {}) }
     }
 }

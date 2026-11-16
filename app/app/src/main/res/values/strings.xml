@@ -4,6 +4,7 @@
     <string name="app_name">Pitchside</string>
 
     <!-- Navigation -->
+    <string name="home_title">Football today</string>
     <string name="nav_home">Home</string>
     <string name="nav_matches">Matches</string>
     <string name="nav_leagues">Leagues</string>

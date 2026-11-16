@@ -2,6 +2,9 @@
 
 package com.innovativeinside.pitchside.ui.screens
 
+import androidx.compose.ui.unit.sp
+import com.innovativeinside.pitchside.ui.components.GlowCard
+import com.innovativeinside.pitchside.ui.components.glowBackground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -142,7 +145,7 @@ fun LeaguesContent(
     val app = LocalApp.current
     val prefs = LocalPrefs.current
     var view by rememberSaveable { mutableIntStateOf(0) }
-    Box(Modifier.fillMaxSize().background(Pc.Bg).statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
+    Box(Modifier.fillMaxSize().glowBackground().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(Modifier.widthIn(max = 760.dp).fillMaxSize(), contentPadding = PaddingValues(bottom = PcSpace.lg)) {
             item { AppTopBar("Leagues", subtitle = "Tables, fixtures and top scorers", onSearch = openSearch) }
             when (state) {
@@ -157,17 +160,19 @@ fun LeaguesContent(
                     }
                     item {
                         val following = current.id in prefs.leagues
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = PcSpace.screen, vertical = PcSpace.xs),
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
-                        ) {
-                            LeagueBadge(current.short, 48, current.logo)
-                            Column(Modifier.weight(1f)) {
-                                Text(current.name, style = PcType.Subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
-                                Text(listOf(current.country, current.season, current.currentRound).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        GlowCard(Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs).fillMaxWidth()) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(start = PcSpace.md, end = PcSpace.xxs, top = PcSpace.md, bottom = PcSpace.md),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
+                            ) {
+                                LeagueBadge(current.short, 52, current.logo)
+                                Column(Modifier.weight(1f)) {
+                                    Text(current.name.uppercase(), style = PcType.TeamName.copy(fontSize = 22.sp, lineHeight = 25.sp), color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+                                    Text(listOf(current.country, current.season, current.currentRound).filter { it.isNotBlank() }.joinToString(" · "), style = PcType.Caption, color = Pc.OnHero2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
+                                IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${current.name}" else "Follow ${current.name}", { app.toggleLeague(current.id, current.name) }, tint = if (following) Pc.HeroAccent else Pc.OnHero2)
+                                IconAction(Icons.AutoMirrored.Outlined.KeyboardArrowRight, "Open ${current.name}", { openLeague(current.id) }, tint = Pc.OnHero2)
                             }
-                            IconAction(if (following) Icons.Filled.Star else Icons.Outlined.StarBorder, if (following) "Unfollow ${current.name}" else "Follow ${current.name}", { app.toggleLeague(current.id, current.name) }, tint = if (following) Pc.Accent else Pc.Text2)
-                            IconAction(Icons.AutoMirrored.Outlined.KeyboardArrowRight, "Open ${current.name}", { openLeague(current.id) }, tint = Pc.Text2)
                         }
                     }
                     item { SegmentedTabs(listOf("Table", "Fixtures", "Top scorers"), view, { view = it }, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs)) }
@@ -213,20 +218,31 @@ fun LeaguesContent(
 
 private fun Modifier.testStateError() = this.testTag("state_error")
 
+private val TableTop = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+private val TableBottom = androidx.compose.foundation.shape.RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+
 private fun androidx.compose.foundation.lazy.LazyListScope.leagueSection(d: LeagueDetail, view: Int, openTeam: (String) -> Unit, openMatch: (String) -> Unit, openPlayer: (String) -> Unit) {
     when (view) {
         0 -> if (d.standings.isEmpty()) item {
             EmptyState("Knockout competition", "${d.league.name} has no league table. Check Fixtures for the draw and results.", Modifier.padding(PcSpace.screen), icon = Icons.Outlined.TableChart)
         } else {
-            stickyHeader(key = "table_header") { Box(Modifier.padding(horizontal = PcSpace.screen).clip(PcShape.Small)) { StandingsHeader(showForm = true) } }
+            stickyHeader(key = "table_header") {
+                Box(Modifier.background(Pc.Bg).padding(horizontal = PcSpace.screen).clip(TableTop).border(1.dp, Pc.Outline, TableTop)) { StandingsHeader(showForm = true) }
+            }
             itemsIndexed(d.standings, key = { _, r -> "row-${r.team.id}" }) { i, r ->
                 val followed = LocalPrefs.current.teams.contains(r.team.id)
-                Column(Modifier.padding(horizontal = PcSpace.screen)) {
+                val last = i == d.standings.lastIndex
+                Column(Modifier.padding(horizontal = PcSpace.screen).let { if (last) it.clip(TableBottom) else it }.background(Pc.Surface)) {
                     StandingsRow(r, { openTeam(r.team.id) }, followed = followed, showForm = true)
-                    if (i < d.standings.lastIndex) Hairline()
+                    if (!last) Hairline()
                 }
             }
-            item { Text("Form shows the last five results, newest on the right. Followed clubs are tinted.", style = PcType.Caption, modifier = Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs)) }
+            item {
+                Column(Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.sm), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                    com.innovativeinside.pitchside.ui.components.ZoneLegend(d.standings)
+                    Text("Form shows the last five results, newest on the right. Followed clubs are tinted.", style = PcType.Caption)
+                }
+            }
         }
         1 -> if (d.fixtures.isEmpty()) item {
             EmptyState("No fixtures this week", "Fixtures for the next round appear once they're scheduled.", Modifier.padding(PcSpace.screen), icon = Icons.Outlined.EventBusy)
@@ -281,21 +297,26 @@ fun ratingColor(r: Double): Color = when { r >= 8.0 -> Pc.Accent; r >= 7.0 -> Pc
 
 // ---------------- Shared detail header ----------------
 
-/** Header for team, player and competition pages: visual, name, facts line, follow button. */
+/**
+ * Hero header for team, player and competition pages on a [GlowCard]: the visual, the name in big condensed
+ * uppercase, a facts line, then the follow pill and any extra actions.
+ */
 @Composable
 private fun EntityHeader(visual: @Composable () -> Unit, title: String, facts: String, following: Boolean, onFollow: () -> Unit, extra: @Composable () -> Unit = {}) {
-    Column(Modifier.padding(horizontal = PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.md)) {
-            visual()
-            Column(Modifier.weight(1f)) {
-                Text(title, style = PcType.Title, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
-                Text(facts, style = PcType.BodyMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    GlowCard(Modifier.padding(horizontal = PcSpace.screen).fillMaxWidth().testTag("entity_header")) {
+        Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.md)) {
+                visual()
+                Column(Modifier.weight(1f)) {
+                    Text(title.uppercase(), style = PcType.Title, color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+                    Text(facts, style = PcType.BodyMuted, color = Pc.OnHero2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
-            if (following) SecondaryButton(stringResource(R.string.action_following), onFollow, icon = Icons.Filled.Star)
-            else PrimaryButton(stringResource(R.string.action_follow), onFollow, icon = Icons.Outlined.StarBorder)
-            extra()
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                if (following) SecondaryButton(stringResource(R.string.action_following), onFollow, icon = Icons.Filled.Star)
+                else PrimaryButton(stringResource(R.string.action_follow), onFollow, icon = Icons.Outlined.StarBorder)
+                extra()
+            }
         }
     }
 }
@@ -320,7 +341,7 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
     val l = d.league
     var tab by rememberSaveable { mutableIntStateOf(0) }
     EntityHeader({ LeagueBadge(l.short, 64, l.logo) }, l.name, listOf(l.country, l.season, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) })
-    Spacer(Modifier.height(PcSpace.sm))
+    Spacer(Modifier.height(PcSpace.md))
     val tabs = buildList { if (d.standings.isNotEmpty()) add("Table"); add("Matches"); if (d.scorers.isNotEmpty()) add("Top scorers"); add("Teams") }
     val current = tabs.getOrElse(tab) { tabs.first() }
     UnderlineTabs(tabs, tabs.indexOf(current), { tab = it })
@@ -369,7 +390,7 @@ private fun ScorerPodium(top: List<Scorer>, openPlayer: (String) -> Unit, modifi
                         TeamCrest(s.team, 22.dp, ring = false)
                     }
                     Text(s.name, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                    Text(s.goals.toString(), style = PcType.ScoreCompact, color = if (lead) Pc.Accent else Pc.Text)
+                    Text(s.goals.toString(), style = PcType.ScoreCompact.copy(fontSize = if (lead) 34.sp else 28.sp), color = if (lead) Pc.Accent else Pc.Text)
                     Text(if (s.goals == 1) "GOAL" else "GOALS", style = PcType.Overline)
                 }
             }
@@ -394,7 +415,7 @@ private fun ScorerRow(s: Scorer, onClick: () -> Unit) {
             }
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(s.goals.toString(), style = PcType.ScoreCompact)
+            Text(s.goals.toString(), style = PcType.ScoreCompact, color = Pc.Accent)
             Text(if (s.goals == 1) "GOAL" else "GOALS", style = PcType.Overline)
         }
     }
@@ -427,7 +448,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
             Chip(if (shield) "Spoiler Shield on" else "Spoiler Shield off", shield, { app.toggleShield(t.id) })
         }
     }
-    Spacer(Modifier.height(PcSpace.sm))
+    Spacer(Modifier.height(PcSpace.md))
     val tabs = buildList { add("Overview"); add("Fixtures"); if (d.squad.isNotEmpty()) add("Squad"); if (page.standings.isNotEmpty()) add("Table") }
     val current = tabs.getOrElse(tab) { tabs.first() }
     UnderlineTabs(tabs, tabs.indexOf(current), { tab = it })
@@ -508,7 +529,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
             "Squad" -> Position.entries.forEach { pos ->
                 val group = d.squad.filter { it.position == pos }.sortedBy { it.number }
                 if (group.isNotEmpty()) {
-                    Overline(pos.label)
+                    Text(pos.label.uppercase(), style = PcType.SectionTitle.copy(fontSize = 18.sp), modifier = Modifier.semantics { heading() })
                     PcCard(Modifier.fillMaxWidth()) {
                         Column { group.forEachIndexed { i, p ->
                             Row(
@@ -574,7 +595,7 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
     EntityHeader({ PlayerAvatar(s.name, s.team.color, 72.dp, s.photo) }, s.name, listOf(s.position, s.number.takeIf { it > 0 }?.let { "#$it" }.orEmpty(), s.nationality).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { s.team.name }, s.id in prefs.players, { app.togglePlayer(s.id, s.name) }) {
         Chip(s.team.name, false, { openTeam(s.team.id) })
     }
-    Spacer(Modifier.height(PcSpace.sm))
+    Spacer(Modifier.height(PcSpace.md))
     val tabs = buildList { add("Profile"); if (p.recentMatches.isNotEmpty()) add("Matches"); if (p.matches > 0 || p.goals > 0) add("Stats"); if (p.career.isNotEmpty()) add("Career") }
     val current = tabs.getOrElse(tab) { tabs.first() }
     UnderlineTabs(tabs, tabs.indexOf(current), { tab = it })
@@ -695,21 +716,21 @@ private fun Tag(text: String) {
 @Composable
 private fun Bar(label: String, value: Double, max: Double, fmt: String) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "$label ${fmt.format(value)}" }) {
-        Text(label, style = PcType.Label, color = Pc.Text2, modifier = Modifier.width(88.dp))
+        Text(label.uppercase(), style = PcType.Overline, modifier = Modifier.width(92.dp))
         Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Pc.SurfaceVariant)) { Box(Modifier.fillMaxWidth((value / max).coerceIn(0.03, 1.0).toFloat()).height(6.dp).clip(CircleShape).background(Pc.Accent)) }
-        Text(fmt.format(value), style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), modifier = Modifier.width(48.dp), textAlign = TextAlign.End)
+        Text(fmt.format(value), style = PcType.Tag.copy(fontSize = 17.sp), modifier = Modifier.width(52.dp), textAlign = TextAlign.End)
     }
 }
 
 @Preview(name = "Leagues · success", showBackground = true, widthDp = 380, heightDp = 1200)
 @Composable
-private fun LeaguesPreview() = PreviewHost(dark = false) {
+private fun LeaguesPreview() = PreviewHost(dark = true) {
     LeaguesContent(
         UiState.Success(LeaguesData(PreviewData.leagues, emptyList())), {}, {}, {}, {},
         selected = "pd", detail = UiState.Success(LeagueDetail(PreviewData.leagues.first(), PreviewData.table, PreviewData.matches, PreviewData.scorers)),
     )
 }
 
-@Preview(name = "Leagues · empty · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0C0F0D)
+@Preview(name = "Leagues · empty · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
 @Composable
 private fun LeaguesEmptyPreview() = PreviewHost(dark = true) { LeaguesContent(UiState.Empty, {}, {}, {}, {}) }

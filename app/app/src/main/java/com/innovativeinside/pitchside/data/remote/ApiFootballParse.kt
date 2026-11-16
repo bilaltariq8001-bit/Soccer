@@ -376,6 +376,7 @@ object ApiFootballParse {
             goalDiff = gf - ga,
             points = r.intOr0("overall_league_PTS"),
             form = form,
+            zone = r.str("overall_promotion").ifBlank { null },
         )
     }
 

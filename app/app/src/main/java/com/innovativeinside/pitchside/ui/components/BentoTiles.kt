@@ -1,5 +1,8 @@
 package com.innovativeinside.pitchside.ui.components
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -59,7 +62,7 @@ import kotlinx.coroutines.delay
 fun BentoTile(title: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, description: String? = null, content: @Composable ColumnScope.() -> Unit) {
     PcCard(modifier.let { if (description != null) it.semantics(mergeDescendants = true) { contentDescription = description } else it }, onClick = onClick) {
         Column(Modifier.fillMaxWidth().heightIn(min = 156.dp).padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            Overline(title)
+            Text(title.uppercase(), style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text2, maxLines = 1, overflow = TextOverflow.Ellipsis)
             content()
         }
     }
@@ -85,41 +88,74 @@ fun StandingsTile(leagueName: String, rows: List<StandingRow>, followed: Set<Str
     }
 }
 
-/** One table row. Columns: position, crest + name, P, GD, Pts, optional form dots. Tabular numerals. */
+/** Qualification / relegation colour for a table row's zone label from the data source; null when there is none. */
+@Composable
+fun zoneColor(zone: String): Color? = when {
+    zone.isBlank() -> null
+    zone.contains("relegation", ignoreCase = true) -> Pc.Error
+    zone.contains("play", ignoreCase = true) -> Pc.Warning
+    else -> Pc.Accent
+}
+
+/**
+ * One table row. A 3dp marker on the left in the zone colour (promotion / qualification emerald, play-offs amber,
+ * relegation red) when the source labels the place. Columns: position, crest + name, form pills, P, GD, PTS.
+ */
 @Composable
 fun StandingsRow(r: StandingRow, onClick: () -> Unit, modifier: Modifier = Modifier, highlight: Boolean = false, followed: Boolean = false, showForm: Boolean = false, compact: Boolean = true) {
     val desc = "${r.rank}, ${r.team.name}, ${r.points} points, played ${r.played}, goal difference ${r.goalDiff}" +
+        (if (r.zone.isNotBlank()) ", ${r.zone}" else "") +
         if (showForm && r.form.isNotBlank()) ", form ${r.form.toList().joinToString(" ")}" else ""
+    val marker = zoneColor(r.zone)
     Row(
-        modifier.fillMaxWidth().heightIn(min = PcSpace.touch).background(if (followed) Pc.AccentContainer else if (highlight) Pc.SurfaceVariant else Pc.Surface)
+        modifier.fillMaxWidth().height(IntrinsicSize.Min).heightIn(min = 52.dp)
+            .background(if (followed) Pc.AccentContainer else if (highlight) Pc.SurfaceVariant else Color.Transparent)
             .pcClickable(androidx.compose.ui.graphics.RectangleShape, "Open ${r.team.name}", onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = desc }.padding(horizontal = PcSpace.sm),
+            .semantics(mergeDescendants = true) { contentDescription = desc }.padding(end = PcSpace.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(r.rank.toString(), style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), modifier = Modifier.width(24.dp), textAlign = TextAlign.Center)
-        Row(Modifier.weight(1f).padding(start = PcSpace.xs), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            TeamCrest(r.team, CrestSize.S.dp)
-            Text(r.team.name, style = if (followed || highlight) PcType.BodyStrong else PcType.Body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Box(Modifier.width(3.dp).fillMaxHeight().padding(vertical = 10.dp).clip(PcShape.Chip).background(marker ?: Color.Transparent))
+        Text(r.rank.toString(), style = PcType.Tag.copy(fontSize = 16.sp), color = if (marker != null) Pc.Text else Pc.Text2, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+            TeamCrest(r.team, 24.dp)
+            Text(r.team.name, style = if (followed || highlight) PcType.BodyStrong else PcType.Body, color = if (followed) Pc.Accent else Pc.Text, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (showForm) FormDots(r.form, Modifier.padding(end = PcSpace.xs), size = 16.dp)
-        Text(r.played.toString(), style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(28.dp), textAlign = TextAlign.Center)
-        if (!compact) Text("${r.won}-${r.drawn}-${r.lost}", style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(60.dp), textAlign = TextAlign.Center)
-        Text(if (r.goalDiff > 0) "+${r.goalDiff}" else r.goalDiff.toString(), style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
-        Text(r.points.toString(), style = PcType.ScoreRow, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+        if (showForm) FormPills(r.form, Modifier.padding(start = PcSpace.xxs, end = PcSpace.xs), size = 15.dp)
+        Text(r.played.toString(), style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(26.dp), textAlign = TextAlign.Center)
+        if (!compact) Text("${r.won}-${r.drawn}-${r.lost}", style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(58.dp), textAlign = TextAlign.Center)
+        Text(if (r.goalDiff > 0) "+${r.goalDiff}" else r.goalDiff.toString(), style = PcType.Numeric, color = Pc.Text2, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
+        Text(r.points.toString(), style = PcType.ScoreRow, modifier = Modifier.width(30.dp), textAlign = TextAlign.End)
     }
 }
 
 /** Header row matching [StandingsRow]; sticky in lazy tables. */
 @Composable
 fun StandingsHeader(modifier: Modifier = Modifier, showForm: Boolean = false, compact: Boolean = true) {
-    Row(modifier.fillMaxWidth().height(36.dp).background(Pc.SurfaceVariant).padding(horizontal = PcSpace.sm), verticalAlignment = Alignment.CenterVertically) {
-        Text("#", style = PcType.Overline, modifier = Modifier.width(24.dp), textAlign = TextAlign.Center)
-        Text("CLUB", style = PcType.Overline, modifier = Modifier.weight(1f).padding(start = PcSpace.xs))
-        if (showForm) Text("FORM", style = PcType.Overline, modifier = Modifier.padding(end = PcSpace.xs))
-        Text("P", style = PcType.Overline, modifier = Modifier.width(28.dp), textAlign = TextAlign.Center)
-        if (!compact) Text("W-D-L", style = PcType.Overline, modifier = Modifier.width(60.dp), textAlign = TextAlign.Center)
-        Text("GD", style = PcType.Overline, modifier = Modifier.width(36.dp), textAlign = TextAlign.Center)
-        Text("PTS", style = PcType.Overline, color = Pc.Text, modifier = Modifier.width(32.dp), textAlign = TextAlign.End)
+    val h = PcType.Overline.copy(fontSize = 12.sp)
+    Row(modifier.fillMaxWidth().height(38.dp).background(Pc.SurfaceVariant).padding(start = 3.dp, end = PcSpace.sm), verticalAlignment = Alignment.CenterVertically) {
+        Text("#", style = h, modifier = Modifier.width(30.dp), textAlign = TextAlign.Center)
+        Text("CLUB", style = h, modifier = Modifier.weight(1f))
+        if (showForm) Text("FORM", style = h, modifier = Modifier.padding(end = PcSpace.xs))
+        Text("P", style = h, modifier = Modifier.width(26.dp), textAlign = TextAlign.Center)
+        if (!compact) Text("W-D-L", style = h, modifier = Modifier.width(58.dp), textAlign = TextAlign.Center)
+        Text("GD", style = h, modifier = Modifier.width(34.dp), textAlign = TextAlign.Center)
+        Text("PTS", style = h, color = Pc.Text, modifier = Modifier.width(30.dp), textAlign = TextAlign.End)
+    }
+}
+
+/** Legend for the zone markers actually present in [rows] (labels as the source publishes them). */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun ZoneLegend(rows: List<StandingRow>, modifier: Modifier = Modifier) {
+    val zones = rows.map { it.zone }.filter { it.isNotBlank() }.distinct()
+    if (zones.isEmpty()) return
+    androidx.compose.foundation.layout.FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xxs)) {
+        zones.forEach { z ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(width = 3.dp, height = 14.dp).clip(PcShape.Chip).background(zoneColor(z) ?: Pc.Text3))
+                Text(z, style = PcType.Caption)
+            }
+        }
     }
 }
 
@@ -158,18 +194,17 @@ fun NextKickoffTile(
     val left = countdown(now, match.kickoffMs)
     PcCard(modifier.semantics(mergeDescendants = true) { contentDescription = "Next kickoff: ${match.home.name} versus ${match.away.name}, in $left" }, onClick = onClick) {
         Row(Modifier.fillMaxWidth().heightIn(min = 156.dp)) {
-            Box(Modifier.width(3.dp).fillMaxHeight().heightIn(min = 156.dp).background(Pc.team(match.home.color)))
             Column(Modifier.weight(1f).padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                Overline("Next kickoff")
+                Text("NEXT KICKOFF", style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text2)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     TeamCrest(match.home, 28.dp)
                     Text("v", style = PcType.Caption)
                     TeamCrest(match.away, 28.dp)
                 }
-                Text("${match.home.name} vs ${match.away.name}", style = PcType.BodyStrong, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text("${match.home.name} vs ${match.away.name}".uppercase(), style = PcType.TeamNameSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(match.leagueName, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.weight(1f, fill = false))
-                Text(left, style = PcType.ScoreCompact, maxLines = 1)
+                Text(left, style = PcType.ScoreCompact, color = Pc.Accent, maxLines = 1)
                 Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xxs)) {
                     IconAction(if (reminderOn) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onReminder, tint = if (reminderOn) Pc.Accent else Pc.Text2, modifier = Modifier.size(40.dp))
                     IconAction(Icons.Outlined.CalendarMonth, "Add to calendar", onCalendar, tint = Pc.Text2, modifier = Modifier.size(40.dp))
@@ -191,7 +226,7 @@ fun PlayerAvatar(name: String, color: Long, size: Dp = 40.dp, photo: String? = n
             else Text(initials, style = if (size >= 56.dp) PcType.Subtitle else PcType.LabelStrong, color = Pc.Text)
         }
     }
-    Box(Modifier.size(size).clip(CircleShape).border(2.dp, Pc.team(color), CircleShape).padding(2.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).clip(CircleShape).border(1.5.dp, Pc.team(color).copy(alpha = 0.9f), CircleShape).padding(2.5.dp).clip(CircleShape), contentAlignment = Alignment.Center) {
         if (photo == null) fallback() else RemoteImage(photo, fallback, Modifier.fillMaxSize(), ContentScale.Crop)
     }
 }
@@ -212,7 +247,7 @@ fun PlayerStatTile(scorer: Scorer, onClick: () -> Unit, modifier: Modifier = Mod
         }
         Spacer(Modifier.weight(1f, fill = false))
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(scorer.goals.toString(), style = PcType.ScoreCompact)
+            Text(scorer.goals.toString(), style = PcType.ScoreCompact, color = Pc.Accent)
             Text("GOALS", style = PcType.Overline, modifier = Modifier.padding(bottom = 5.dp))
             Spacer(Modifier.weight(1f))
             Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.Text2, modifier = Modifier.size(20.dp))
@@ -225,7 +260,7 @@ fun PlayerStatTile(scorer: Scorer, onClick: () -> Unit, modifier: Modifier = Mod
 fun NoteCard(text: String, modifier: Modifier = Modifier, title: String) {
     PcCard(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            Overline(title)
+            Text(title.uppercase(), style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text2)
             Text(text, style = PcType.Body)
         }
     }
@@ -235,7 +270,7 @@ fun NoteCard(text: String, modifier: Modifier = Modifier, title: String) {
 
 @Preview(name = "Bento tiles", showBackground = true, widthDp = 380)
 @Composable
-private fun BentoPreview() = PreviewHost(dark = false) {
+private fun BentoPreview() = PreviewHost(dark = true) {
     Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
             StandingsTile("Premier Division", PreviewData.table, setOf("ng"), {}, Modifier.weight(1f))

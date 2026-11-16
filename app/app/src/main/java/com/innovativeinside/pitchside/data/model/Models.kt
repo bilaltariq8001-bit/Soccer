@@ -99,6 +99,8 @@ data class MatchLineups(val home: Lineup, val away: Lineup)
 data class StandingRow(
     val rank: Int, val team: Team, val played: Int, val won: Int, val drawn: Int, val lost: Int,
     val goalsFor: Int, val goalsAgainst: Int, val goalDiff: Int, val points: Int, val form: String,
+    /** Qualification or relegation label from the data source ("Promotion - ...", "Relegation"); blank when none. */
+    val zone: String = "",
 )
 
 data class Scorer(val rank: Int, val playerId: String, val name: String, val team: Team, val goals: Int, val assists: Int, val photo: String? = null)
