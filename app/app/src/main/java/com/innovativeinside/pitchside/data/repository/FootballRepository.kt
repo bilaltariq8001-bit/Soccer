@@ -19,7 +19,6 @@ import com.innovativeinside.pitchside.data.model.StatRow
 import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.data.model.TeamDetail
 import com.innovativeinside.pitchside.data.remote.FootballApi
-import com.innovativeinside.pitchside.data.insight.MatchBrief
 import com.innovativeinside.pitchside.data.remote.Mappers
 import com.innovativeinside.pitchside.data.news.NewsFeedSource
 import com.innovativeinside.pitchside.data.remote.dto.AskRequest
@@ -29,6 +28,7 @@ import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.async
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 
@@ -58,6 +58,9 @@ data class LeagueDetail(val league: League, val standings: List<StandingRow>, va
 data class TeamPage(val detail: TeamDetail, val fixtures: List<Match>, val standings: List<StandingRow>)
 
 data class NewsPage(val items: List<NewsItem>, val nextCursor: String?)
+
+/** Hard limit for one repository call (network and retries included). Past it the call fails with a Timeout. */
+const val CALL_TIMEOUT_MS = 20_000L
 
 /**
  * The single seam between UI and data. ViewModels only talk to this. Every call returns a [Result] whose
@@ -99,6 +102,8 @@ class DefaultFootballRepository(
     private val newsSource: NewsFeedSource? = null,
     private val newsTtlMs: Long = 10 * 60_000,
     private val newsPageSize: Int = 20,
+    /** Hard limit for one data call, retries included. */
+    private val callTimeoutMs: Long = CALL_TIMEOUT_MS,
 ) : FootballRepository {
 
     /** Every feed story seen this session, so the article screen opens without another download. */
@@ -118,15 +123,24 @@ class DefaultFootballRepository(
         return safe { load().also { cache[key] = Entry(it, clock.nowMs()) } }
     }
 
+    /**
+     * Runs one data call on the IO dispatcher with a hard time limit ([callTimeoutMs]), so no screen can wait forever:
+     * past the limit the call fails with [AppError.Timeout] and the screen's spinner ends. The timer runs on the IO
+     * dispatcher (wall time on device, virtual time in unit tests).
+     */
     private suspend fun <T> safe(block: suspend () -> T): Result<T> = withContext(dispatchers.io) {
         try {
-            Result.success(block())
+            val value = withTimeoutOrNull(callTimeoutMs) { Wrapped(block()) } ?: throw AppError.Timeout()
+            Result.success(value.v)
         } catch (c: CancellationException) {
             throw c
         } catch (t: Throwable) {
             Result.failure(AppError.from(t))
         }
     }
+
+    /** Lets a null result be told apart from a timeout. */
+    private class Wrapped<T>(val v: T)
 
     fun clearCache() = cache.clear()
 
@@ -159,14 +173,8 @@ class DefaultFootballRepository(
             val tableRows = table.await().map(Mappers::standing)
             val h2hList = h2h.await()
             val (homeRecent, awayRecent) = recent.await()?.let { (h, a) -> h.map(::match) to a.map(::match) } ?: (emptyList<Match>() to emptyList())
-            val brief = fixture.brief.ifBlank {
-                MatchBrief.of(
-                    fixture.copy(probs = prediction.await() ?: fixture.probs), tableRows, h2hList, ev,
-                    MatchBrief.formFrom(fixture.home.id, homeRecent), MatchBrief.formFrom(fixture.away.id, awayRecent),
-                )
-            }
             MatchDetail(
-                match = fixture.copy(brief = brief),
+                match = fixture,
                 events = ev,
                 stats = stats.await().map(Mappers::stat),
                 lineups = Mappers.lineups(lineups.await(), fixture.home.id, fixture.away.id, scorers),

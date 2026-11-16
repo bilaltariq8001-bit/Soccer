@@ -43,7 +43,7 @@ data class Match(
     val status: Status,
     /** What the badge shows: "74'", "HT", "20:45", "FT" or "Postponed". */
     val label: String,
-    /** Short Match Brief text (computed from match data on the backend). */
+    /** Preview text from the data source. Not shown in the UI. */
     val brief: String,
     /** Pre-match win probability when the data source has one. */
     val probs: WinProbability? = null,

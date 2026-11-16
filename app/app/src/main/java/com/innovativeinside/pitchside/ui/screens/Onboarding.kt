@@ -169,7 +169,7 @@ fun WelcomeScreen(onStart: () -> Unit, onRestore: () -> Unit) {
         Spacer(Modifier.weight(1f))
         Text("Every match,\nexplained.", style = PcType.Display)
         Spacer(Modifier.height(12.dp))
-        Text("Live scores, smart alerts and a short brief on every game, in your language.", style = PcType.BodyMuted)
+        Text("Live scores, match alerts, tables and form for the teams you follow.", style = PcType.BodyMuted)
         Spacer(Modifier.height(28.dp))
         PrimaryButton("Get started", onStart, Modifier.fillMaxWidth())
         TextAction("I already have an account", onRestore, Modifier.fillMaxWidth(), color = Pc.Text)
@@ -183,7 +183,7 @@ fun LanguageScreen(onBack: () -> Unit, onNext: () -> Unit) {
     val prefs = LocalPrefs.current
     var query by remember { mutableStateOf("") }
     val langs = Languages.all.filter { query.isBlank() || it.native.contains(query, true) || it.english.contains(query, true) }
-    OnbScaffold(1, "Choose your language", "Scores, alerts and Match Briefs will be written in it. Change it any time in Settings.", onBack, null, "Continue", onNext) {
+    OnbScaffold(1, "Choose your language", "Alerts and Ask answers use it where available. Change it any time in Settings.", onBack, null, "Continue", onNext) {
         SearchField(query, { query = it }, "Search languages")
         Spacer(Modifier.height(16.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

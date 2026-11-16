@@ -142,7 +142,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                 }
             }
             item {
-                if (s.sending) Text("Thinking…", style = PcType.BodyMuted, modifier = Modifier.padding(start = 4.dp).testTag("ask_thinking"))
+                if (s.sending) Text("Looking that up…", style = PcType.BodyMuted, modifier = Modifier.padding(start = 4.dp).testTag("ask_thinking"))
                 else FlowChips(listOf("Who leads the table?", "Who is the top scorer?", "Which team is in the best form?"), "", { onSend(it) }, Modifier.fillMaxWidth())
             }
         }
@@ -164,7 +164,7 @@ fun AskContent(s: AskState, back: () -> Unit, onInput: (String) -> Unit, onSend:
                 }
             }
             if (s.inputError != null) Text(s.inputError, style = PcType.Caption, color = Pc.Error)
-            Text("AI-generated from match data. It can make mistakes.", style = PcType.Caption)
+            Text("Answers come from live tables, scorers and form.", style = PcType.Caption)
         }
     }
 }
@@ -186,9 +186,9 @@ fun PaywallScreen(onClose: () -> Unit) {
         Column(Modifier.padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(56.dp).clip(PcShape.Hero).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Bolt, null, tint = Pc.OnAccent, modifier = Modifier.size(28.dp)) }
             Text("Pitchside Pro", style = PcType.Display)
-            Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more insight.", style = PcType.BodyMuted)
+            Text(if (prefs.isPro) "Pro is active on this device." else "Less noise, more football.", style = PcType.BodyMuted)
             Spacer(Modifier.height(8.dp))
-            listOf("No ads anywhere", "${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} Ask questions a day", "Deeper Match Briefs", "Follow unlimited teams").forEach {
+            listOf("No ads anywhere", "${com.innovativeinside.pitchside.data.prefs.UserPrefs.PRO_ASK_LIMIT} Ask questions a day", "Follow unlimited teams").forEach {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.heightIn(min = 32.dp)) {
                     Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.Accent), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Check, null, tint = Pc.OnAccent, modifier = Modifier.size(14.dp)) }
                     Text(it, style = PcType.Body)
@@ -261,7 +261,6 @@ fun SettingsScreen(nav: SettingsNav) {
                 SettingRow("Spoiler Shield", "${prefs.shielded.size} of ${prefs.teams.size} teams shielded") { PcSwitch(prefs.shielded.isNotEmpty(), app::setShieldAll) }
             }
             SettingsGroup("APP") {
-                SettingRow("Match Brief detail") { Box(Modifier.width(180.dp)) { SegmentedTabs(listOf("Simple", "Detailed"), if (prefs.detailed) 1 else 0, { app.setDetailed(it == 1) }) } }
                 SettingRow("Language", value = Languages.byCode(prefs.language).native, onClick = { langSheet = true })
                 SettingRow("Theme") { Box(Modifier.width(220.dp)) { SegmentedTabs(ThemeChoice.entries.map { it.label }, prefs.theme.ordinal, { app.setTheme(ThemeChoice.entries[it]) }) } }
             }
@@ -276,7 +275,7 @@ fun SettingsScreen(nav: SettingsNav) {
             SettingsGroup("ABOUT") {
                 SettingRow("Privacy", onClick = { privacy = true })
                 SettingRow("Share Pitchside", onClick = {
-                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "Pitchside: live scores with a short brief on every match. https://play.google.com/store/apps/details?id=${ctx.packageName}")
+                    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "Pitchside: live scores, fixtures and tables. https://play.google.com/store/apps/details?id=${ctx.packageName}")
                     ctx.startActivity(Intent.createChooser(send, "Share Pitchside"))
                 })
                 SettingRow("Rate on Google Play", onClick = {
@@ -290,7 +289,7 @@ fun SettingsScreen(nav: SettingsNav) {
     }
     if (langSheet) PcSheet({ langSheet = false }) {
         Text("App language", style = PcType.Subtitle)
-        Text("Match Briefs and Ask answers use this language. Screens are in English for now.", style = PcType.Caption)
+        Text("Ask answers use this language where available. Screens are in English for now.", style = PcType.Caption)
         Languages.all.forEach { l ->
             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).pcClickable(PcShape.Control) { app.setLanguage(l.code); langSheet = false }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${l.native} · ${l.english}", style = PcType.Body, modifier = Modifier.weight(1f))

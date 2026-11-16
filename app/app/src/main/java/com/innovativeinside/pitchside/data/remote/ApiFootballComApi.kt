@@ -29,7 +29,14 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -127,7 +134,8 @@ class ApiFootballComApi(
                 throw e
             } catch (t: Throwable) {
                 val err = AppError.from(t)
-                val canRetry = attempt < maxRetries && (err is AppError.Network || err is AppError.Timeout || err is AppError.Server || err is AppError.RateLimited)
+                // A timeout already used the whole call budget: retrying it would only make the screen wait longer.
+                val canRetry = attempt < maxRetries && (err is AppError.Network || err is AppError.Server || err is AppError.RateLimited)
                 if (!canRetry) throw err
                 attempt++
                 delay(retryDelayMs * attempt)
@@ -226,10 +234,30 @@ class ApiFootballComApi(
         return divisions(baseOf(id)).firstOrNull { it.id == id }
     }
 
+    /** Leagues whose division lookup failed recently: skipped for a while so one bad source costs one call, not one per row. */
+    private val divisionMiss = ConcurrentHashMap<String, Long>()
+
+    /**
+     * Divisions of a league for labelling fixtures. A nice-to-have: bounded in time, failures fall back to "not split"
+     * and are remembered for [MINUTE] so the lookup is not repeated for every fixture row of that league.
+     */
+    private suspend fun divisionsForMapping(baseId: String): List<Division> {
+        divisionMiss[baseId]?.let { at -> if (nowMs() - at < MINUTE) return emptyList() }
+        val divs = try {
+            // Real-clock timeout (Dispatchers.IO has no virtual time), so it means wall time on device and in tests.
+            withContext(Dispatchers.IO) { withTimeoutOrNull(DIVISION_TIMEOUT_MS) { divisions(baseId) } }
+        } catch (c: CancellationException) {
+            throw c
+        } catch (_: Throwable) {
+            null
+        }
+        if (divs == null) divisionMiss[baseId] = nowMs() else divisionMiss.remove(baseId)
+        return divs.orEmpty()
+    }
+
     /** The competition id a fixture belongs to: its division when the league is split, else the API league id. */
-    private suspend fun competitionIdFor(e: JsonObject): String {
+    private fun competitionIdFor(e: JsonObject, divs: List<Division>): String {
         val baseId = e.str("league_id")
-        val divs = runCatching { divisions(baseId) }.getOrDefault(emptyList())
         if (divs.isEmpty()) return baseId
         val stage = e.str("fk_stage_key")
         divs.firstOrNull { it.stageKey != null && it.stageKey == stage }?.let { return it.id }
@@ -237,8 +265,14 @@ class ApiFootballComApi(
         return divs.firstOrNull { home in it.teamIds }?.id ?: baseId
     }
 
-    private suspend fun mapFixtures(rows: List<JsonObject>, predictions: Map<String, PredictionDto> = emptyMap()): List<FixtureDto> =
-        patch(rows).map { ApiFootballParse.fixture(it, competitionIdFor(it), predictions[it.str("match_id")]) }
+    /** Division lookups run once per league and in parallel, not once per fixture row in sequence. */
+    private suspend fun mapFixtures(rows: List<JsonObject>, predictions: Map<String, PredictionDto> = emptyMap()): List<FixtureDto> {
+        val patched = patch(rows)
+        val byLeague = coroutineScope {
+            patched.map { it.str("league_id") }.distinct().map { id -> async { id to divisionsForMapping(id) } }.awaitAll().toMap()
+        }
+        return patched.map { ApiFootballParse.fixture(it, competitionIdFor(it, byLeague[it.str("league_id")].orEmpty()), predictions[it.str("match_id")]) }
+    }
 
     private suspend fun predictionsFor(from: LocalDate, to: LocalDate): Map<String, PredictionDto> = runCatching {
         list("get_predictions", range(from, to), HALF_HOUR).mapNotNull { p -> ApiFootballParse.prediction(p)?.let { p.str("match_id") to it } }.toMap()
@@ -329,17 +363,22 @@ class ApiFootballComApi(
 
     // ---------------- fixtures ----------------
 
+    /**
+     * Fixtures of one day on the device's calendar ([date] is a local date). The API is asked for every UTC day the local
+     * day overlaps (e.g. Sun 15 Nov in Pakistan, UTC+5, is 14 Nov 19:00 to 15 Nov 19:00 UTC, so 14 and 15 Nov UTC)
+     * with timezone=UTC, then rows are kept only if their kickoff falls inside the local day.
+     */
     override suspend fun fixtures(date: String): List<FixtureDto> {
-        val day = LocalDate.parse(date)
-        val z = zone()
-        val start = day.atStartOfDay(z).toInstant().toEpochMilli()
-        val end = day.plusDays(1).atStartOfDay(z).toInstant().toEpochMilli()
-        val from = Instant.ofEpochMilli(start).atZone(ZoneOffset.UTC).toLocalDate()
-        val to = Instant.ofEpochMilli(end - 1).atZone(ZoneOffset.UTC).toLocalDate()
+        val w = LocalDayWindow.of(LocalDate.parse(date), zone())
         val today = todayUtc()
-        val ttl = if (!today.isBefore(from) && !today.isAfter(to)) MINUTE else TEN_MIN
-        val rows = list("get_events", range(from, to), ttl)
-        return mapFixtures(rows, predictionsFor(from, to)).filter { it.kickoffMs in start until end }.sortedBy { it.kickoffMs }
+        val ttl = if (!today.isBefore(w.utcFrom) && !today.isAfter(w.utcTo)) MINUTE else TEN_MIN
+        val (rows, predictions) = coroutineScope {
+            val rows = async { list("get_events", range(w.utcFrom, w.utcTo), ttl) }
+            val predictions = async { predictionsFor(w.utcFrom, w.utcTo) }
+            rows.await() to predictions.await()
+        }
+        val inDay = rows.filter { w.contains(ApiFootballParse.kickoffMs(it.str("match_date"), it.str("match_time"))) }
+        return mapFixtures(inDay, predictions).filter { w.contains(it.kickoffMs) }.sortedBy { it.kickoffMs }
     }
 
     override suspend fun liveFixtures(): List<FixtureDto> {
@@ -356,7 +395,7 @@ class ApiFootballComApi(
     override suspend fun fixture(id: String): FixtureDto {
         val e = eventRow(id)
         val pred = runCatching { prediction(id) }.getOrNull()
-        return ApiFootballParse.fixture(e, competitionIdFor(e), pred)
+        return ApiFootballParse.fixture(e, competitionIdFor(e, divisionsForMapping(e.str("league_id"))), pred)
     }
 
     override suspend fun events(fixtureId: String): List<EventDto> = ApiFootballParse.timeline(eventRow(fixtureId))
@@ -566,5 +605,6 @@ class ApiFootballComApi(
         private const val HALF_HOUR = 30 * MINUTE
         private const val HOUR = 60 * MINUTE
         private const val DAY = 24 * HOUR
+        private const val DIVISION_TIMEOUT_MS = 10_000L
     }
 }

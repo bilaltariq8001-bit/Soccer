@@ -26,7 +26,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material.icons.outlined.EventBusy
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -66,7 +66,6 @@ import com.innovativeinside.pitchside.data.model.StatRow
 import com.innovativeinside.pitchside.data.model.Status
 import com.innovativeinside.pitchside.ui.LocalApp
 import com.innovativeinside.pitchside.ui.LocalPrefs
-import com.innovativeinside.pitchside.ui.components.AiInsightTile
 import com.innovativeinside.pitchside.ui.components.AppTopBar
 import com.innovativeinside.pitchside.ui.components.EmptyState
 import com.innovativeinside.pitchside.ui.components.FilterChipRow
@@ -101,7 +100,7 @@ import com.innovativeinside.pitchside.ui.vm.CompetitionCount
 import com.innovativeinside.pitchside.ui.vm.countsByCompetition
 import com.innovativeinside.pitchside.ui.vm.inForm
 import com.innovativeinside.pitchside.ui.vm.pickSpotlight
-import com.innovativeinside.pitchside.data.insight.MatchBrief
+import com.innovativeinside.pitchside.data.model.FormText
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.text.style.TextAlign
 import com.innovativeinside.pitchside.ui.vm.filterByCompetition
@@ -151,7 +150,7 @@ fun HomeContent(
     AppTopBar(
         "Football today", subtitle = longDate(LocalDate.now()),
         onSearch = actions.openSearch, onNotifications = actions.openNotifications,
-        actions = { IconAction(Icons.Outlined.AutoAwesome, stringResource(R.string.action_ask), actions.openAsk, tint = Pc.Accent) },
+        actions = { IconAction(Icons.Outlined.QuestionAnswer, stringResource(R.string.action_ask), actions.openAsk, tint = Pc.Accent) },
     )
     StateContent(state, onRetry, Modifier.padding(horizontal = PcSpace.screen), loading = { HomeSkeleton(Modifier.padding(top = PcSpace.xs)) }) { d ->
         HomeBody(d, actions, heroStats, loadStats)
@@ -322,9 +321,9 @@ private fun SpotlightSection(d: HomeData, actions: HomeActions) {
         topRight = if (upcoming) formatDay(spot.kickoffMs) else null,
     ) {
         if (hr != null || ar != null) Row(Modifier.fillMaxWidth()) {
-            Text(hr?.let { "${MatchBrief.ordinal(it.rank)} · ${it.points} pts" }.orEmpty(), style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text(hr?.let { "${FormText.ordinal(it.rank)} · ${it.points} pts" }.orEmpty(), style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
             Spacer(Modifier.width(112.dp))
-            Text(ar?.let { "${MatchBrief.ordinal(it.rank)} · ${it.points} pts" }.orEmpty(), style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+            Text(ar?.let { "${FormText.ordinal(it.rank)} · ${it.points} pts" }.orEmpty(), style = PcType.Caption, color = Pc.OnHero2, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
         }
         val p = spot.probs
         if (upcoming && p != null) {
@@ -348,16 +347,10 @@ private fun BentoGrid(d: HomeData, live: List<Match>, actions: HomeActions) {
     val prefs = LocalPrefs.current
     val ctx = LocalContext.current
     val next = nextKickoff(d.upcoming, prefs.teams, System.currentTimeMillis())
-    val insightMatch = pickHero(live, prefs.teams, null)?.takeIf { it.brief.isNotBlank() && !app.isHidden(prefs, it) }
-        ?: d.matches.firstOrNull { it.brief.isNotBlank() && it.status != Status.Finished && !app.isHidden(prefs, it) }
-        ?: d.upcoming.firstOrNull { it.brief.isNotBlank() && it.involves(prefs.teams) }
-        ?: d.upcoming.firstOrNull { it.brief.isNotBlank() }
-        ?: d.matches.firstOrNull { it.brief.isNotBlank() && !app.isHidden(prefs, it) }
     val tiles = buildList<@Composable (Modifier) -> Unit> {
         if (d.table.isNotEmpty()) add { m -> StandingsTile(d.tableLeague?.name ?: "Table", d.table, prefs.teams.toSet(), { actions.openLeague(d.tableLeague?.id ?: d.table.first().team.leagueId) }, m) }
         if (next != null) add { m -> NextKickoffTile(next, next.id in prefs.matchAlerts, { app.toggleMatchAlert(next.id) }, { addMatchToCalendar(ctx, next) }, { actions.openMatch(next.id) }, m) }
         d.scorers.firstOrNull()?.let { s -> add { m -> PlayerStatTile(s, { actions.openPlayer(s.playerId) }, m) } }
-        insightMatch?.let { im -> add { m -> AiInsightTile(im.brief, "${im.home.short} v ${im.away.short} · ${im.leagueName}", { actions.openMatch(im.id) }, m) } }
         val perComp = countsByCompetition(d.matches)
         if (perComp.isNotEmpty()) add { m -> TodayByCompetitionTile(perComp, actions.openLeague, actions.openMatches, m) }
         val hot = inForm(d.tables)

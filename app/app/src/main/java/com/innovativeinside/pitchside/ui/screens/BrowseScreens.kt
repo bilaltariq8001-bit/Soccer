@@ -72,7 +72,7 @@ import com.innovativeinside.pitchside.ui.LocalPrefs
 import com.innovativeinside.pitchside.ui.components.AppTopBar
 import com.innovativeinside.pitchside.ui.components.BackButton
 import com.innovativeinside.pitchside.ui.components.BentoTile
-import com.innovativeinside.pitchside.ui.components.BriefCard
+import com.innovativeinside.pitchside.ui.components.NoteCard
 import com.innovativeinside.pitchside.ui.components.Chip
 import com.innovativeinside.pitchside.ui.components.CrestSize
 import com.innovativeinside.pitchside.ui.components.DetailSkeleton
@@ -454,7 +454,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                 val finishedStatus = com.innovativeinside.pitchside.data.model.Status.Finished
                 val played = page.fixtures.filter { it.status == finishedStatus && it.hasScore }.sortedByDescending { it.kickoffMs }
                 val last = played.firstOrNull()
-                val form = com.innovativeinside.pitchside.data.insight.MatchBrief.formFrom(t.id, played)
+                val form = com.innovativeinside.pitchside.data.model.FormText.formFrom(t.id, played)
                 if (last != null || form.isNotBlank()) Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
                     if (last != null) BentoTile("Last result", Modifier.weight(1f).fillMaxHeight(), onClick = { openMatch(last.id) }) {
                         val home = last.home.id == t.id
@@ -600,7 +600,7 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                         StatTile(p.yellowCards.toString(), "Yellows", Modifier.weight(1f), if (p.yellowCards > 0) Pc.Warning else Pc.Text)
                         StatTile(p.redCards.toString(), "Reds", Modifier.weight(1f), if (p.redCards > 0) Pc.Error else Pc.Text)
                     }
-                    BriefCard(seasonSnapshot(p), title = "Season snapshot", compactMeta = true)
+                    NoteCard(seasonSnapshot(p), title = "Season snapshot")
                     if (p.statsNote.isNotBlank()) Text(p.statsNote + ".", style = PcType.Caption)
                 } else {
                     PcCard(Modifier.fillMaxWidth()) {
@@ -610,7 +610,7 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                         }
                     }
                 }
-                if (p.scoutingNote.isNotBlank()) BriefCard(p.scoutingNote, title = "Profile", compactMeta = true)
+                if (p.scoutingNote.isNotBlank()) NoteCard(p.scoutingNote, title = "Profile")
             }
             "Matches" -> PcCard(Modifier.fillMaxWidth()) {
                 Column { p.recentMatches.forEachIndexed { i, m ->

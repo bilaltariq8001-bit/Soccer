@@ -23,19 +23,19 @@ enum class Persona(val title: String, val tagline: String, val bullets: List<Str
     Fanatic("Matchday Fanatic", "Never miss a goal.", listOf(
         "Live matches and your teams are pinned to the top.",
         "An alert for every goal, card and kickoff.",
-        "Match Briefs update live during games.")),
+        "Live scores refresh on their own during games.")),
     CatchUp("Catch-up Fan", "Watch first, spoil never.", listOf(
         "Scores for your teams stay hidden until you tap reveal.",
         "One final-score alert, held until you say you're caught up.",
-        "Match Briefs open on the recap.")),
+        "Match pages open on the result and key events.")),
     Casual("Casual Follower", "Only what matters.", listOf(
         "Home shows the top leagues and today's big games.",
         "Alerts for key moments only.",
-        "Short, simple Match Briefs.")),
+        "Short, simple match pages.")),
     Nerd("Stats Nerd", "All the numbers.", listOf(
         "Match pages open on Stats, with xG up front.",
         "Players you follow are tracked closely.",
-        "Deeper Match Briefs.")),
+        "Tables, form and head-to-head one tap away.")),
     Explorer("League Explorer", "Your leagues, one place.", listOf(
         "Home is grouped by league.",
         "Standings are one tap away.",

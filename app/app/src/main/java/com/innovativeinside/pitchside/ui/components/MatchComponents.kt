@@ -28,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Visibility
@@ -244,7 +243,7 @@ fun ScoreText(value: String, modifier: Modifier = Modifier, bold: Boolean = true
 
 /**
  * The dominant 2x2 live tile: deep-green stage, competition and venue overline, LIVE badge, both crests
- * and names, the 56sp score, an optional possession/shots strip, and the AI insight line from Match.brief.
+ * and names, the 56sp score, an optional possession/shots strip.
  */
 @Composable
 fun LiveMatchTile(
@@ -310,15 +309,6 @@ fun LiveMatchTile(
             if (match.status == Status.Live) liveProgress(match.label)?.let { p ->
                 Box(Modifier.fillMaxWidth().height(3.dp).clip(CircleShape).background(Pc.HeroRaised)) {
                     Box(Modifier.fillMaxWidth(p).fillMaxHeight().clip(CircleShape).background(Pc.Live))
-                }
-            }
-            if (match.brief.isNotBlank()) {
-                Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.OnHero2, modifier = Modifier.padding(top = 2.dp).size(16.dp))
-                    Text(
-                        if (hidden) "Brief hidden to avoid spoilers." else match.brief,
-                        style = PcType.Label, color = Pc.OnHero, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                    )
                 }
             }
             footer()

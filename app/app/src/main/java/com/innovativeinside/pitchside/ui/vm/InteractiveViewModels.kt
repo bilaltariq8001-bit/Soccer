@@ -59,24 +59,44 @@ class NewsViewModel(private val repo: FootballRepository) : ViewModel() {
     fun refresh() = reload(pull = true)
     fun retry() = reload(pull = false, force = true)
 
+    private var moreJob: Job? = null
+    private var generation = 0L
+
     private fun reload(pull: Boolean = false, force: Boolean = false) {
         job?.cancel()
-        _state.update { it.copy(loading = !pull || it.items.isEmpty(), refreshing = pull, error = null, loadMoreError = null) }
+        moreJob?.cancel()
+        val token = ++generation
+        // The pull indicator only shows over a list that is already there; a first load uses the skeleton.
+        _state.update { val showPull = pull && it.items.isNotEmpty(); it.copy(loading = !showPull, refreshing = showPull, loadingMore = false, error = null, loadMoreError = null) }
         job = viewModelScope.launch {
-            repo.headlines(_state.value.edition, null, refresh = pull || force)
-                .onSuccess { page -> _state.update { it.copy(items = page.items, nextCursor = page.nextCursor, loading = false, refreshing = false) } }
-                .onFailure { e -> _state.update { it.copy(loading = false, refreshing = false, error = AppError.from(e)) } }
+            try {
+                val result = boundedFetch { repo.headlines(_state.value.edition, null, refresh = pull || force) }
+                if (token != generation) return@launch
+                result
+                    .onSuccess { page -> _state.update { it.copy(items = page.items, nextCursor = page.nextCursor) } }
+                    .onFailure { e -> _state.update { it.copy(error = AppError.from(e)) } }
+            } finally {
+                // Ends the indicator and skeleton on success, error, timeout and cancellation.
+                if (token == generation) _state.update { it.copy(loading = false, refreshing = false) }
+            }
         }
     }
 
     fun loadMore() {
         val s = _state.value
         if (s.loading || s.loadingMore || s.nextCursor == null) return
+        val token = generation
         _state.update { it.copy(loadingMore = true, loadMoreError = null) }
-        job = viewModelScope.launch {
-            repo.headlines(s.edition, s.nextCursor)
-                .onSuccess { page -> _state.update { it.copy(items = (it.items + page.items).distinctBy { n -> n.id }, nextCursor = page.nextCursor, loadingMore = false) } }
-                .onFailure { e -> _state.update { it.copy(loadingMore = false, loadMoreError = AppError.from(e)) } }
+        moreJob = viewModelScope.launch {
+            try {
+                val result = boundedFetch { repo.headlines(s.edition, s.nextCursor) }
+                if (token != generation) return@launch
+                result
+                    .onSuccess { page -> _state.update { it.copy(items = (it.items + page.items).distinctBy { n -> n.id }, nextCursor = page.nextCursor) } }
+                    .onFailure { e -> _state.update { it.copy(loadMoreError = AppError.from(e)) } }
+            } finally {
+                if (token == generation) _state.update { it.copy(loadingMore = false) }
+            }
         }
     }
 

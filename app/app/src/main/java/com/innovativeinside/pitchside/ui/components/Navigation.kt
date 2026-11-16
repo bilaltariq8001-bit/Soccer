@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.QuestionAnswer
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
@@ -165,7 +165,7 @@ fun SideRail(current: String?, onNavigate: (String) -> Unit, onAsk: () -> Unit, 
                     .pcClickable(PcShape.Control, onClick = onAsk).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Control),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(Icons.Outlined.AutoAwesome, stringResource(R.string.action_ask), tint = Pc.Accent, modifier = Modifier.size(20.dp))
+                Icon(Icons.Outlined.QuestionAnswer, stringResource(R.string.action_ask), tint = Pc.Accent, modifier = Modifier.size(20.dp))
                 if (wide) { Spacer(Modifier.width(PcSpace.xs)); Text(stringResource(R.string.action_ask), style = PcType.LabelStrong, color = Pc.Accent) }
             }
         }

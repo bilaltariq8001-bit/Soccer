@@ -1,9 +1,7 @@
 package com.innovativeinside.pitchside.data
 
-import com.innovativeinside.pitchside.data.insight.MatchBrief
-import com.innovativeinside.pitchside.data.model.EventKind
+import com.innovativeinside.pitchside.data.model.FormText
 import com.innovativeinside.pitchside.data.model.Match
-import com.innovativeinside.pitchside.data.model.MatchEvent
 import com.innovativeinside.pitchside.data.model.StandingRow
 import com.innovativeinside.pitchside.data.model.Status
 import com.innovativeinside.pitchside.data.model.Team
@@ -22,7 +20,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Real-data enrichment: images, squad-based lineup shapes, season stats from events, briefs and Home picks. */
+/** Real-data enrichment: images, squad-based lineup shapes, season stats from events, form and Home picks. */
 class RichDataTest {
 
     private fun obj(s: String) = Json.parseToJsonElement(s) as JsonObject
@@ -97,18 +95,12 @@ class RichDataTest {
         assertEquals(listOf("Corners", "Red cards"), ApiFootballParse.stats(rows).map { it.label })
     }
 
-    @Test fun briefIsWrittenFromRealDataOnly() {
-        val table = listOf(row(1, a, 20, "WWWDW"), row(5, b, 12, "LLDLW"))
-        val up = match("m", a, b, Status.Upcoming, 1_000, probs = WinProbability(60, 25, 15))
-        val brief = MatchBrief.of(up, table)
-        assertTrue(brief, brief.startsWith("Asante (1st, 20 pts) host Bechem (5th, 12 pts)."))
-        assertTrue(brief, "favourites at 60%" in brief)
+    @Test fun formAndOrdinalsFromRealResults() {
         val done = match("f", a, b, Status.Finished, 1_000, 2, 0)
-        val recap = MatchBrief.of(done, table, events = listOf(MatchEvent(10, null, true, EventKind.Goal, "Kofi", ""), MatchEvent(70, null, true, EventKind.Goal, "Kofi", "")))
-        assertTrue(recap, recap.startsWith("Asante beat Bechem 2–0. Kofi scored twice."))
-        // Nothing to say: no filler.
-        assertEquals("", MatchBrief.of(match("x", c, d, Status.Upcoming, 1_000)))
-        assertEquals("WL", MatchBrief.formFrom("a", listOf(done, match("g", b, a, Status.Finished, 2_000, 3, 1))))
+        assertEquals("WL", FormText.formFrom("a", listOf(done, match("g", b, a, Status.Finished, 2_000, 3, 1))))
+        // Upcoming games carry no result.
+        assertEquals("", FormText.formFrom("c", listOf(match("x", c, d, Status.Upcoming, 1_000))))
+        assertEquals(listOf("1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "102nd"), listOf(1, 2, 3, 4, 11, 12, 13, 21, 102).map(FormText::ordinal))
     }
 
     @Test fun spotlightPrefersFollowedThenBiggestGame() {

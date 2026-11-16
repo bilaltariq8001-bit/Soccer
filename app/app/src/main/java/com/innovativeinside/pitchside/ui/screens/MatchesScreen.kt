@@ -82,10 +82,11 @@ fun MatchesRoute(openMatch: (String) -> Unit, openLeague: (String) -> Unit, open
     val myTeams by vm.myTeamsOnly.collectAsStateWithLifecycle()
     val refreshing by vm.refreshing.collectAsStateWithLifecycle()
     val refreshError by vm.refreshError.collectAsStateWithLifecycle()
+    val nextMatchDay by vm.nextMatchDay.collectAsStateWithLifecycle()
     var applied by rememberSaveable { mutableStateOf(false) }
     if (!applied && initialFilter != null) { vm.setFilter(initialFilter); applied = true }
     RefreshScreen(refreshing, vm::refresh, refreshError, vm::dismissRefreshError) {
-        MatchesContent(state, date, vm.today, filter, vm::selectDate, vm::setFilter, vm::retry, openMatch, openLeague, openSearch, myTeams, vm::setMyTeamsOnly)
+        MatchesContent(state, date, vm.today, filter, vm::selectDate, vm::setFilter, vm::retry, openMatch, openLeague, openSearch, myTeams, vm::setMyTeamsOnly, nextMatchDay)
     }
 }
 
@@ -106,6 +107,7 @@ fun MatchesContent(
     openSearch: () -> Unit,
     myTeams: Boolean = false,
     onMyTeams: (Boolean) -> Unit = {},
+    nextMatchDay: LocalDate? = null,
 ) {
     val app = LocalApp.current
     val prefs = LocalPrefs.current
@@ -120,21 +122,24 @@ fun MatchesContent(
         val all = (state as? UiState.Success)?.data.orEmpty()
         val comps = competitionsOf(all, prefs.leagues)
         val selectedComp = competition?.takeIf { id -> comps.any { it.first == id } }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            Chip("My teams", myTeams, { onMyTeams(!myTeams) }, leading = Icons.Outlined.Star)
-            Chip("All", selectedComp == null, { app.setCompetition(null) })
-            comps.forEach { (id, name) -> Chip(name, selectedComp == id, { app.setCompetition(id) }) }
-        }
         val byComp = filterByCompetition(all, selectedComp).let { if (myTeams) filterMatches(it, MatchFilter.MyTeams, prefs.teams, prefs.leagues) else it }
-        val counts = segmentFilters.associateWith { f -> filterMatches(byComp, f, prefs.teams, prefs.leagues).size }
         val segIndex = segmentFilters.indexOf(filter).coerceAtLeast(0)
-        SegmentedControl(
-            listOf(Segment("All", counts[MatchFilter.All]), Segment("Live", counts[MatchFilter.Live], live = true), Segment("Upcoming", counts[MatchFilter.Upcoming]), Segment("Finished", counts[MatchFilter.Finished])),
-            segIndex, { onFilter(segmentFilters[it]) },
-        )
+        // Filters and counts only make sense over a loaded day: no "All 0 / Live 0" while loading, failed or empty.
+        if (state is UiState.Success) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+                Chip("My teams", myTeams, { onMyTeams(!myTeams) }, leading = Icons.Outlined.Star)
+                Chip("All", selectedComp == null, { app.setCompetition(null) })
+                comps.forEach { (id, name) -> Chip(name, selectedComp == id, { app.setCompetition(id) }) }
+            }
+            val counts = segmentFilters.associateWith { f -> filterMatches(byComp, f, prefs.teams, prefs.leagues).size }
+            SegmentedControl(
+                listOf(Segment("All", counts[MatchFilter.All]), Segment("Live", counts[MatchFilter.Live], live = true), Segment("Upcoming", counts[MatchFilter.Upcoming]), Segment("Finished", counts[MatchFilter.Finished])),
+                segIndex, { onFilter(segmentFilters[it]) },
+            )
+        }
         StateContent(
             state, onRetry,
-            empty = { EmptyState("No matches on ${dayLabel(date, today)}", "Try another day, or browse a league's fixtures.", actionLabel = if (date != today) "Go to today" else null, onAction = { onDate(today) }, icon = Icons.Outlined.EventBusy) },
+            empty = { NoMatchesState(date, today, nextMatchDay, onDate) },
         ) { _ ->
             val shown = filterMatches(byComp, segmentFilters[segIndex], prefs.teams, prefs.leagues)
             Column(verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
@@ -176,6 +181,25 @@ fun MatchesContent(
         }
     }
 }
+
+/** Designed empty day: names the day, and offers the next day that has matches (or today) as one tap. */
+@Composable
+private fun NoMatchesState(date: LocalDate, today: LocalDate, next: LocalDate?, onDate: (LocalDate) -> Unit) {
+    val (label, target) = when {
+        next != null -> "Jump to ${shortDay(next)}" to next
+        date != today -> "Go to today" to today
+        else -> null to null
+    }
+    EmptyState(
+        noMatchesTitle(date),
+        if (next != null) "The next matches in your competitions are on ${shortDay(next)}." else "Try another day, or browse a league's fixtures.",
+        actionLabel = label, onAction = { target?.let(onDate) }, icon = Icons.Outlined.EventBusy,
+    )
+}
+
+/** "Sun 15 Nov": the day as people say it. */
+fun shortDay(d: LocalDate): String = d.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
+fun noMatchesTitle(d: LocalDate): String = "No matches on ${shortDay(d)}"
 
 /** One line of the day in numbers: matches, competitions, goals so far and how many are live. */
 @Composable
@@ -244,5 +268,5 @@ private fun MatchesPreview() = PreviewHost(dark = false) {
 @Preview(name = "Matches · empty · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0C0F0D)
 @Composable
 private fun MatchesEmptyPreview() = PreviewHost(dark = true) {
-    Column { MatchesContent(UiState.Empty, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 11, 12), MatchFilter.All, {}, {}, {}, {}, {}, {}) }
+    Column { MatchesContent(UiState.Empty, LocalDate.of(2026, 11, 15), LocalDate.of(2026, 11, 15), MatchFilter.All, {}, {}, {}, {}, {}, {}, nextMatchDay = LocalDate.of(2026, 11, 21)) }
 }

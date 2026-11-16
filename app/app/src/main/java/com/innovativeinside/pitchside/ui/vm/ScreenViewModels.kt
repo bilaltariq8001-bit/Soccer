@@ -14,7 +14,6 @@ import com.innovativeinside.pitchside.data.model.StandingRow
 import com.innovativeinside.pitchside.data.model.Status
 import com.innovativeinside.pitchside.data.model.Team
 import com.innovativeinside.pitchside.data.repository.FootballRepository
-import com.innovativeinside.pitchside.data.insight.MatchBrief
 import com.innovativeinside.pitchside.data.repository.LeagueDetail
 import com.innovativeinside.pitchside.data.repository.MatchDetail
 import com.innovativeinside.pitchside.data.repository.TeamPage
@@ -116,8 +115,7 @@ class HomeViewModel(
         matches.await().map { raw ->
             val detail = table.await()
             val t = tables.await()
-            fun brief(x: Match) = if (x.brief.isNotBlank()) x else x.copy(brief = MatchBrief.of(x, t[x.leagueId].orEmpty()))
-            val m = raw.map(::brief)
+            val m = raw
             HomeData(
                 matches = m,
                 news = news.await().getOrNull()?.items.orEmpty().take(3),
@@ -125,7 +123,7 @@ class HomeViewModel(
                 leagues = leagues.await().getOrDefault(emptyList()),
                 tableLeague = detail?.league,
                 scorers = detail?.scorers.orEmpty(),
-                upcoming = (m + ahead.flatMap { it.await() }.map(::brief)).filter { it.status == Status.Upcoming }.distinctBy { it.id }.sortedBy { it.kickoffMs },
+                upcoming = (m + ahead.flatMap { it.await() }).filter { it.status == Status.Upcoming }.distinctBy { it.id }.sortedBy { it.kickoffMs },
                 tables = t,
             )
         }
@@ -217,6 +215,18 @@ fun groupByLeague(list: List<Match>, followedLeagues: Collection<String>): List<
         .sortedWith(compareBy<Pair<String, List<Match>>> { (_, ms) -> if (ms.first().leagueId in followedLeagues) 0 else 1 }.thenBy { it.first })
         .map { (name, ms) -> name to ms.sortedBy { it.kickoffMs } }
 
+/**
+ * The first day after [from] (up to [maxDays] ahead) that has at least one match, or null. Days that fail to load are
+ * skipped; stops at the first hit so it costs as few calls as possible.
+ */
+suspend fun findNextMatchDay(from: LocalDate, maxDays: Int, matchesOn: suspend (LocalDate) -> Result<List<Match>>): LocalDate? {
+    for (i in 1..maxDays) {
+        val d = from.plusDays(i.toLong())
+        if (matchesOn(d).getOrNull()?.isNotEmpty() == true) return d
+    }
+    return null
+}
+
 class MatchesViewModel(
     private val repo: FootballRepository,
     liveUpdates: kotlinx.coroutines.flow.Flow<Set<String>> = kotlinx.coroutines.flow.emptyFlow(),
@@ -229,6 +239,10 @@ class MatchesViewModel(
     private val _myTeams = MutableStateFlow(false)
     /** "My teams" chip: followed teams and leagues only, combined with the status segment. */
     val myTeamsOnly: StateFlow<Boolean> = _myTeams.asStateFlow()
+    private val _nextMatchDay = MutableStateFlow<LocalDate?>(null)
+    /** When the picked day has no matches: the next day (within [NEXT_DAY_LOOKAHEAD] days) that has some, else null. */
+    val nextMatchDay: StateFlow<LocalDate?> = _nextMatchDay.asStateFlow()
+    private var nextJob: kotlinx.coroutines.Job? = null
 
     val today: LocalDate get() = todayFn()
 
@@ -237,14 +251,27 @@ class MatchesViewModel(
         reloadOn(liveUpdates) { list, ids -> list.any { it.id in ids } }
     }
 
-    fun selectDate(d: LocalDate) { if (d != _date.value) { _date.value = d; load() } }
+    fun selectDate(d: LocalDate) { if (d != _date.value) { nextJob?.cancel(); _nextMatchDay.value = null; _date.value = d; load() } }
+
+    override fun onLoaded(state: com.innovativeinside.pitchside.core.UiState<List<Match>>) {
+        nextJob?.cancel()
+        _nextMatchDay.value = null
+        if (state !is com.innovativeinside.pitchside.core.UiState.Empty) return
+        val from = _date.value
+        nextJob = viewModelScope.launch {
+            _nextMatchDay.value = boundedFetch { Result.success(findNextMatchDay(from, NEXT_DAY_LOOKAHEAD) { d -> repo.matchesOn(d) }) }.getOrNull()
+        }
+    }
     fun setFilter(f: MatchFilter) { if (f == MatchFilter.MyTeams) _myTeams.value = true else _filter.value = f }
     fun setMyTeamsOnly(on: Boolean) { _myTeams.value = on }
 
     override suspend fun fetch(refresh: Boolean) = repo.matchesOn(_date.value, refresh)
     override fun pollIntervalMs(data: List<Match>) = if (data.any { it.status == Status.Live }) LIVE_POLL_MS else null
 
-    companion object { val Factory = containerFactory { c, _ -> MatchesViewModel(c.football, c.liveUpdates) { c.clock.today() } } }
+    companion object {
+        const val NEXT_DAY_LOOKAHEAD = 7
+        val Factory = containerFactory { c, _ -> MatchesViewModel(c.football, c.liveUpdates) { c.clock.today() } }
+    }
 }
 
 // ---------------- Match detail ----------------
@@ -297,7 +324,7 @@ class LeaguesViewModel(private val repo: FootballRepository, private val followe
         detailJob?.cancel()
         if (_detail.value !is com.innovativeinside.pitchside.core.UiState.Success || refresh.not()) _detail.value = com.innovativeinside.pitchside.core.UiState.Loading
         detailJob = viewModelScope.launch {
-            _detail.value = repo.leagueDetail(id, refresh).fold(
+            _detail.value = boundedFetch { repo.leagueDetail(id, refresh) }.fold(
                 { com.innovativeinside.pitchside.core.UiState.Success(it) },
                 { com.innovativeinside.pitchside.core.UiState.Error(AppError.from(it)) },
             )
@@ -392,7 +419,7 @@ data class BuildStep(val label: String, val state: StepState = StepState.Waiting
 
 class BuildHomeViewModel(private val c: AppContainer) : androidx.lifecycle.ViewModel() {
     private val _steps = MutableStateFlow(
-        listOf(BuildStep("Saving your choices"), BuildStep("Loading today's fixtures"), BuildStep("Loading leagues and tables"), BuildStep("Preparing your Match Briefs")),
+        listOf(BuildStep("Saving your choices"), BuildStep("Loading today's fixtures"), BuildStep("Loading leagues and tables"), BuildStep("Checking live matches")),
     )
     val steps: StateFlow<List<BuildStep>> = _steps.asStateFlow()
     private val _finished = MutableStateFlow(false)
@@ -418,6 +445,7 @@ class BuildHomeViewModel(private val c: AppContainer) : androidx.lifecycle.ViewM
 
     private suspend fun run(i: Int, work: suspend () -> Boolean) {
         set(i, StepState.Running)
+        // Each repository call is time-limited in the data layer, so a slow network cannot leave a step running forever.
         val ok = runCatching { work() }.getOrDefault(false)
         // Offline is fine: the step is skipped and the data loads when the app opens.
         set(i, if (ok) StepState.Done else StepState.Skipped)

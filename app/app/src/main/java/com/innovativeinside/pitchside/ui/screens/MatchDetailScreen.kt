@@ -84,7 +84,6 @@ import com.innovativeinside.pitchside.ui.LocalApp
 import com.innovativeinside.pitchside.ui.LocalPrefs
 import com.innovativeinside.pitchside.ui.components.BackButton
 import com.innovativeinside.pitchside.ui.components.BentoTile
-import com.innovativeinside.pitchside.ui.components.BriefCard
 import com.innovativeinside.pitchside.ui.components.CrestSize
 import com.innovativeinside.pitchside.ui.components.DetailSkeleton
 import com.innovativeinside.pitchside.ui.components.EmptyState
@@ -93,7 +92,7 @@ import com.innovativeinside.pitchside.ui.components.FormChip
 import com.innovativeinside.pitchside.ui.components.StandingsHeader
 import com.innovativeinside.pitchside.ui.components.StandingsRow
 import com.innovativeinside.pitchside.ui.components.PlayerAvatar
-import com.innovativeinside.pitchside.data.insight.MatchBrief
+import com.innovativeinside.pitchside.data.model.FormText
 import com.innovativeinside.pitchside.ui.components.Hairline
 import com.innovativeinside.pitchside.ui.components.IconAction
 import com.innovativeinside.pitchside.ui.components.LiveBadge
@@ -292,19 +291,14 @@ private fun RowScope.HeaderTeam(team: Team, onClick: () -> Unit) {
 private fun SpoilerGate(what: String, onReveal: () -> Unit) =
     EmptyState("$what hidden by Spoiler Shield", "Reveal the score to see it. Your other shielded matches stay hidden.", actionLabel = "Reveal score", onAction = onReveal)
 
-/** Overview bento: AI brief, key events, key stats, form, and match facts. */
+/** Overview bento: key events, key stats, form, and match facts. */
 @Composable
 private fun OverviewTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, onReveal: () -> Unit) {
     val m = d.match
     if (hidden) { SpoilerGate("Match overview", onReveal); return }
-    if (m.brief.isNotBlank()) BriefCard(
-        m.brief,
-        title = when (m.status) { Status.Live -> "Match insight · live"; Status.Finished -> "Match insight · recap"; else -> "Match insight · preview" },
-        updated = if (m.status == Status.Live) "Updates every 30 s" else "",
-    )
     val key = d.events.filter { it.kind == EventKind.Goal || it.kind == EventKind.RedCard }
-    val homeForm = d.table.firstOrNull { it.team.id == m.home.id }?.form.orEmpty().ifBlank { MatchBrief.formFrom(m.home.id, d.homeRecent) }
-    val awayForm = d.table.firstOrNull { it.team.id == m.away.id }?.form.orEmpty().ifBlank { MatchBrief.formFrom(m.away.id, d.awayRecent) }
+    val homeForm = d.table.firstOrNull { it.team.id == m.home.id }?.form.orEmpty().ifBlank { FormText.formFrom(m.home.id, d.homeRecent) }
+    val awayForm = d.table.firstOrNull { it.team.id == m.away.id }?.form.orEmpty().ifBlank { FormText.formFrom(m.away.id, d.awayRecent) }
     val showForm = homeForm.isNotBlank() || awayForm.isNotBlank()
     if (key.isNotEmpty() || showForm) Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         if (key.isNotEmpty()) BentoTile("Key events", Modifier.weight(1f).fillMaxHeight()) {
@@ -361,7 +355,7 @@ private fun TableSpotTile(d: MatchDetail, modifier: Modifier) {
         listOf(m.home, m.away).forEach { t ->
             val r = d.table.firstOrNull { it.team.id == t.id }
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(r?.let { MatchBrief.ordinal(it.rank) } ?: "–", style = PcType.ScoreRow)
+                Text(r?.let { FormText.ordinal(it.rank) } ?: "–", style = PcType.ScoreRow)
                 Text(r?.let { "${it.points} pts" } ?: t.short, style = PcType.Caption, modifier = Modifier.padding(bottom = 2.dp))
             }
             Text(t.name, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)

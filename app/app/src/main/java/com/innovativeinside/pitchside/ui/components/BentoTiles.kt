@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.NotificationsNone
 import androidx.compose.material.icons.outlined.Person
@@ -221,34 +220,13 @@ fun PlayerStatTile(scorer: Scorer, onClick: () -> Unit, modifier: Modifier = Mod
     }
 }
 
-// ---------------- AI insight ----------------
-
-/** Insight text from Match.brief. No probability or confidence ring: no such data exists. */
+/** Full-width titled note (player season snapshot and profile). */
 @Composable
-fun AiInsightTile(text: String, context: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    BentoTile("Match insight", modifier, onClick, description = "Match insight about $context: $text") {
-        Box(Modifier.size(28.dp).clip(CircleShape).background(Pc.AccentContainer), contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Accent, modifier = Modifier.size(16.dp))
-        }
-        Text(text, style = PcType.Label, maxLines = 4, overflow = TextOverflow.Ellipsis)
-        Text(context, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** Full-width brief (match detail, player scouting note). */
-@Composable
-fun BriefCard(text: String, modifier: Modifier = Modifier, title: String = "MATCH BRIEF", updated: String = "", compactMeta: Boolean = false) {
+fun NoteCard(text: String, modifier: Modifier = Modifier, title: String) {
     PcCard(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                Box(Modifier.size(24.dp).clip(CircleShape).background(Pc.AccentContainer), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.AutoAwesome, null, tint = Pc.Accent, modifier = Modifier.size(14.dp))
-                }
-                Overline(title, Modifier.weight(1f))
-                if (updated.isNotBlank()) Text(updated, style = PcType.Caption)
-            }
+            Overline(title)
             Text(text, style = PcType.Body)
-            if (!compactMeta) Text("Written from table, form, prediction and match data", style = PcType.Caption)
         }
     }
 }
@@ -265,7 +243,6 @@ private fun BentoPreview() = PreviewHost(dark = false) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
             PlayerStatTile(Scorer(1, "p1", "Leo Marsh", PreviewData.live.home, 18, 4), {}, Modifier.weight(1f))
-            AiInsightTile(PreviewData.live.brief, "Northgate v Riverside", {}, Modifier.weight(1f))
         }
         PcCard { Column { StandingsHeader(showForm = true); PreviewData.table.forEach { StandingsRow(it, {}, showForm = true, followed = it.team.id == "ng") } } }
     }
