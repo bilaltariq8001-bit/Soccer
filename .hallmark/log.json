@@ -1,0 +1,44 @@
+[
+ {
+  "date": "2026-11-12",
+  "mode": "redesign",
+  "depth": "full",
+  "scope": "app",
+  "theme": "Pitchside existing brand",
+  "prompt": "Polish the full Pitchside football scores app UI while preserving every route and handler",
+  "signature": "live match scores with a short Match Brief",
+  "shape": "native app screen",
+  "hero": "none; home screen leads with live scores",
+  "nav": "existing bottom navigation and adaptive side rail",
+  "footer": "none; native app shell",
+  "imagery": "text-first match and news content; no new images",
+  "entry": "existing Home route",
+  "fingerprint": "Pitchside navy, lime signal, Manrope copy and Barlow score numerals",
+  "sections": [
+   "onboarding",
+   "home",
+   "matches",
+   "leagues",
+   "news",
+   "favorites",
+   "match detail",
+   "player",
+   "search",
+   "Ask",
+   "paywall",
+   "settings"
+  ],
+  "photos": [],
+  "waived": [],
+  "files": [
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/theme/Theme.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/components/Components.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/ScreenBase.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/HomeScreen.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/MatchScreens.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/ContentScreens.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/UserScreens.kt",
+   "app/app/src/main/java/com/innovativeinside/pitchside/ui/screens/Onboarding.kt"
+  ]
+ }
+]
