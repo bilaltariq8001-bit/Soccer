@@ -14,8 +14,8 @@ android {
         applicationId = "com.innovativeinside.pitchside"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.4.0"
+        versionCode = 6
+        versionName = "0.4.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Base URL of the Pitchside REST gateway (see API_CONTRACTS.md). Empty means the app runs on the

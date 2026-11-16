@@ -49,14 +49,12 @@ import com.innovativeinside.pitchside.data.model.NewsEdition
 import com.innovativeinside.pitchside.data.model.NewsItem
 import com.innovativeinside.pitchside.ui.components.AppTopBar
 import com.innovativeinside.pitchside.ui.components.BackButton
-import com.innovativeinside.pitchside.ui.components.BannerKind
 import com.innovativeinside.pitchside.ui.components.DetailSkeleton
 import com.innovativeinside.pitchside.ui.components.EmptyState
 import com.innovativeinside.pitchside.ui.components.ErrorState
 import com.innovativeinside.pitchside.ui.components.FilterChipRow
 import com.innovativeinside.pitchside.ui.components.Hairline
 import com.innovativeinside.pitchside.ui.components.IconAction
-import com.innovativeinside.pitchside.ui.components.InfoBanner
 import com.innovativeinside.pitchside.ui.components.NewsCardCompact
 import com.innovativeinside.pitchside.ui.components.NewsCardLead
 import com.innovativeinside.pitchside.ui.components.NewsImage
@@ -75,7 +73,6 @@ import com.innovativeinside.pitchside.ui.vm.ArticleViewModel
 import com.innovativeinside.pitchside.ui.vm.NewsState
 import com.innovativeinside.pitchside.ui.vm.NewsViewModel
 
-private const val STALE_MS = 7L * 24 * 60 * 60 * 1000
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,10 +109,6 @@ fun NewsContent(s: NewsState, onEdition: (NewsEdition?) -> Unit, onRetry: () -> 
                     )
                 }
                 else -> {
-                    val newest = s.items.maxOf { it.publishedMs }
-                    if (System.currentTimeMillis() - newest > STALE_MS) item(key = "stale") {
-                        InfoBanner("Latest story in this feed: ${newsDate(newest)}. 90min updates these editions irregularly.", BannerKind.Info, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xxs))
-                    }
                     val lead = s.items.first()
                     item(key = "lead-${lead.id}") { NewsCardLead(lead, { openArticle(lead.id) }, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs)) }
                     itemsIndexed(s.items.drop(1), key = { _, n -> n.id }) { i, n ->
