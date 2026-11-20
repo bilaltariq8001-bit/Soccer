@@ -246,8 +246,8 @@ fun ScoreText(home: Int?, away: Int?, modifier: Modifier = Modifier, style: Text
 
 /** The design-system name for the big animated score. */
 @Composable
-fun ScoreHero(home: Int?, away: Int?, modifier: Modifier = Modifier, color: Color = Pc.OnHero) =
-    ScoreText(home, away, modifier, PcType.ScoreDisplay, color, flashKey = "$home-$away", flashColor = Pc.HeroAccent)
+fun ScoreHero(home: Int?, away: Int?, modifier: Modifier = Modifier, color: Color = Pc.OnHero, style: androidx.compose.ui.text.TextStyle = PcType.ScoreDisplay) =
+    ScoreText(home, away, modifier, style, color, flashKey = "$home-$away", flashColor = Pc.HeroAccent)
 
 /** Single number score for rows (keeps the old signature). */
 @Composable
@@ -275,14 +275,22 @@ fun LiveMatchTile(
     onMenu: (() -> Unit)? = null,
     /** Spoken summary; defaults to "Featured match: <match>". */
     description: String? = null,
+    /**
+     * Compact layout for short screens (Home fits one viewport): smaller crests and score, one-line names, the
+     * competition as a one-line label in the top row and no stats strip.
+     */
+    compact: Boolean = false,
     footer: @Composable ColumnScope.() -> Unit = {},
 ) {
     val spoken = description ?: ("Featured match: " + matchDescription(match, hidden))
     GlowCard(modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = spoken }, onClick = onClick) {
-        Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+        Column(
+            Modifier.padding(horizontal = PcSpace.md, vertical = if (compact) PcSpace.xs else PcSpace.md),
+            verticalArrangement = Arrangement.spacedBy(if (compact) PcSpace.xxs else PcSpace.sm),
+        ) {
             // Status left, competition centred, menu right. Equal side weights keep the mark centred; with a large
             // font the mark moves to its own line so nothing overlaps.
-            val roomy = androidx.compose.ui.platform.LocalDensity.current.fontScale <= 1.15f
+            val roomy = !compact && androidx.compose.ui.platform.LocalDensity.current.fontScale <= 1.15f
             Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     when (match.status) {
@@ -292,6 +300,11 @@ fun LiveMatchTile(
                     }
                 }
                 if (roomy) CompetitionMark(match, Modifier.widthIn(max = 116.dp))
+                else if (compact) Text(
+                    match.leagueName.uppercase(), style = PcType.Overline.copy(fontSize = 11.sp, lineHeight = 13.sp), color = Pc.OnHero2,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                    modifier = Modifier.widthIn(max = 140.dp).clearAndSetSemantics {},
+                )
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     if (onMenu != null) Box(
                         Modifier.size(PcSpace.touch).pcClickable(PcShape.Control, "More options for this match", onClick = onMenu),
@@ -303,10 +316,10 @@ fun LiveMatchTile(
                     }
                 }
             }
-            if (!roomy) CompetitionMark(match, Modifier.fillMaxWidth())
+            if (!roomy && !compact) CompetitionMark(match, Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                HeroTeam(match.home)
-                Box(Modifier.widthIn(min = 104.dp), contentAlignment = Alignment.Center) {
+                HeroTeam(match.home, compact)
+                Box(Modifier.widthIn(min = if (compact) 96.dp else 104.dp), contentAlignment = Alignment.Center) {
                     if (hidden) {
                         Box(
                             Modifier.heightIn(min = PcSpace.touch).pcClickable(PcShape.Chip, "Reveal score", onClick = onReveal).background(Pc.HeroRaised).padding(horizontal = PcSpace.md),
@@ -318,14 +331,14 @@ fun LiveMatchTile(
                             }
                         }
                     } else if (match.hasScore) {
-                        ScoreHero(match.homeScore, match.awayScore)
+                        ScoreHero(match.homeScore, match.awayScore, style = if (compact) PcType.ScoreDisplay.copy(fontSize = 44.sp, lineHeight = 46.sp) else PcType.ScoreDisplay)
                     } else {
-                        Text(match.label, style = PcType.ScoreCompact.copy(fontSize = 40.sp, lineHeight = 42.sp), color = Pc.OnHero, maxLines = 1)
+                        Text(match.label, style = PcType.ScoreCompact.copy(fontSize = if (compact) 32.sp else 40.sp, lineHeight = if (compact) 34.sp else 42.sp), color = Pc.OnHero, maxLines = 1)
                     }
                 }
-                HeroTeam(match.away)
+                HeroTeam(match.away, compact)
             }
-            val strip = if (hidden) emptyList() else stats.filter { it.label == "Possession" || it.label == "Shots" }
+            val strip = if (hidden || compact) emptyList() else stats.filter { it.label == "Possession" || it.label == "Shots" }
             if (strip.isNotEmpty()) {
                 Hairline(color = Pc.OnHero.copy(alpha = 0.10f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.lg, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
@@ -354,10 +367,13 @@ private fun CompetitionMark(match: Match, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun RowScope.HeroTeam(team: Team) {
-    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-        TeamCrest(team, CrestSize.XL.dp, onHero = true)
-        Text(team.name.uppercase(), style = PcType.TeamName, color = Pc.OnHero, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+private fun RowScope.HeroTeam(team: Team, compact: Boolean = false) {
+    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (compact) PcSpace.xxs else PcSpace.xs)) {
+        TeamCrest(team, if (compact) 40.dp else CrestSize.XL.dp, onHero = true)
+        Text(
+            team.name.uppercase(), style = if (compact) PcType.TeamNameSmall else PcType.TeamName, color = Pc.OnHero,
+            maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -550,29 +566,35 @@ fun HighlightRow(
  * crest; uppercase names underneath.
  */
 @Composable
-fun MatchCardCompact(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    PcCard(modifier.width(232.dp).semantics(mergeDescendants = true) { contentDescription = match.leagueName + ", " + matchDescription(match, hidden) }, onClick = onClick) {
-        Column(Modifier.padding(horizontal = PcSpace.sm, vertical = PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+fun MatchCardCompact(match: Match, hidden: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, dense: Boolean = false) {
+    // [dense]: the Home rail on a single-viewport screen; smaller crests and score, same reading order.
+    val crest = if (dense) 34.dp else 44.dp
+    val score = if (dense) PcType.ScoreCompact.copy(fontSize = 24.sp, lineHeight = 26.sp) else PcType.ScoreCompact
+    PcCard(modifier.width(if (dense) 208.dp else 232.dp).semantics(mergeDescendants = true) { contentDescription = match.leagueName + ", " + matchDescription(match, hidden) }, onClick = onClick) {
+        Column(
+            Modifier.padding(horizontal = PcSpace.sm, vertical = if (dense) PcSpace.sm else PcSpace.md),
+            verticalArrangement = Arrangement.spacedBy(if (dense) PcSpace.xs else PcSpace.sm),
+        ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { TeamCrest(match.home, 44.dp) }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { TeamCrest(match.home, crest) }
                 Column(Modifier.widthIn(min = 76.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     val logo = match.leagueLogo
-                    if (logo != null) RemoteImage(logo, { Box(Modifier.fillMaxSize()) }, Modifier.size(22.dp), ContentScale.Fit)
+                    if (logo != null) RemoteImage(logo, { Box(Modifier.fillMaxSize()) }, Modifier.size(if (dense) 18.dp else 22.dp), ContentScale.Fit)
                     else Text(match.leagueName.uppercase(), style = PcType.Overline.copy(fontSize = 10.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 76.dp))
                     when (match.status) {
-                        Status.Upcoming -> Text(match.label, style = PcType.ScoreCompact, maxLines = 1)
+                        Status.Upcoming -> Text(match.label, style = score, maxLines = 1)
                         Status.Live -> {
-                            if (match.hasScore && !hidden) Text("${match.homeScore} – ${match.awayScore}", style = PcType.ScoreCompact, maxLines = 1)
+                            if (match.hasScore && !hidden) Text("${match.homeScore} – ${match.awayScore}", style = score, maxLines = 1)
                             LiveBadge(match.label, compact = true)
                         }
                         Status.Finished -> {
-                            Text(if (match.hasScore && !hidden) "${match.homeScore} – ${match.awayScore}" else "FT", style = PcType.ScoreCompact, maxLines = 1)
-                            if (match.hasScore && !hidden) Text("FT", style = PcType.Overline)
+                            Text(if (match.hasScore && !hidden) "${match.homeScore} – ${match.awayScore}" else "FT", style = score, maxLines = 1)
+                            if (match.hasScore && !hidden && !dense) Text("FT", style = PcType.Overline)
                         }
-                        Status.Postponed -> Text("PPD", style = PcType.ScoreCompact, color = Pc.Warning, maxLines = 1)
+                        Status.Postponed -> Text("PPD", style = score, color = Pc.Warning, maxLines = 1)
                     }
                 }
-                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { TeamCrest(match.away, 44.dp) }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { TeamCrest(match.away, crest) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
                 Text(match.home.name.uppercase(), style = PcType.TeamNameSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))

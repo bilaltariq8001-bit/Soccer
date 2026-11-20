@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.aspectRatio
@@ -54,6 +55,8 @@ fun <T> StateContent(
     modifier: Modifier = Modifier,
     loading: @Composable () -> Unit = { ListSkeleton() },
     empty: @Composable () -> Unit = { EmptyState(stringResource(R.string.state_empty_title), stringResource(R.string.state_empty_body)) },
+    /** Fill the given height (single-viewport screens): content gets the full box, error and empty cards are centred. */
+    fill: Boolean = false,
     content: @Composable (T) -> Unit,
 ) {
     // A Column, not a Box: screen bodies emit several siblings (header, tabs, sections) and a Box
@@ -71,7 +74,14 @@ fun <T> StateContent(
         label = "state",
         modifier = modifier,
     ) { s ->
-        Column {
+        if (fill) Box(Modifier.fillMaxSize()) {
+            when (s) {
+                UiState.Loading -> Box(Modifier.fillMaxSize().testTag("state_loading")) { loading() }
+                UiState.Empty -> Box(Modifier.fillMaxSize().testTag("state_empty"), contentAlignment = Alignment.Center) { empty() }
+                is UiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { ErrorState(s.error, onRetry, Modifier.testTag("state_error")) }
+                is UiState.Success -> content(s.data)
+            }
+        } else Column {
             when (s) {
                 UiState.Loading -> Box(Modifier.testTag("state_loading")) { loading() }
                 UiState.Empty -> Box(Modifier.testTag("state_empty")) { empty() }
@@ -147,16 +157,25 @@ fun ListSkeleton(rows: Int = 4, modifier: Modifier = Modifier) {
     }
 }
 
-/** Skeleton that mirrors the Home layout: live hero, top-match cards, highlights list, mini standings and news. */
+/**
+ * Skeleton that mirrors the single-viewport Home: live hero, the top-matches rail and the today list, which takes
+ * whatever height is left. Never taller than the box it is given.
+ */
 @Composable
 fun HomeSkeleton(modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().semantics { contentDescription = "Loading" }, verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
-        Box(Modifier.fillMaxWidth(0.45f).height(24.dp).skeleton())
-        Box(Modifier.fillMaxWidth().height(250.dp).skeleton(PcShape.Hero))
-        Box(Modifier.fillMaxWidth(0.4f).height(24.dp).skeleton())
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) { repeat(2) { Box(Modifier.weight(1f).height(120.dp).skeleton(PcShape.Tile)) } }
-        Box(Modifier.fillMaxWidth().height(180.dp).skeleton(PcShape.Tile))
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) { repeat(2) { Box(Modifier.weight(1f).height(170.dp).skeleton(PcShape.Tile)) } }
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().semantics { contentDescription = "Loading" }) {
+        val hero = (maxHeight * 0.36f).coerceIn(120.dp, 230.dp)
+        val showRail = maxHeight >= 460.dp
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+            Box(Modifier.fillMaxWidth(0.45f).height(22.dp).skeleton())
+            Box(Modifier.fillMaxWidth().height(hero).skeleton(PcShape.Hero))
+            if (showRail) {
+                Box(Modifier.fillMaxWidth(0.4f).height(22.dp).skeleton())
+                Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) { repeat(2) { Box(Modifier.weight(1f).height(96.dp).skeleton(PcShape.Tile)) } }
+            }
+            Box(Modifier.fillMaxWidth().height(44.dp).skeleton(PcShape.Chip))
+            Box(Modifier.fillMaxWidth().weight(1f).skeleton(PcShape.Tile))
+        }
     }
 }
 

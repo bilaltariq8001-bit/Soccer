@@ -2,10 +2,6 @@ package com.innovativeinside.pitchside.ui.screens
 
 import com.innovativeinside.pitchside.ui.components.glowBackground
 import com.innovativeinside.pitchside.ui.components.ZoneLegend
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.provider.CalendarContract
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -106,7 +102,7 @@ fun Screen(
         val col = Modifier.widthIn(max = maxWidth.dp).fillMaxSize()
         Column(if (scroll) col.verticalScroll(scrollState) else col) {
             content()
-            Spacer(Modifier.height(PcSpace.lg))
+            if (scroll) Spacer(Modifier.height(PcSpace.lg))
         }
     }
 }
@@ -121,14 +117,40 @@ fun RefreshScreen(
     onDismissError: () -> Unit,
     maxWidth: Int = 720,
     scrollState: ScrollState = rememberScrollState(),
+    /**
+     * Fit the content to exactly one viewport instead of scrolling (Home). The content column gets the viewport's
+     * height, so children can use weights; pull-to-refresh still works.
+     */
+    fillViewport: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().background(Pc.Bg)) {
-        Screen(maxWidth = maxWidth, scrollState = scrollState) {
+        val banner: @Composable () -> Unit = {
             AnimatedVisibility(refreshError != null) {
                 InfoBanner(stringResource(R.string.refresh_failed), BannerKind.Warning, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs), action = "OK", onAction = onDismissError)
             }
-            content()
+        }
+        if (fillViewport) FixedViewport(maxWidth) { banner(); content() }
+        else Screen(maxWidth = maxWidth, scrollState = scrollState) { banner(); content() }
+    }
+}
+
+/**
+ * A page that never scrolls: the content column is exactly the viewport's height. It sits in a scroll container
+ * whose content is that same height, so it cannot move, but drags still reach the nested-scroll parent and the
+ * pull-to-refresh gesture keeps working. The overscroll stretch is switched off so the page stays still.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun FixedViewport(maxWidth: Int, content: @Composable ColumnScope.() -> Unit) {
+    Box(Modifier.fillMaxSize().glowBackground().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.widthIn(max = maxWidth.dp).fillMaxSize()) {
+            val h = maxHeight
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.foundation.LocalOverscrollConfiguration provides null) {
+                Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                    Column(Modifier.fillMaxWidth().height(h), content = content)
+                }
+            }
         }
     }
 }
@@ -151,17 +173,6 @@ fun longDate(d: LocalDate): String = d.format(DateTimeFormatter.ofPattern("EEEE 
 fun SectionTitle(text: String, modifier: Modifier = Modifier) =
     Text(text.uppercase(), style = PcType.SectionTitle, modifier = modifier.semantics { heading() })
 
-
-/** Opens a calendar "new event" screen prefilled with the match (no calendar permission needed). */
-fun addMatchToCalendar(ctx: Context, m: Match) {
-    val intent = Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI)
-        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, m.kickoffMs)
-        .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, m.kickoffMs + 115 * 60_000L)
-        .putExtra(CalendarContract.Events.TITLE, "${m.home.name} vs ${m.away.name}")
-        .putExtra(CalendarContract.Events.EVENT_LOCATION, m.venue)
-        .putExtra(CalendarContract.Events.DESCRIPTION, "${m.leagueName} · ${m.round}")
-    try { ctx.startActivity(intent) } catch (_: ActivityNotFoundException) { }
-}
 
 /**
  * Matches in one tile, separated by hairlines. Each row has the favourite star (opens a sheet to follow

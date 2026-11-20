@@ -175,47 +175,6 @@ fun countdown(fromMs: Long, toMs: Long): String {
     }
 }
 
-/**
- * Next followed fixture with a live countdown (ticks every 30s), a reminder toggle (match alerts) and an
- * add-to-calendar action. A 3dp edge in the home side's colour is the only team colour on the tile.
- */
-@Composable
-fun NextKickoffTile(
-    match: Match,
-    reminderOn: Boolean,
-    onReminder: () -> Unit,
-    onCalendar: () -> Unit,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    nowMs: () -> Long = System::currentTimeMillis,
-) {
-    var now by remember { mutableLongStateOf(nowMs()) }
-    LaunchedEffect(match.id) { while (true) { now = nowMs(); delay(30_000) } }
-    val left = countdown(now, match.kickoffMs)
-    PcCard(modifier.semantics(mergeDescendants = true) { contentDescription = "Next kickoff: ${match.home.name} versus ${match.away.name}, in $left" }, onClick = onClick) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 156.dp)) {
-            Column(Modifier.weight(1f).padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                Text("NEXT KICKOFF", style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text2)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TeamCrest(match.home, 28.dp)
-                    Text("v", style = PcType.Caption)
-                    TeamCrest(match.away, 28.dp)
-                }
-                Text("${match.home.name} vs ${match.away.name}".uppercase(), style = PcType.TeamNameSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(match.leagueName, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.weight(1f, fill = false))
-                Text(left, style = PcType.ScoreCompact, color = Pc.Accent, maxLines = 1)
-                Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.xxs)) {
-                    IconAction(if (reminderOn) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onReminder, tint = if (reminderOn) Pc.Accent else Pc.Text2, modifier = Modifier.size(40.dp))
-                    IconAction(Icons.Outlined.CalendarMonth, "Add to calendar", onCalendar, tint = Pc.Text2, modifier = Modifier.size(40.dp))
-                }
-            }
-        }
-    }
-}
-
-// ---------------- Player stat ----------------
-
 /** Player photo in a team-colour ring; initials (or a silhouette when there is no name) while it loads or when there is none. */
 @Composable
 fun PlayerAvatar(name: String, color: Long, size: Dp = 40.dp, photo: String? = null) {
@@ -233,27 +192,6 @@ fun PlayerAvatar(name: String, color: Long, size: Dp = 40.dp, photo: String? = n
 
 @Composable
 fun PlayerAvatar(name: String, color: Long, size: Int) = PlayerAvatar(name, color, size.dp)
-
-/** Top scorer tile: avatar, name, club and the goal count. */
-@Composable
-fun PlayerStatTile(scorer: Scorer, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    BentoTile("Top scorer", modifier, onClick, description = "Top scorer: ${scorer.name}, ${scorer.team.name}, ${scorer.goals} goals") {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-            PlayerAvatar(scorer.name, scorer.team.color, 44.dp, scorer.photo)
-            Column(Modifier.weight(1f)) {
-                Text(scorer.name, style = PcType.LabelStrong, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(scorer.team.name, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-        Spacer(Modifier.weight(1f, fill = false))
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(scorer.goals.toString(), style = PcType.ScoreCompact, color = Pc.Accent)
-            Text("GOALS", style = PcType.Overline, modifier = Modifier.padding(bottom = 5.dp))
-            Spacer(Modifier.weight(1f))
-            Icon(Icons.Outlined.SportsSoccer, null, tint = Pc.Text2, modifier = Modifier.size(20.dp))
-        }
-    }
-}
 
 /** Full-width titled note (player season snapshot and profile). */
 @Composable
@@ -274,10 +212,6 @@ private fun BentoPreview() = PreviewHost(dark = true) {
     Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
             StandingsTile("Premier Division", PreviewData.table, setOf("ng"), {}, Modifier.weight(1f))
-            NextKickoffTile(PreviewData.upcoming, false, {}, {}, {}, Modifier.weight(1f)) { PreviewData.upcoming.kickoffMs - 90_000_000 }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
-            PlayerStatTile(Scorer(1, "p1", "Leo Marsh", PreviewData.live.home, 18, 4), {}, Modifier.weight(1f))
         }
         PcCard { Column { StandingsHeader(showForm = true); PreviewData.table.forEach { StandingsRow(it, {}, showForm = true, followed = it.team.id == "ng") } } }
     }
