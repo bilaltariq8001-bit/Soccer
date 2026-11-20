@@ -12,7 +12,6 @@ import com.innovativeinside.pitchside.data.auth.AuthRepository
 import com.innovativeinside.pitchside.data.auth.KeystoreCipher
 import com.innovativeinside.pitchside.data.auth.LocalAuthRepository
 import com.innovativeinside.pitchside.data.mock.MockBehavior
-import com.innovativeinside.pitchside.data.mock.MockFootballApi
 import com.innovativeinside.pitchside.data.news.NinetyMinNewsSource
 import com.innovativeinside.pitchside.data.prefs.DataStorePrefsRepository
 import com.innovativeinside.pitchside.data.prefs.PrefsRepository
@@ -54,14 +53,13 @@ class DefaultAppContainer(context: Context) : AppContainer {
 
     private val apifootballKey = BuildConfig.APIFOOTBALL_KEY.trim()
 
-    /** Real data comes from apifootball.com when a key is built in, else the Pitchside gateway; mock only without either. */
-    override val mockBehavior: MockBehavior? =
-        if (apifootballKey.isBlank() && BuildConfig.API_BASE_URL.isBlank()) MockBehavior() else null
+    /** The installed app never runs on mock data: football data comes from apifootball.com (or the Pitchside gateway). */
+    override val mockBehavior: MockBehavior? = null
 
     private val apiFootball: ApiFootballComApi? = apifootballKey.takeIf { it.isNotBlank() }?.let { ApiFootballComApi(it, zone = { clock.zone() }) }
     private val socket: LiveScoreSocket? = apiFootball?.let { LiveScoreSocket(apifootballKey, it) }
 
-    private val api: FootballApi = apiFootball ?: mockBehavior?.let { MockFootballApi(clock, it) } ?: HttpFootballApi(
+    private val api: FootballApi = apiFootball ?: HttpFootballApi(
         baseUrl = BuildConfig.API_BASE_URL,
         tokenProvider = { auth.accessToken() },
         onUnauthorized = { auth.onUnauthorized() },
