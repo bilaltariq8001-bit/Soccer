@@ -1,5 +1,6 @@
 package com.innovativeinside.pitchside.data.prefs
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 enum class AlertLevel(val label: String, val desc: String) {
@@ -47,8 +48,11 @@ enum class Persona(val title: String, val tagline: String, val bullets: List<Str
 data class UserPrefs(
     val onboarded: Boolean = false,
     val language: String = "en",
-    /** Dark is the primary look (0.6.0); System and Light stay available in Settings. */
-    val theme: ThemeChoice = ThemeChoice.Dark,
+    /**
+     * Light (fresh green) is the primary look; System and Dark stay available in Settings. Stored under a new key so
+     * installs that saved the old Dark default move to Light once.
+     */
+    @SerialName("themeV2") val theme: ThemeChoice = ThemeChoice.Light,
     val followKind: FollowKind = FollowKind.Clubs,
     val watchStyle: WatchStyle = WatchStyle.Live,
     val alertLevel: AlertLevel = AlertLevel.Key,

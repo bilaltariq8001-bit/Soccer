@@ -62,14 +62,15 @@ fun <T> StateContent(
     // A Column, not a Box: screen bodies emit several siblings (header, tabs, sections) and a Box
     // would draw them on top of each other.
     // Crossfade between loading / empty / error / content (keyed on the kind of state, not the data, so a
-    // refresh that keeps showing content never flickers). Instant when motion is reduced.
+    // refresh that keeps showing content never flickers). Instant when motion is reduced. No size animation: a
+    // clipped height tween inside a scrolling page made screens jump and stutter while switching days or tabs.
     val reduced = rememberReducedMotion()
     androidx.compose.animation.AnimatedContent(
         targetState = state,
         contentKey = { it::class },
         transitionSpec = {
-            if (reduced) androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None, androidx.compose.animation.ExitTransition.None)
-            else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)), androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)))
+            if (reduced) androidx.compose.animation.ContentTransform(androidx.compose.animation.EnterTransition.None, androidx.compose.animation.ExitTransition.None, sizeTransform = null)
+            else androidx.compose.animation.ContentTransform(androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)), androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)), sizeTransform = null)
         },
         label = "state",
         modifier = modifier,
