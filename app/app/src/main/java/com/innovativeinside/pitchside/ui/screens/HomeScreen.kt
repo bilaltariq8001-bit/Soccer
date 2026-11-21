@@ -492,8 +492,9 @@ private fun TodaySection(
             } else {
                 FitList(
                     shown,
+                    // Same scoreboard row as the Matches tab, so a match reads the same everywhere.
                     row = { m ->
-                        HighlightRow(
+                        com.innovativeinside.pitchside.ui.components.MatchRow(
                             m, app.isHidden(prefs, m), { actions.openMatch(m.id) }, { app.reveal(m.id) },
                             favorite = m.involves(prefs.teams), onFavorite = { onFollow(m) },
                             reminderOn = m.id in prefs.matchAlerts, onReminder = { app.toggleMatchAlert(m.id) },

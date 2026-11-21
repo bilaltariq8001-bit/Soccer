@@ -405,10 +405,27 @@ private fun MiniTeamLine(team: Team, score: Int?, lead: Boolean) {
 
 // ---------------- Match row ----------------
 
+/** Short status shown under the score in a match row: "74'", "HT", "FT", "AET", "Pens 4-3", "Postp.". */
+fun rowStatus(m: Match): String = when (m.status) {
+    Status.Live -> m.label.ifBlank { "LIVE" }
+    Status.Finished -> m.label.ifBlank { "FT" }
+    Status.Postponed -> when {
+        m.label.startsWith("Canc", true) -> "Canc."
+        m.label.startsWith("Postp", true) || m.label.isBlank() -> "Postp."
+        else -> m.label.take(6)
+    }
+    Status.Upcoming -> ""
+}
+
+/** Fixed row height so lists never jump while scores and statuses change. */
+val MatchRowHeight = 68.dp
+
 /**
- * One match in a list. Left: LIVE minute (emerald, with a thin progress bar under the row), kickoff time, FT or
- * Postponed. Middle: both teams in uppercase condensed on two lines (winner bright once finished). Right: scores,
- * then the follow star, a kickoff reminder bell for upcoming games and a chevron.
+ * One match in a list, laid out symmetrically like a scoreboard: home name (right-aligned) and crest | the score, or
+ * the kickoff time for games not started, with the status under it (live minute in the live colour, FT, HT, Pens,
+ * Postponed) | crest and away name (left-aligned). Once finished the winner is bold and the loser dimmed. One trailing
+ * action keeps every row the same width: the kickoff reminder bell for upcoming games, otherwise the follow star.
+ * The row height is fixed, so nothing moves when a score or status changes.
  */
 @Composable
 fun MatchRow(
@@ -424,67 +441,80 @@ fun MatchRow(
 ) {
     val hs = match.homeScore
     val aw = match.awayScore
-    val finished = match.status == Status.Finished
-    val homeWin = finished && hs != null && aw != null && hs > aw
-    val awayWin = finished && hs != null && aw != null && aw > hs
-    Column(
-        modifier.fillMaxWidth().heightIn(min = 72.dp).pcClickable(PcShape.Control, "Open match", onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = matchDescription(match, hidden) },
+    val decided = match.status == Status.Finished && hs != null && aw != null && !hidden
+    val homeWin = decided && hs!! > aw!!
+    val awayWin = decided && aw!! > hs!!
+    Row(
+        modifier.fillMaxWidth().height(MatchRowHeight).pcClickable(PcShape.Control, "Open match", onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = matchDescription(match, hidden) }
+            .padding(start = PcSpace.sm),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(Modifier.fillMaxWidth().heightIn(min = 70.dp).padding(start = PcSpace.md, end = PcSpace.xxs), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.width(54.dp), contentAlignment = Alignment.CenterStart) {
-                when (match.status) {
-                    Status.Live -> Column {
-                        Text(match.label, style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.LiveText, maxLines = 1)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(6.dp).clip(CircleShape).background(Pc.Live)); Spacer(Modifier.width(4.dp))
-                            Text("LIVE", style = PcType.Overline.copy(fontSize = 11.sp), color = Pc.LiveText)
-                        }
-                    }
-                    Status.Upcoming -> Text(match.label, style = PcType.Tag.copy(fontSize = 16.sp), maxLines = 1)
-                    Status.Finished -> Text("FT", style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text2)
-                    Status.Postponed -> Text("PPD", style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Warning)
-                }
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                RowTeam(match.home, hs, hidden, dim = awayWin)
-                RowTeam(match.away, aw, hidden, dim = homeWin)
-                val probs = match.probs
-                if (probs != null && match.status == Status.Upcoming) ProbabilityBar(probs, Modifier.fillMaxWidth(0.55f), height = 3.dp)
-            }
-            if (hidden) {
-                Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, "Reveal score", onClick = onReveal), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Outlined.Visibility, "Reveal score", tint = Pc.Text2, modifier = Modifier.size(20.dp))
-                }
-            }
-            if (onFavorite != null) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (favorite) "Following a team in this match" else "Follow a team in this match", onClick = onFavorite), contentAlignment = Alignment.Center) {
-                Icon(if (favorite) Icons.Filled.Star else Icons.Outlined.StarBorder, if (favorite) "Following" else "Follow", tint = if (favorite) Pc.Accent else Pc.Text2, modifier = Modifier.size(22.dp))
-            }
-            if (onReminder != null && match.status == Status.Upcoming) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onClick = onReminder), contentAlignment = Alignment.Center) {
-                Icon(if (reminderOn) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, if (reminderOn) "Reminder on" else "Reminder off", tint = if (reminderOn) Pc.Accent else Pc.Text2, modifier = Modifier.size(20.dp))
-            }
-            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = Pc.Text3, modifier = Modifier.size(18.dp))
+        // Home: name right-aligned against its crest.
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs, Alignment.End)) {
+            RowTeamName(match.home.name, bold = homeWin, dim = awayWin, align = TextAlign.End, modifier = Modifier.weight(1f, fill = false))
+            TeamCrest(match.home, CrestSize.S.dp)
         }
-        if (match.status == Status.Live) liveProgress(match.label)?.let { p ->
-            Box(Modifier.fillMaxWidth().padding(horizontal = PcSpace.md).height(2.dp).clip(CircleShape).background(Pc.LiveContainer)) {
-                Box(Modifier.fillMaxWidth(p).fillMaxHeight().clip(CircleShape).background(Pc.Live))
+        RowCentre(match, hidden, onReveal, Modifier.width(78.dp))
+        // Away: crest then name, left-aligned.
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
+            TeamCrest(match.away, CrestSize.S.dp)
+            RowTeamName(match.away.name, bold = awayWin, dim = homeWin, align = TextAlign.Start, modifier = Modifier.weight(1f, fill = false))
+        }
+        Box(Modifier.width(PcSpace.touch).fillMaxHeight(), contentAlignment = Alignment.Center) {
+            when {
+                onReminder != null && match.status == Status.Upcoming -> Box(
+                    Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (reminderOn) "Turn off kickoff reminder" else "Remind me at kickoff", onClick = onReminder),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(if (reminderOn) Icons.Filled.Notifications else Icons.Outlined.NotificationsNone, null, tint = if (reminderOn) Pc.Accent else Pc.Text3, modifier = Modifier.size(20.dp)) }
+                onFavorite != null -> Box(
+                    Modifier.size(PcSpace.touch).pcClickable(CircleShape, if (favorite) "Following a team in this match" else "Follow a team in this match", onClick = onFavorite),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(if (favorite) Icons.Filled.Star else Icons.Outlined.StarBorder, null, tint = if (favorite) Pc.Accent else Pc.Text3, modifier = Modifier.size(20.dp)) }
             }
         }
     }
 }
 
 @Composable
-private fun RowTeam(team: Team, score: Int?, hidden: Boolean, dim: Boolean) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-        TeamCrest(team, CrestSize.S.dp)
-        Text(
-            team.name.uppercase(), style = PcType.TeamNameSmall, color = if (dim) Pc.Text2 else Pc.Text,
-            maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-        )
-        when {
-            hidden -> Box(Modifier.size(width = 16.dp, height = 18.dp).clip(PcShape.Small).background(Pc.SurfaceVariant))
-            score != null -> ScoreText(score.toString(), bold = !dim)
-            else -> Spacer(Modifier.width(16.dp))
+private fun RowTeamName(name: String, bold: Boolean, dim: Boolean, align: TextAlign, modifier: Modifier = Modifier) {
+    Text(
+        name,
+        style = PcType.Label.copy(fontSize = 14.sp, lineHeight = 17.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium),
+        color = if (dim) Pc.Text2 else Pc.Text,
+        maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = align, modifier = modifier,
+    )
+}
+
+/** Score (or kickoff time) over the status line. Both lines always take their space so rows line up. */
+@Composable
+private fun RowCentre(match: Match, hidden: Boolean, onReveal: () -> Unit, modifier: Modifier) {
+    val status = rowStatus(match)
+    val statusColor = when (match.status) {
+        Status.Live -> Pc.LiveText
+        Status.Postponed -> Pc.Warning
+        else -> Pc.Text2
+    }
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Box(Modifier.height(24.dp), contentAlignment = Alignment.Center) {
+            when {
+                match.status == Status.Upcoming -> Text(match.label, style = PcType.Tag.copy(fontSize = 16.sp), color = Pc.Text, maxLines = 1)
+                hidden && match.hasScore -> Box(
+                    Modifier.size(width = 56.dp, height = 24.dp).pcClickable(PcShape.Chip, "Reveal score", onClick = onReveal).background(Pc.SurfaceVariant),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.Outlined.Visibility, null, tint = Pc.Text2, modifier = Modifier.size(16.dp)) }
+                match.hasScore -> Text(
+                    "${match.homeScore} - ${match.awayScore}", style = PcType.ScoreRow,
+                    color = if (match.status == Status.Live) Pc.LiveText else Pc.Text, maxLines = 1,
+                )
+                else -> Text("vs", style = PcType.Label, color = Pc.Text3, maxLines = 1)
+            }
+        }
+        Box(Modifier.height(16.dp), contentAlignment = Alignment.Center) {
+            if (status.isNotEmpty()) Text(
+                status, style = PcType.Caption.copy(fontWeight = if (match.status == Status.Live) FontWeight.Bold else FontWeight.Medium),
+                color = statusColor, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

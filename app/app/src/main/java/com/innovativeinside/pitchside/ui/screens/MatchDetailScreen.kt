@@ -315,58 +315,89 @@ private fun RowScope.HeaderTeam(team: Team, onClick: () -> Unit) {
 private fun SpoilerGate(what: String, onReveal: () -> Unit) =
     EmptyState("$what hidden by Spoiler Shield", "Reveal the score to see it. Your other shielded matches stay hidden.", actionLabel = "Reveal score", onAction = onReveal)
 
-/** Overview bento: key events, key stats, form, and match facts. */
+/** A titled card: the consistent building block of the Overview (title over a surface card). */
+@Composable
+private fun TitledCard(title: String, action: String? = null, onAction: () -> Unit = {}, content: @Composable () -> Unit) {
+    SectionHeader(title, action, onAction)
+    PcCard(Modifier.fillMaxWidth()) { content() }
+}
+
+/**
+ * Overview as titled cards in reading order: what happened (key events), highlights, key numbers, win probability,
+ * form, head to head, recent results, table snapshot, match info, and odds last. A card only appears when the source
+ * has data for it, and the match info card only lists the facts that exist, so there are no empty boxes or dashes.
+ */
 @Composable
 private fun OverviewTab(d: MatchDetail, hidden: Boolean, onStats: () -> Unit, onReveal: () -> Unit) {
     val m = d.match
     if (hidden) { SpoilerGate("Match overview", onReveal); return }
-    val key = d.events.filter { it.kind == EventKind.Goal || it.kind == EventKind.RedCard }
-    val homeForm = d.table.firstOrNull { it.team.id == m.home.id }?.form.orEmpty().ifBlank { FormText.formFrom(m.home.id, d.homeRecent) }
-    val awayForm = d.table.firstOrNull { it.team.id == m.away.id }?.form.orEmpty().ifBlank { FormText.formFrom(m.away.id, d.awayRecent) }
-    val showForm = homeForm.isNotBlank() || awayForm.isNotBlank()
-    if (key.isNotEmpty() || showForm) Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
-        if (key.isNotEmpty()) BentoTile("Key events", Modifier.weight(1f).fillMaxHeight()) {
-            key.take(5).forEach { e ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(e.minuteLabel, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), modifier = Modifier.width(36.dp))
-                    EventIcon(e.kind, 16)
-                    Text(e.player.substringAfterLast(' '), style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+    val key = d.events.filter { it.kind == EventKind.Goal || it.kind == EventKind.RedCard }.sortedWith(compareBy({ it.minute }, { it.extra ?: 0 }))
+    if (key.isNotEmpty()) TitledCard("Key events") {
+        Column(Modifier.padding(vertical = PcSpace.xxs)) {
+            key.forEachIndexed { i, e ->
+                if (i > 0) Hairline(Modifier.padding(horizontal = PcSpace.md))
+                KeyEventLine(e)
             }
         }
-        if (showForm) BentoTile("Form · last 5", Modifier.weight(1f).fillMaxHeight()) {
-            listOf(m.home to homeForm, m.away to awayForm).forEach { (t, f) ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TeamCrest(t, 20.dp)
-                    Text(t.name, style = PcType.LabelStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                if (f.isNotBlank()) FormDots(f) else Text("No recent results", style = PcType.Caption)
-            }
-        }
-        if (key.isEmpty() && showForm && d.table.isNotEmpty()) TableSpotTile(d, Modifier.weight(1f).fillMaxHeight())
     }
-    if (d.stats.isNotEmpty()) {
-        SectionHeader("Key numbers", "All stats", onStats)
-        PcCard(Modifier.fillMaxWidth()) { Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) { d.stats.take(3).forEach { StatBar(it) } } }
+    if (d.highlights.isNotEmpty()) HighlightsCard(d.highlights)
+    if (d.stats.isNotEmpty()) TitledCard("Key numbers", "All stats", onStats) {
+        Column(Modifier.padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.md)) { d.stats.take(4).forEach { StatBar(it) } }
     }
     d.prediction?.let { ProbabilityCard(m, it) }
-    d.odds?.let { OddsCard(it) }
-    if (d.highlights.isNotEmpty()) HighlightsCard(d.highlights)
+    val homeForm = d.table.firstOrNull { it.team.id == m.home.id }?.form.orEmpty().ifBlank { FormText.formFrom(m.home.id, d.homeRecent) }
+    val awayForm = d.table.firstOrNull { it.team.id == m.away.id }?.form.orEmpty().ifBlank { FormText.formFrom(m.away.id, d.awayRecent) }
+    val forms = listOf(m.home to homeForm, m.away to awayForm).filter { it.second.isNotBlank() }
+    if (forms.isNotEmpty()) TitledCard("Form · last 5") {
+        Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xxs)) {
+            forms.forEachIndexed { i, (t, f) ->
+                if (i > 0) Hairline()
+                Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+                    TeamCrest(t, CrestSize.S.dp)
+                    Text(t.name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    FormDots(f.takeLast(5))
+                }
+            }
+        }
+    }
     if (d.h2h.isNotEmpty()) HeadToHeadCard(m, d.h2h)
     if (d.homeRecent.isNotEmpty() || d.awayRecent.isNotEmpty()) RecentResultsCard(m, d.homeRecent, d.awayRecent)
     if (d.table.isNotEmpty()) MiniTableCard(d)
-    PcCard(Modifier.fillMaxWidth()) {
+    val info = buildList {
+        add("Competition" to listOf(m.leagueName, m.country).filter { it.isNotBlank() }.joinToString(" · "))
+        if (m.round.isNotBlank()) add("Round" to m.round)
+        add("Kickoff" to formatKickoff(m.kickoffMs))
+        if (m.venue.isNotBlank()) add("Venue" to m.venue)
+        m.referee?.takeIf { it.isNotBlank() }?.let { add("Referee" to it) }
+    }.filter { it.second.isNotBlank() }
+    TitledCard("Match info") {
         Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xxs)) {
-            InfoLine("Kickoff", formatKickoff(m.kickoffMs))
-            if (m.venue.isNotBlank()) InfoLine("Venue", m.venue)
-            m.referee?.let { InfoLine("Referee", it) }
-            if (m.round.isNotBlank()) InfoLine("Round", m.round)
-            InfoLine("Competition", listOf(m.leagueName, m.country).filter { it.isNotBlank() }.joinToString(" · "))
-            InfoLine(
-                "Lineups",
-                when { d.lineups != null -> "Published"; m.status == Status.Upcoming -> "Usually out ~1 h before kickoff"; else -> "Not published for this match" },
-                last = true,
-            )
+            info.forEachIndexed { i, (k, v) -> InfoLine(k, v, last = i == info.lastIndex) }
+        }
+    }
+    d.odds?.let { OddsCard(it) }
+}
+
+/** One goal or red card: home events read from the left, away from the right, the minute in the middle. */
+@Composable
+private fun KeyEventLine(e: MatchEvent) {
+    val what = if (e.kind == EventKind.Goal) "Goal" else "Red card"
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = PcSpace.md).semantics(mergeDescendants = true) { contentDescription = "${e.minuteLabel}, $what, ${e.player}" },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+            if (e.isHome) {
+                Text(e.player, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1f, fill = false))
+                EventIcon(e.kind, 16)
+            }
+        }
+        Text(e.minuteLabel, style = PcType.Numeric.copy(fontWeight = FontWeight.Bold), textAlign = TextAlign.Center, modifier = Modifier.width(56.dp))
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!e.isHome) {
+                EventIcon(e.kind, 16)
+                Text(e.player, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            }
         }
     }
 }
@@ -413,15 +444,14 @@ private fun MiniTableCard(d: MatchDetail) {
 private fun RecentResultsCard(m: Match, home: List<Match>, away: List<Match>) {
     SectionHeader("Recent results")
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
-        listOf(m.home to home, m.away to away).forEach { (team, games) ->
+        listOf(m.home to home, m.away to away).filter { it.second.isNotEmpty() }.forEach { (team, games) ->
             PcCard(Modifier.weight(1f).fillMaxHeight()) {
                 Column(Modifier.padding(PcSpace.sm), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TeamCrest(team, 20.dp)
                         Text(team.short, style = PcType.LabelStrong, maxLines = 1)
                     }
-                    if (games.isEmpty()) Text("No recent results", style = PcType.Caption)
-                    games.take(5).forEach { g ->
+                    games.filter { it.hasScore }.take(5).forEach { g ->
                         val home = g.home.id == team.id
                         val opp = if (home) g.away else g.home
                         val mine = if (home) g.homeScore else g.awayScore
@@ -433,7 +463,7 @@ private fun RecentResultsCard(m: Match, home: List<Match>, away: List<Match>) {
                         ) {
                             if (res != '-') FormChip(res, 16.dp)
                             Text("${if (home) "v" else "@"} ${opp.short}", style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text("${mine ?: "-"}–${theirs ?: "-"}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+                            Text("$mine–$theirs", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
                         }
                     }
                 }
@@ -444,6 +474,7 @@ private fun RecentResultsCard(m: Match, home: List<Match>, away: List<Match>) {
 
 @Composable
 private fun ProbabilityCard(m: Match, p: WinProbability) {
+    SectionHeader(if (m.status == Status.Upcoming) "Win probability" else "Pre-match win probability")
     PcCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(PcSpace.md).semantics(mergeDescendants = true) {
@@ -451,7 +482,6 @@ private fun ProbabilityCard(m: Match, p: WinProbability) {
             },
             verticalArrangement = Arrangement.spacedBy(PcSpace.sm),
         ) {
-            Overline(if (m.status == Status.Upcoming) "Win probability" else "Pre-match win probability")
             Row(Modifier.fillMaxWidth()) {
                 ProbCell("${p.home}%", m.home.short, Modifier.weight(1f), TextAlign.Start)
                 ProbCell("${p.draw}%", "Draw", Modifier.weight(1f), TextAlign.Center)
@@ -476,6 +506,7 @@ private fun price(v: Double) = String.format(java.util.Locale.US, "%.2f", v)
 
 @Composable
 private fun OddsCard(o: MatchOdds) {
+    SectionHeader(if (o.live) "Live odds · 1X2" else "Odds · 1X2")
     PcCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(PcSpace.md).semantics(mergeDescendants = true) {
@@ -483,7 +514,6 @@ private fun OddsCard(o: MatchOdds) {
             },
             verticalArrangement = Arrangement.spacedBy(PcSpace.sm),
         ) {
-            Overline(if (o.live) "Live odds · 1X2" else "Odds · 1X2")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
                 listOf("1" to o.home, "X" to o.draw, "2" to o.away).forEach { (k, v) ->
                     Row(
@@ -503,6 +533,7 @@ private fun OddsCard(o: MatchOdds) {
 @Composable
 private fun HighlightsCard(clips: List<Highlight>) {
     val uri = LocalUriHandler.current
+    SectionHeader("Highlights")
     PcCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xxs)) {
             clips.forEachIndexed { i, c ->
@@ -531,7 +562,7 @@ private fun HeadToHeadCard(m: Match, games: List<Match>) {
     PcCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.xs)) {
             Text("${m.home.short} $homeWins · Draws $draws · ${m.away.short} $awayWins", style = PcType.LabelStrong, modifier = Modifier.padding(vertical = PcSpace.xs))
-            games.forEach { g ->
+            games.filter { it.hasScore }.forEach { g ->
                 Hairline()
                 Row(
                     Modifier.fillMaxWidth().heightIn(min = 44.dp).semantics(mergeDescendants = true) {},
@@ -539,7 +570,7 @@ private fun HeadToHeadCard(m: Match, games: List<Match>) {
                 ) {
                     Text(java.time.Instant.ofEpochMilli(g.kickoffMs).atZone(java.time.ZoneId.systemDefault()).format(h2hDate()), style = PcType.Caption, modifier = Modifier.width(84.dp))
                     Text(g.home.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
-                    Text("${g.homeScore ?: "-"}–${g.awayScore ?: "-"}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
+                    Text("${g.homeScore}–${g.awayScore}", style = PcType.Numeric.copy(fontWeight = FontWeight.Bold))
                     Text(g.away.name, style = PcType.Label, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 }
             }
@@ -649,16 +680,18 @@ private fun StatsTab(d: MatchDetail, hidden: Boolean, onReveal: () -> Unit) {
 @Composable
 private fun LineupsTab(d: MatchDetail, nav: MatchNav) {
     val l = d.lineups ?: return
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
+    // One full-width card per team (stacked, not side by side) so player names are never cut short.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         listOf(d.match.home to l.home, d.match.away to l.away).forEach { (team, lineup) ->
-            PcCard(Modifier.weight(1f).fillMaxHeight()) {
-                Column(Modifier.padding(PcSpace.sm), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PcCard(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(horizontal = PcSpace.md, vertical = PcSpace.sm), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
                         TeamCrest(team, CrestSize.S.dp)
-                        Text(team.short.uppercase(), style = PcType.TeamNameSmall)
-                        Text(lineup.formation, style = PcType.Tag, color = Pc.Accent)
+                        Text(team.name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        if (lineup.formation.isNotBlank()) Text(lineup.formation, style = PcType.Tag, color = Pc.Accent)
                     }
-                    Text("Coach ${lineup.coach}", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (lineup.coach.isNotBlank()) Text("Coach: ${lineup.coach}", style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Hairline(Modifier.padding(vertical = PcSpace.xxs))
                     val order = mapOf("G" to 0, "D" to 1, "M" to 2, "F" to 3)
                     lineup.starters.sortedWith(compareBy({ order[it.position.take(1)] ?: 2 }, { it.number })).forEach { p ->
                         LineupLine(p, team.color) { nav.openPlayer(p.playerId) }
@@ -757,7 +790,7 @@ private fun PitchView(d: MatchDetail, home: Lineup, away: Lineup, openPlayer: (S
                 }
             }
         }
-        Overline("Bench · coach ${l.coach}")
+        Overline(if (l.coach.isNotBlank()) "Bench · coach ${l.coach}" else "Bench")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
             l.bench.forEach { b ->
                 Box(Modifier.heightIn(min = 40.dp).clip(PcShape.Chip).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Chip).pcClickable(PcShape.Chip, "Open ${b.name}") { openPlayer(b.playerId) }.padding(horizontal = PcSpace.sm), contentAlignment = Alignment.Center) {

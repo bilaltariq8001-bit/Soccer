@@ -137,7 +137,7 @@ fun MatchesContent(
             empty = { NoMatchesState(date, today, nextMatchDay, onDate) },
         ) { _ ->
             val shown = filterMatches(byComp, segmentFilters[segIndex], prefs.teams, prefs.leagues)
-            Column(verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
                 if (shown.isEmpty()) {
                     EmptyState(
                         when { myTeams -> "None of your teams or leagues play"; filter == MatchFilter.Live -> "Nothing live right now"; else -> "No matches here" },
@@ -145,7 +145,13 @@ fun MatchesContent(
                         actionLabel = "Show all matches", onAction = { onFilter(MatchFilter.All); onMyTeams(false); app.setCompetition(null) }, icon = Icons.Outlined.EventBusy,
                     )
                 } else groupByLeague(shown, prefs.leagues).forEach { (name, ms) ->
-                    LeagueGroup(name, ms, openMatch, openLeague = { openLeague(ms.first().leagueId) }, logo = ms.firstNotNullOfOrNull { it.leagueLogo })
+                    val first = ms.first()
+                    androidx.compose.runtime.key(first.leagueId + name) {
+                        LeagueGroup(
+                            name, ms, openMatch, openLeague = { openLeague(first.leagueId) }, logo = ms.firstNotNullOfOrNull { it.leagueLogo },
+                            country = first.country, stateKey = "lg-" + first.leagueId + name,
+                        )
+                    }
                 }
             }
         }

@@ -45,6 +45,9 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import com.innovativeinside.pitchside.R
 import com.innovativeinside.pitchside.core.AppError
 import com.innovativeinside.pitchside.data.model.Match
@@ -126,7 +129,7 @@ fun RefreshScreen(
 ) {
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize().background(Pc.Bg)) {
         val banner: @Composable () -> Unit = {
-            AnimatedVisibility(refreshError != null) {
+            if (refreshError != null) {
                 InfoBanner(stringResource(R.string.refresh_failed), BannerKind.Warning, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs), action = "OK", onAction = onDismissError)
             }
         }
@@ -175,24 +178,28 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier) =
 
 
 /**
- * Matches in one tile, separated by hairlines. Each row has the favourite star (opens a sheet to follow
- * either club) and, for upcoming games, the kickoff reminder bell (match alerts).
+ * Matches in one tile, separated by hairlines. Each row has one trailing action: the kickoff reminder bell for
+ * upcoming games, otherwise the follow star (opens a sheet to follow either club).
  */
 @Composable
 fun MatchList(matches: List<Match>, openMatch: (String) -> Unit, modifier: Modifier = Modifier) {
+    PcCard(modifier.fillMaxWidth()) { Column { MatchRows(matches, openMatch) } }
+}
+
+/** The rows of [MatchList] without the card, for cards that add their own header. Stable keys keep rows in place on refresh. */
+@Composable
+fun MatchRows(matches: List<Match>, openMatch: (String) -> Unit) {
     val app = LocalApp.current
     val prefs = LocalPrefs.current
     var followFor by remember { mutableStateOf<Match?>(null) }
-    PcCard(modifier.fillMaxWidth()) {
-        Column {
-            matches.forEachIndexed { i, m ->
-                MatchRow(
-                    m, app.isHidden(prefs, m), { openMatch(m.id) }, { app.reveal(m.id) },
-                    favorite = m.involves(prefs.teams), onFavorite = { followFor = m },
-                    reminderOn = m.id in prefs.matchAlerts, onReminder = { app.toggleMatchAlert(m.id) },
-                )
-                if (i < matches.lastIndex) Hairline(Modifier.padding(horizontal = PcSpace.sm))
-            }
+    matches.forEachIndexed { i, m ->
+        androidx.compose.runtime.key(m.id) {
+            if (i > 0) Hairline(Modifier.padding(horizontal = PcSpace.sm))
+            MatchRow(
+                m, app.isHidden(prefs, m), { openMatch(m.id) }, { app.reveal(m.id) },
+                favorite = m.involves(prefs.teams), onFavorite = { followFor = m },
+                reminderOn = m.id in prefs.matchAlerts, onReminder = { app.toggleMatchAlert(m.id) },
+            )
         }
     }
     followFor?.let { m -> FollowTeamsSheet(m) { followFor = null } }
@@ -217,22 +224,56 @@ fun FollowTeamsSheet(m: Match, onDismiss: () -> Unit) {
     }
 }
 
-/** Matches of one competition under a collapsible header (badge, name, count). */
+/**
+ * Matches of one competition (or one day) in a single card: a header with the competition logo, its name, the
+ * country under it, a live count when games are on, the match count and a collapse chevron; then the match rows.
+ * [openLeague] adds a small arrow that opens the competition. Collapsing is instant (no size animation), so the list
+ * never stutters. [stateKey] keeps the open/closed state per competition.
+ */
 @Composable
-fun LeagueGroup(name: String, matches: List<Match>, openMatch: (String) -> Unit, modifier: Modifier = Modifier, openLeague: (() -> Unit)? = null, short: String? = null, logo: String? = null) {
-    var open by rememberSaveable(name) { mutableStateOf(true) }
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-        Row(
-            Modifier.fillMaxWidth().heightIn(min = PcSpace.touch).pcClickable(PcShape.Control, if (open) "Collapse $name" else "Expand $name") { open = !open }.padding(horizontal = PcSpace.xxs),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs),
-        ) {
-            LeagueBadge(short ?: name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 28, logo)
-            Text(name.uppercase(), style = PcType.TeamName, modifier = Modifier.weight(1f).semantics { heading() }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${matches.size}", style = PcType.Tag, color = Pc.Text2)
-            if (openLeague != null) Text("TABLE", style = PcType.Tag, color = Pc.Accent, modifier = Modifier.pcClickable(PcShape.Chip, "Open $name", onClick = openLeague).padding(horizontal = PcSpace.xs, vertical = 14.dp))
-            Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = Pc.Text2)
+fun LeagueGroup(
+    name: String,
+    matches: List<Match>,
+    openMatch: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    openLeague: (() -> Unit)? = null,
+    short: String? = null,
+    logo: String? = null,
+    country: String = "",
+    stateKey: String = name,
+) {
+    var open by rememberSaveable(stateKey) { mutableStateOf(true) }
+    val live = matches.count { it.status == com.innovativeinside.pitchside.data.model.Status.Live }
+    PcCard(modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 56.dp).pcClickable(PcShape.Control, if (open) "Collapse $name" else "Expand $name") { open = !open }
+                    .padding(start = PcSpace.md, end = PcSpace.xxs),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm),
+            ) {
+                if (logo != null || short == null) LeagueBadge(short ?: name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 26, logo)
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { heading() }) {
+                    Text(name, style = PcType.BodyStrong, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (country.isNotBlank()) Text(country, style = PcType.Caption, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (live > 0) Text(
+                    "$live LIVE", style = PcType.Micro.copy(fontSize = 11.sp), color = Pc.OnLive,
+                    modifier = Modifier.clip(PcShape.Chip).background(Pc.Live).padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+                Text(
+                    "${matches.size}", style = PcType.LabelStrong, color = Pc.Text2,
+                    modifier = Modifier.clip(PcShape.Chip).background(Pc.SurfaceVariant).padding(horizontal = 8.dp, vertical = 2.dp),
+                )
+                if (openLeague != null) Box(Modifier.size(PcSpace.touch).pcClickable(CircleShape, "Open $name", onClick = openLeague), contentAlignment = Alignment.Center) {
+                    Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null, tint = Pc.Text2, modifier = Modifier.size(22.dp))
+                }
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = Pc.Text2, modifier = Modifier.padding(end = PcSpace.xs))
+            }
+            if (open) {
+                Hairline()
+                MatchRows(matches, openMatch)
+            }
         }
-        AnimatedVisibility(open) { MatchList(matches, openMatch) }
     }
 }
 

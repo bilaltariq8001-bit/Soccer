@@ -208,12 +208,38 @@ fun statusCounts(list: List<Match>): Map<MatchFilter, Int> = mapOf(
     MatchFilter.Finished to list.count { it.status == Status.Finished },
 )
 
-/** Groups by competition, followed leagues first, then by kickoff. */
+/** Well-known competitions shown before the rest of a day's leagues (after followed ones). Lower is earlier. */
+private val topCompetitions = listOf(
+    "champions league", "europa league", "conference league", "premier league", "la liga", "laliga", "serie a",
+    "bundesliga", "ligue 1", "eredivisie", "primeira liga", "world cup", "euro", "nations league", "fa cup", "copa del rey",
+)
+private val topCountries = setOf("england", "spain", "italy", "germany", "france", "netherlands", "portugal", "eurocups", "europe", "world", "intl")
+
+/** 0 for well-known competitions (ordered by [topCompetitions]), large for everything else. */
+fun competitionRank(name: String, country: String): Int {
+    val n = name.lowercase()
+    val i = topCompetitions.indexOfFirst { n.contains(it) }
+    if (i < 0) return 1000
+    // "Premier League" exists in many countries; only the big ones count as top.
+    val c = country.lowercase()
+    return if (c.isBlank() || c in topCountries || n.contains("uefa") || n.contains("champions") || n.contains("europa")) i else 500 + i
+}
+
+/**
+ * Groups by competition (by id, so two leagues with the same name stay apart): followed leagues first, then
+ * competitions with live games, then the well-known ones, then A-Z. Within a competition live games come first, then
+ * by kickoff.
+ */
 fun groupByLeague(list: List<Match>, followedLeagues: Collection<String>): List<Pair<String, List<Match>>> =
-    list.groupBy { it.leagueName }
-        .toList()
-        .sortedWith(compareBy<Pair<String, List<Match>>> { (_, ms) -> if (ms.first().leagueId in followedLeagues) 0 else 1 }.thenBy { it.first })
-        .map { (name, ms) -> name to ms.sortedBy { it.kickoffMs } }
+    list.groupBy { it.leagueId.ifBlank { it.leagueName } }
+        .values
+        .map { ms -> ms.first().leagueName to ms.sortedWith(compareBy<Match> { if (it.status == Status.Live) 0 else 1 }.thenBy { it.kickoffMs }) }
+        .sortedWith(
+            compareBy<Pair<String, List<Match>>> { (_, ms) -> if (ms.first().leagueId in followedLeagues) 0 else 1 }
+                .thenBy { (_, ms) -> if (ms.any { it.status == Status.Live }) 0 else 1 }
+                .thenBy { (name, ms) -> competitionRank(name, ms.first().country) }
+                .thenBy { (name, ms) -> ms.first().country.ifBlank { "~" } + " " + name },
+        )
 
 /**
  * The first day after [from] (up to [maxDays] ahead) that has at least one match, or null. Days that fail to load are

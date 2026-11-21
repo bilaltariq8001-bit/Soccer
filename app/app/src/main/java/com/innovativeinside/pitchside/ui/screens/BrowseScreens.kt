@@ -43,6 +43,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -175,11 +176,11 @@ fun LeaguesContent(
                             }
                         }
                     }
-                    item { SegmentedTabs(listOf("Table", "Fixtures", "Top scorers"), view, { view = it }, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs)) }
+                    item { SegmentedTabs(listOf("Matches", "Standings", "Top scorers"), view, { view = it }, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs)) }
                     when (detail) {
                         UiState.Loading, UiState.Empty -> item { ListSkeleton(5, Modifier.padding(PcSpace.screen)) }
                         is UiState.Error -> item { ErrorState(detail.error, onRetryDetail, Modifier.padding(PcSpace.screen)) }
-                        is UiState.Success -> leagueSection(detail.data, view, openTeam, openMatch, openPlayer)
+                        is UiState.Success -> leagueSection(detail.data, when (view) { 0 -> 1; 1 -> 0; else -> 2 }, openTeam, openMatch, openPlayer)
                     }
                     item { SectionHeader("All competitions", modifier = Modifier.padding(start = PcSpace.screen, end = PcSpace.screen, top = PcSpace.md)) }
                     // Grouped by country, in the data source's country order (apifootball.com get_countries).
@@ -246,8 +247,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.leagueSection(d: Leag
         }
         1 -> if (d.fixtures.isEmpty()) item {
             EmptyState("No fixtures this week", "Fixtures for the next round appear once they're scheduled.", Modifier.padding(PcSpace.screen), icon = Icons.Outlined.EventBusy)
-        } else d.fixtures.groupBy { formatDay(it.kickoffMs) }.forEach { (day, ms) ->
-            item(key = "fx-$day") { LeagueGroup(day, ms, openMatch, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xxs), short = day.take(3)) }
+        } else d.fixtures.sortedBy { it.kickoffMs }.groupBy { formatDay(it.kickoffMs) }.forEach { (day, ms) ->
+            item(key = "fx-$day") { LeagueGroup(day, ms, openMatch, Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.xs), short = day.take(3), stateKey = "lsday-$day") }
         }
         else -> if (d.scorers.isEmpty()) item {
             EmptyState("No goals yet", "Top scorers appear after the first round.", Modifier.padding(PcSpace.screen), icon = Icons.Outlined.EmojiEvents)
@@ -339,29 +340,32 @@ fun LeagueBody(d: LeagueDetail, openMatch: (String) -> Unit, openTeam: (String) 
     val app = LocalApp.current
     val prefs = LocalPrefs.current
     val l = d.league
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tabName by rememberSaveable { mutableStateOf("") }
     EntityHeader({ LeagueBadge(l.short, 64, l.logo) }, l.name, listOf(l.country, l.season, l.currentRound).filter { it.isNotBlank() }.joinToString(" · "), l.id in prefs.leagues, { app.toggleLeague(l.id, l.name) })
     Spacer(Modifier.height(PcSpace.md))
-    val tabs = buildList { if (d.standings.isNotEmpty()) add("Table"); add("Matches"); if (d.scorers.isNotEmpty()) add("Top scorers"); add("Teams") }
-    val current = tabs.getOrElse(tab) { tabs.first() }
-    UnderlineTabs(tabs, tabs.indexOf(current), { tab = it })
-    Column(Modifier.padding(PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
+    // Matches first (what people open a league for), then the table, scorers and teams. Tabs without data are left out.
+    val teams = d.standings.map { it.team }.ifEmpty { d.fixtures.flatMap { listOf(it.home, it.away) }.distinctBy { it.id } }
+    val tabs = buildList {
+        add("Matches")
+        if (d.standings.isNotEmpty()) add("Standings")
+        if (d.scorers.isNotEmpty()) add("Top scorers")
+        if (teams.isNotEmpty()) add("Teams")
+    }
+    val current = tabs.firstOrNull { it == tabName } ?: tabs.first()
+    UnderlineTabs(tabs, tabs.indexOf(current), { tabName = tabs[it] })
+    Column(Modifier.padding(PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         when (current) {
-            "Table" -> {
-                var view by rememberSaveable { mutableIntStateOf(0) }
-                SegmentedTabs(listOf("Short", "Full", "Form"), view, { view = it })
-                StandingsTable(d.standings, openTeam, compact = view != 1, showForm = view == 2)
-            }
+            "Standings" -> StandingsTable(d.standings, openTeam, compact = true, showForm = true)
             "Matches" -> if (d.fixtures.isEmpty()) EmptyState("No fixtures this week", "Fixtures for the next round appear once they're scheduled.", icon = Icons.Outlined.EventBusy)
-            else d.fixtures.groupBy { formatDay(it.kickoffMs) }.forEach { (day, ms) -> LeagueGroup(day, ms, openMatch, short = day.take(3)) }
+            else d.fixtures.sortedBy { it.kickoffMs }.groupBy { formatDay(it.kickoffMs) }.forEach { (day, ms) ->
+                androidx.compose.runtime.key(day) { LeagueGroup(day, ms, openMatch, short = day.take(3), stateKey = "lday-$day") }
+            }
             "Top scorers" -> {
                 if (d.scorers.size >= 3) ScorerPodium(d.scorers.take(3), openPlayer)
                 PcCard(Modifier.fillMaxWidth()) { Column { d.scorers.forEachIndexed { i, s -> ScorerRow(s) { openPlayer(s.playerId) }; if (i < d.scorers.lastIndex) Hairline() } } }
             }
             else -> {
-                val teams = d.standings.map { it.team }.ifEmpty { d.fixtures.flatMap { listOf(it.home, it.away) }.distinctBy { it.id } }
-                if (teams.isEmpty()) EmptyState("No teams listed", "Team lists appear when the season starts.", icon = Icons.Outlined.Groups)
-                else PcCard(Modifier.fillMaxWidth()) {
+                PcCard(Modifier.fillMaxWidth()) {
                     Column { teams.forEachIndexed { i, t ->
                         FollowRow({ TeamCrest(t, CrestSize.M.dp) }, t.name, l.name, t.id in prefs.teams, { app.toggleTeam(t.id, t.name) }) { openTeam(t.id) }
                         if (i < teams.lastIndex) Hairline()
@@ -441,7 +445,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
     val d = page.detail
     val t = d.team
     val following = t.id in prefs.teams
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var tabName by rememberSaveable { mutableStateOf("") }
     EntityHeader({ TeamCrest(t, CrestSize.XL.dp) }, t.name, listOf(d.leagueName, d.city).filter { it.isNotBlank() }.joinToString(" · "), following, { app.toggleTeam(t.id, t.name) }) {
         if (following) {
             val shield = t.id in prefs.shielded
@@ -449,16 +453,18 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
         }
     }
     Spacer(Modifier.height(PcSpace.md))
-    val tabs = buildList { add("Overview"); add("Fixtures"); if (d.squad.isNotEmpty()) add("Squad"); if (page.standings.isNotEmpty()) add("Table") }
-    val current = tabs.getOrElse(tab) { tabs.first() }
-    UnderlineTabs(tabs, tabs.indexOf(current), { tab = it })
+    // Same order as the league page: matches first, then overview, squad and standings. Tabs without data are left out.
+    val tabs = buildList { if (page.fixtures.isNotEmpty()) add("Matches"); add("Overview"); if (d.squad.isNotEmpty()) add("Squad"); if (page.standings.isNotEmpty()) add("Standings") }
+    val current = tabs.firstOrNull { it == tabName } ?: tabs.first()
+    UnderlineTabs(tabs, tabs.indexOf(current), { tabName = tabs[it] })
+    val goTo: (String) -> Unit = { name -> if (name in tabs) tabName = name }
     Column(Modifier.padding(PcSpace.screen), verticalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
         when (current) {
             "Overview" -> {
                 val next = page.fixtures.filter { it.status == com.innovativeinside.pitchside.data.model.Status.Upcoming }.minByOrNull { it.kickoffMs }
                 val row = page.standings.firstOrNull { it.team.id == t.id }
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(PcSpace.gutter)) {
-                    if (row != null) BentoTile("League position", Modifier.weight(1f).fillMaxHeight(), onClick = { tab = tabs.indexOf("Table") }) {
+                    if (row != null) BentoTile("League position", Modifier.weight(1f).fillMaxHeight(), onClick = { goTo("Standings") }) {
                         Text("${row.rank}", style = PcType.ScoreCompact)
                         Text("${row.points} pts · ${row.played} played", style = PcType.Caption)
                         com.innovativeinside.pitchside.ui.components.FormDots(row.form)
@@ -487,7 +493,7 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                         Text("${last.homeScore}–${last.awayScore}", style = PcType.ScoreCompact)
                         Text(formatDay(last.kickoffMs), style = PcType.Caption)
                     }
-                    if (form.isNotBlank()) BentoTile("Form · last ${form.length}", Modifier.weight(1f).fillMaxHeight(), onClick = { tab = tabs.indexOf("Fixtures") }) {
+                    if (form.isNotBlank()) BentoTile("Form · last ${form.length}", Modifier.weight(1f).fillMaxHeight(), onClick = { goTo("Matches") }) {
                         com.innovativeinside.pitchside.ui.components.FormDots(form)
                         val w = form.count { it == 'W' }; val dr = form.count { it == 'D' }; val l = form.count { it == 'L' }
                         Text("$w W · $dr D · $l L", style = PcType.LabelStrong)
@@ -513,23 +519,29 @@ fun TeamBody(page: TeamPage, openMatch: (String) -> Unit, openTeam: (String) -> 
                 if (row != null) {
                     val i = page.standings.indexOf(row)
                     val around = page.standings.subList((i - 2).coerceAtLeast(0), (i + 3).coerceAtMost(page.standings.size))
-                    SectionHeader("Table snapshot", "Full table", { tab = tabs.indexOf("Table") })
+                    SectionHeader("Table snapshot", "Full table", { goTo("Standings") })
                     StandingsTable(around, openTeam, highlight = setOf(t.id), compact = true, showForm = true)
                 }
-                PcCard(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(horizontal = PcSpace.md)) {
-                        KeyValue("Coach", d.coach.ifBlank { "Not listed" })
-                        Hairline()
-                        KeyValue("Stadium", listOf(d.stadium, d.city).filter { it.isNotBlank() }.joinToString(", ").ifBlank { "Not listed" })
+                val clubInfo = listOf("Coach" to d.coach, "Stadium" to listOf(d.stadium, d.city).filter { it.isNotBlank() }.joinToString(", ")).filter { it.second.isNotBlank() }
+                if (clubInfo.isNotEmpty()) {
+                    SectionHeader("Club info")
+                    PcCard(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(horizontal = PcSpace.md)) {
+                            clubInfo.forEachIndexed { i, (k, v) -> if (i > 0) Hairline(); KeyValue(k, v) }
+                        }
                     }
                 }
             }
-            "Fixtures" -> if (page.fixtures.isEmpty()) EmptyState("No matches this fortnight", "Upcoming fixtures appear once they're scheduled.", icon = Icons.Outlined.EventBusy)
-            else groupByLeague(page.fixtures, prefs.leagues).forEach { (name, ms) -> LeagueGroup(name, ms, openMatch, logo = ms.firstNotNullOfOrNull { it.leagueLogo }) }
+            "Matches" -> groupByLeague(page.fixtures, prefs.leagues).forEach { (name, ms) ->
+                val first = ms.first()
+                androidx.compose.runtime.key(first.leagueId + name) {
+                    LeagueGroup(name, ms.sortedBy { it.kickoffMs }, openMatch, logo = ms.firstNotNullOfOrNull { it.leagueLogo }, country = first.country, stateKey = "tlg-" + first.leagueId + name)
+                }
+            }
             "Squad" -> Position.entries.forEach { pos ->
                 val group = d.squad.filter { it.position == pos }.sortedBy { it.number }
                 if (group.isNotEmpty()) {
-                    Text(pos.label.uppercase(), style = PcType.SectionTitle.copy(fontSize = 18.sp), modifier = Modifier.semantics { heading() })
+                    SectionHeader(pos.label, count = group.size.toString())
                     PcCard(Modifier.fillMaxWidth()) {
                         Column { group.forEachIndexed { i, p ->
                             Row(
@@ -623,13 +635,6 @@ fun PlayerBody(p: PlayerProfile, openTeam: (String) -> Unit) {
                     }
                     NoteCard(seasonSnapshot(p), title = "Season snapshot")
                     if (p.statsNote.isNotBlank()) Text(p.statsNote + ".", style = PcType.Caption)
-                } else {
-                    PcCard(Modifier.fillMaxWidth()) {
-                        Row(Modifier.padding(PcSpace.md), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-                            Icon(Icons.Outlined.EventBusy, null, tint = Pc.Text2)
-                            Text("No appearances recorded this season yet.", style = PcType.BodyMuted)
-                        }
-                    }
                 }
                 if (p.scoutingNote.isNotBlank()) NoteCard(p.scoutingNote, title = "Profile")
             }
