@@ -347,13 +347,13 @@ fun PcSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
  */
 @Suppress("ModifierParameter")
 @Composable
-fun SectionHeader(title: String, action: String? = null, onAction: () -> Unit = {}, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null, count: String? = null) {
-    Row(modifier.fillMaxWidth().heightIn(min = PcSpace.touch), verticalAlignment = Alignment.CenterVertically) {
+fun SectionHeader(title: String, action: String? = null, onAction: () -> Unit = {}, modifier: Modifier = Modifier, trailing: (@Composable () -> Unit)? = null, count: String? = null, maxLines: Int = 2, minHeight: Dp = PcSpace.touch) {
+    Row(modifier.fillMaxWidth().heightIn(min = minHeight), verticalAlignment = Alignment.CenterVertically) {
         val text = buildAnnotatedString {
             append(title.uppercase())
             if (count != null) withStyle(SpanStyle(color = Pc.Text2, fontFamily = PcType.Body.fontFamily, fontWeight = FontWeight.Normal, fontSize = 15.sp, letterSpacing = 0.sp)) { append("  $count") }
         }
-        Text(text, style = PcType.SectionTitle, modifier = Modifier.weight(1f).semantics { heading() }, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(text, style = PcType.SectionTitle, modifier = Modifier.weight(1f).semantics { heading() }, maxLines = maxLines, overflow = TextOverflow.Ellipsis)
         trailing?.invoke()
         if (action != null) Box(
             Modifier.heightIn(min = PcSpace.touch).pcClickable(PcShape.Control, action, onClick = onAction).padding(start = PcSpace.xs, end = 2.dp),

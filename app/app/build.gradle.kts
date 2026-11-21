@@ -18,16 +18,23 @@ android {
         versionName = "0.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Base URL of the Pitchside REST gateway (see API_CONTRACTS.md). Empty means the app runs on the
-        // built-in mock data source. Set it with -PpitchsideApiBaseUrl=https://... or in gradle.properties.
+        // Base URL of the Pitchside REST gateway (see API_CONTRACTS.md). Mock data is only used by tests and previews. Set it with -PpitchsideApiBaseUrl=https://... or in gradle.properties.
         val apiBase = (project.findProperty("pitchsideApiBaseUrl") as String?) ?: ""
         buildConfigField("String", "API_BASE_URL", "\"$apiBase\"")
 
         // apifootball.com v3 key. When set, the app reads football data straight from apifootball.com (see
         // data/remote/ApiFootballComApi.kt). Keep it out of the repo: put apifootballKey=... in ~/.gradle/gradle.properties
-        // (or $GRADLE_USER_HOME/gradle.properties), or pass -PapifootballKey=... . Empty falls back to the gateway or mock data.
+        // (or $GRADLE_USER_HOME/gradle.properties), or pass -PapifootballKey=... . Empty falls back to the gateway.
         val apifootballKey = ((project.findProperty("apifootballKey") as String?) ?: "").trim()
         buildConfigField("String", "APIFOOTBALL_KEY", "\"$apifootballKey\"")
+        // No mock data in an installable app: an APK must be built with a real data source.
+        if (apifootballKey.isEmpty() && apiBase.isEmpty()) {
+            gradle.taskGraph.whenReady {
+                if (allTasks.any { Regex("^(assemble|bundle|install)(Debug|Release)?$").matches(it.name) }) {
+                    throw GradleException("No data source: pass -PapifootballKey=... (or -PpitchsideApiBaseUrl=...). The app no longer ships with mock data.")
+                }
+            }
+        }
     }
 
     buildTypes {

@@ -148,60 +148,6 @@ fun LeagueLogo(short: String, size: Int = 40, logo: String? = null) {
     }
 }
 
-// ---------------- Mini standings ----------------
-
-/**
- * Mini standings card (reference "MINI STANDINGS"): league logo and name header, then the top rows as
- * "1. crest TOT 20 pts ▮▮▮" with form pills. Followed clubs are emerald.
- */
-@Composable
-fun MiniStandingsCard(leagueName: String, leagueLogo: String?, rows: List<StandingRow>, followed: Set<String>, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    PcCard(
-        modifier.semantics(mergeDescendants = true) {
-            contentDescription = "$leagueName table: " + rows.take(4).joinToString("; ") { "${it.rank}, ${it.team.name}, ${it.points} points" }
-        },
-        onClick = onClick,
-    ) {
-        Column(Modifier.fillMaxWidth().padding(PcSpace.md), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                LeagueLogo(leagueName.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }, 24, leagueLogo)
-                Text(leagueName.uppercase(), style = PcType.Overline.copy(fontSize = 15.sp, lineHeight = 18.sp), color = Pc.Text2, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            rows.take(4).forEach { r ->
-                val mine = r.team.id in followed
-                Row(Modifier.fillMaxWidth().heightIn(min = 30.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("${r.rank}.", style = PcType.Tag.copy(fontSize = 15.sp), color = Pc.Text2, modifier = Modifier.width(20.dp))
-                    TeamCrest(r.team, 20.dp)
-                    Text(r.team.short.uppercase(), style = PcType.TeamNameSmall, color = if (mine) Pc.Accent else Pc.Text, maxLines = 1, modifier = Modifier.weight(1f))
-                    Text("${r.points} pts", style = PcType.Tag.copy(fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold), maxLines = 1)
-                    if (r.form.isNotBlank()) FormPills(r.form.takeLast(3), compact = true)
-                }
-            }
-        }
-    }
-}
-
-// ---------------- Layout ----------------
-
-/**
- * Two equal-width columns where the second takes the first's measured height (the mini standings card sets the
- * height, the news photo card fills it). A custom layout, because intrinsic sizing cannot measure image cards.
- */
-@Composable
-fun MatchedHeightPair(modifier: Modifier = Modifier, spacing: androidx.compose.ui.unit.Dp = PcSpace.sm, first: @Composable () -> Unit, second: @Composable () -> Unit) {
-    androidx.compose.ui.layout.Layout(content = { Box { first() }; Box { second() } }, modifier = modifier) { measurables, constraints ->
-        val gap = spacing.roundToPx()
-        val w = ((constraints.maxWidth - gap) / 2).coerceAtLeast(0)
-        val a = measurables[0].measure(androidx.compose.ui.unit.Constraints.fixedWidth(w))
-        val h = a.height
-        val b = measurables[1].measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
-        layout(constraints.maxWidth, h) {
-            a.placeRelative(0, 0)
-            b.placeRelative(w + gap, 0)
-        }
-    }
-}
-
 // ---------------- Previews ----------------
 
 @Preview(name = "Header + glow card · dark", showBackground = true, widthDp = 380, backgroundColor = 0xFF0E1110)
@@ -210,6 +156,5 @@ private fun DesignSystemPreview() = PreviewHost(dark = true) {
     Column(Modifier.glowBackground().padding(bottom = PcSpace.md), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
         ScreenHeader("Football today", subtitle = "Sunday, Nov 15", onSearch = {}, onNotifications = {}, unread = true, onAvatar = {}, avatarInitial = "M")
         GlowCard(Modifier.padding(horizontal = PcSpace.md).fillMaxWidth().height(120.dp)) {}
-        MiniStandingsCard("Premier Division", null, PreviewData.table, setOf("ng"), {}, Modifier.padding(horizontal = PcSpace.md).width(180.dp))
     }
 }

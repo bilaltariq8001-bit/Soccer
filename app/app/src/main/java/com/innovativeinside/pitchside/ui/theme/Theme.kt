@@ -78,24 +78,25 @@ class PcColors(
     val isDark: Boolean,
 )
 
-// Light variant: same structure as dark (charcoal hero stage, emerald accent), on a soft off-white page.
+// Light (default): a bright, fresh-green look. Soft mint-white page, white cards, a vivid (not deep) green accent,
+// and a light emerald hero stage instead of the old near-black green.
 val LightPc = PcColors(
-    bg = Color(0xFFF2F4F2), surface = Color(0xFFFFFFFF), surfaceVariant = Color(0xFFE8ECE9),
-    outline = Color(0x1A0E1110), outlineStrong = Color(0x330E1110),
-    text = Color(0xFF0E1110), text2 = Color(0xFF5A635E), text3 = Color(0xFF8A928D),
-    accent = Color(0xFF0F7D3B), accentContainer = Color(0xFFDDF5E5), onAccent = Color(0xFFFFFFFF),
-    live = Color(0xFF16A34A), liveText = Color(0xFF0F7D3B), liveContainer = Color(0xFFDDF5E5), liveFill = Color(0xFF0F7D3B), onLive = Color(0xFFFFFFFF),
-    success = Color(0xFF16A34A), successContainer = Color(0xFFDDF5E5),
+    bg = Color(0xFFF4F8F5), surface = Color(0xFFFFFFFF), surfaceVariant = Color(0xFFEAF3ED),
+    outline = Color(0x140E1110), outlineStrong = Color(0x290E1110),
+    text = Color(0xFF111814), text2 = Color(0xFF55615A), text3 = Color(0xFF8E9891),
+    accent = Color(0xFF16A34A), accentContainer = Color(0xFFE3F7EA), onAccent = Color(0xFFFFFFFF),
+    live = Color(0xFFE5484D), liveText = Color(0xFFD12F35), liveContainer = Color(0xFFFDECEC), liveFill = Color(0xFFE5484D), onLive = Color(0xFFFFFFFF),
+    success = Color(0xFF16A34A), successContainer = Color(0xFFE3F7EA),
     warning = Color(0xFFB7791F), warningContainer = Color(0xFFFBF0DA),
     error = Color(0xFFD03A3A), errorContainer = Color(0xFFFBE4E4),
-    hero = Color(0xFF151B18), heroRaised = Color(0xFF212925), onHero = Color(0xFFF3F5F4), onHero2 = Color(0xFFA3ACA7), heroOutline = Color(0x332EE06E),
-    neutral = Color(0xFFC3C9C5), nav = Color(0xFFFFFFFF), scrim = Color(0x99000000), onTeam = Color(0xFFFFFFFF),
-    pitch = Color(0xFF0F3A22), pitchLine = Color(0x47FFFFFF),
-    glow = Color(0xFF22C55E), heroAccent = Color(0xFF2EE06E),
+    hero = Color(0xFF1DAE5C), heroRaised = Color(0xFF3CC878), onHero = Color(0xFFFFFFFF), onHero2 = Color(0xE6FFFFFF), heroOutline = Color(0x40FFFFFF),
+    neutral = Color(0xFFD5DDD8), nav = Color(0xFFFFFFFF), scrim = Color(0x80000000), onTeam = Color(0xFFFFFFFF),
+    pitch = Color(0xFF2FA862), pitchLine = Color(0x66FFFFFF),
+    glow = Color(0xFF4ADE80), heroAccent = Color(0xFFFFFFFF),
     isDark = false,
 )
 
-// Dark (default): premium charcoal, 1dp white-alpha borders, emerald accent and a soft emerald glow.
+// Dark: charcoal with a lighter, brighter green accent (kept as an option in Settings).
 val DarkPc = PcColors(
     bg = Color(0xFF0E1110), surface = Color(0xFF1A1F1C), surfaceVariant = Color(0xFF232A26),
     outline = Color(0x17FFFFFF), outlineStrong = Color(0x2BFFFFFF),
@@ -112,7 +113,7 @@ val DarkPc = PcColors(
     isDark = true,
 )
 
-val LocalPc = staticCompositionLocalOf { DarkPc }
+val LocalPc = staticCompositionLocalOf { LightPc }
 
 /** Read colour tokens as Pc.Accent, Pc.Text2 and so on. They follow the active theme. */
 object Pc {
@@ -258,7 +259,7 @@ object PcType {
 }
 
 @Composable
-fun PitchsideTheme(dark: Boolean = true, content: @Composable () -> Unit) {
+fun PitchsideTheme(dark: Boolean = false, content: @Composable () -> Unit) {
     val c = if (dark) DarkPc else LightPc
     val scheme = if (dark) {
         darkColorScheme(

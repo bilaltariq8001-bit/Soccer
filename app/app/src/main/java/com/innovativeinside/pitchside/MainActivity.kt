@@ -39,7 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefs by app.prefs.collectAsStateWithLifecycle()
             val systemDark = isSystemInDarkTheme()
-            val dark = when (prefs?.theme) { ThemeChoice.Light -> false; ThemeChoice.System -> systemDark; else -> true }
+            val dark = when (prefs?.theme) { ThemeChoice.Dark -> true; ThemeChoice.System -> systemDark; else -> false }
             // A fresh launch gets the short brand intro; recreation and returning from background do not replay it.
             var showIntro by remember { mutableStateOf(savedInstanceState == null && intent?.data == null) }
             DisposableEffect(dark, showIntro) {

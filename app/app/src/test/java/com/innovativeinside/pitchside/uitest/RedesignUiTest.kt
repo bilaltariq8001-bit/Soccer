@@ -1,8 +1,9 @@
 package com.innovativeinside.pitchside.uitest
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.SemanticsMatcher
@@ -49,7 +50,7 @@ class RedesignUiTest {
     @get:Rule val rule = createComposeRule()
 
     private val opened = mutableListOf<String>()
-    private val actions = HomeActions({ opened += "match:$it" }, {}, {}, {}, { opened += "article:$it" }, { opened += "league:$it" }, {}, {}, openAccount = { opened += "account" })
+    private val actions = HomeActions({ opened += "match:$it" }, {}, {}, {}, { opened += "article:$it" }, { opened += "league:$it" }, {}, { opened += "matches" }, openAccount = { opened += "account" })
 
     private fun liveMatches(n: Int): List<Match> {
         val base = PreviewData.live
@@ -65,7 +66,7 @@ class RedesignUiTest {
         rule.setContent {
             PreviewHost(dark = false) {
                 CompositionLocalProvider(LocalReducedMotion provides true) {
-                    Column(Modifier.verticalScroll(rememberScrollState())) { HomeContent(UiState.Success(PreviewData.home.copy(matches = matches)), actions, {}) }
+                    Box(Modifier.size(412.dp, 915.dp)) { HomeContent(UiState.Success(PreviewData.home.copy(matches = matches)), actions, {}, modifier = Modifier.fillMaxSize()) }
                 }
             }
         }
@@ -79,10 +80,11 @@ class RedesignUiTest {
         rule.onNodeWithText("Nothing live right now").assertExists()
         // The rest of the hub still renders.
         rule.onNodeWithTag("today_rail").assertExists()
-        rule.onNodeWithTag("bento").assertExists()
-        rule.onNodeWithTag("mini_standings_news").assertExists()
         rule.onNodeWithTag("highlights").assertExists()
-        assertTrue(rule.onAllNodesWithText("LATEST NEWS").fetchSemanticsNodes().isNotEmpty())
+        rule.onNodeWithTag("see_all_today").assertExists()
+        // Standings, news and the matchday cards moved off Home (one screen, no scrolling).
+        rule.onNodeWithTag("bento").assertDoesNotExist()
+        rule.onNodeWithTag("mini_standings_news").assertDoesNotExist()
     }
 
     @Test fun homeWithOneLiveMatchShowsHeroWithoutMiniTiles() {
@@ -143,15 +145,15 @@ class RedesignUiTest {
         setHome(1)
         rule.onNodeWithText("FOOTBALL TODAY").assertExists()
         rule.onNodeWithText("TOP MATCHES").assertExists()
-        rule.onNodeWithText("TODAY'S HIGHLIGHTS", substring = true).assertExists()
+        rule.onNodeWithText("TODAY", substring = true).assertExists()
         rule.onNodeWithContentDescription("Account and settings").performClick()
         assertEquals("account", opened.last())
     }
 
-    @Test fun miniStandingsOpensTheLeague() {
+    @Test fun seeAllTodayOpensMatches() {
         setHome(0)
-        rule.onNode(hasDescriptionContaining("table: 1, ")).performClick()
-        assertTrue(opened.last().startsWith("league:"))
+        rule.onNodeWithTag("see_all_today").performClick()
+        assertEquals("matches", opened.last())
     }
 
     @Test fun pillTabsSelectAndUppercaseLabels() {

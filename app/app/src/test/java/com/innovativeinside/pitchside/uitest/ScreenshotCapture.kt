@@ -81,8 +81,8 @@ class ScreenshotCapture {
         null, PreviewData.table,
     )
 
-    @Test fun homeLight() = shot("home_light", false) { HomeContent(UiState.Success(threeLive), actions, {}, mapOf("m1" to detail.stats)) }
-    @Test fun homeDark() = shot("home_dark", true) { HomeContent(UiState.Success(threeLive), actions, {}, mapOf("m1" to detail.stats)) }
+    @Test fun homeLight() = shot("home_light", false) { HomeContent(UiState.Success(threeLive), actions, {}, mapOf("m1" to detail.stats), modifier = Modifier.fillMaxSize()) }
+    @Test fun homeDark() = shot("home_dark", true) { HomeContent(UiState.Success(threeLive), actions, {}, mapOf("m1" to detail.stats), modifier = Modifier.fillMaxSize()) }
     @Test fun newsLight() = shot("news_light", false) { NewsContent(NewsState(items = PreviewData.news, loading = false), {}, {}, {}, {}) }
     @Test fun matchLight() = shot("match_light", false) { MatchContent(UiState.Success(detail), MatchNav({}, {}, {}, {}, {})) {} }
     @Test fun matchDark() = shot("match_dark", true) { MatchContent(UiState.Success(detail), MatchNav({}, {}, {}, {}, {})) {} }

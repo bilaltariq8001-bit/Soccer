@@ -7,13 +7,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
@@ -52,8 +50,6 @@ import com.innovativeinside.pitchside.ui.components.AppTopBar
 import com.innovativeinside.pitchside.ui.components.Chip
 import com.innovativeinside.pitchside.ui.components.EmptyState
 import com.innovativeinside.pitchside.ui.components.IconAction
-import com.innovativeinside.pitchside.ui.components.Segment
-import com.innovativeinside.pitchside.ui.components.SegmentedControl
 import com.innovativeinside.pitchside.ui.components.StateContent
 import com.innovativeinside.pitchside.ui.components.TextAction
 import com.innovativeinside.pitchside.ui.components.pcClickable
@@ -115,28 +111,26 @@ fun MatchesContent(
     val competition by app.competition.collectAsStateWithLifecycle()
     var calendar by rememberSaveable { mutableStateOf(false) }
     AppTopBar("Matches", subtitle = dayLabel(date, today), onSearch = openSearch, actions = {
+        if (date != today) TextAction("Today", { onDate(today) })
         IconAction(Icons.Outlined.CalendarMonth, "Pick a date", { calendar = true })
     })
     DateStrip(date, today, onDate)
     Column(Modifier.padding(horizontal = PcSpace.screen, vertical = PcSpace.sm), verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-        if (date !in (-3L..3L).map { today.plusDays(it) }) TextAction("Back to today", { onDate(today) })
         val all = (state as? UiState.Success)?.data.orEmpty()
         val comps = competitionsOf(all, prefs.leagues)
         val selectedComp = competition?.takeIf { id -> comps.any { it.first == id } }
         val byComp = filterByCompetition(all, selectedComp).let { if (myTeams) filterMatches(it, MatchFilter.MyTeams, prefs.teams, prefs.leagues) else it }
         val segIndex = segmentFilters.indexOf(filter).coerceAtLeast(0)
-        // Filters and counts only make sense over a loaded day: no "All 0 / Live 0" while loading, failed or empty.
-        if (state is UiState.Success) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-                Chip("My teams", myTeams, { onMyTeams(!myTeams) }, leading = Icons.Outlined.Star)
-                Chip("All", selectedComp == null, { app.setCompetition(null) })
-                comps.forEach { (id, name) -> Chip(name, selectedComp == id, { app.setCompetition(id) }) }
-            }
-            val counts = segmentFilters.associateWith { f -> filterMatches(byComp, f, prefs.teams, prefs.leagues).size }
-            SegmentedControl(
-                listOf(Segment("All", counts[MatchFilter.All]), Segment("Live", counts[MatchFilter.Live], live = true), Segment("Upcoming", counts[MatchFilter.Upcoming]), Segment("Finished", counts[MatchFilter.Finished])),
-                segIndex, { onFilter(segmentFilters[it]) },
-            )
+        val liveCount = filterMatches(byComp, MatchFilter.Live, prefs.teams, prefs.leagues).size
+        // One quiet filter row that is always there, so nothing jumps while a day loads. Leagues are already grouped below,
+        // so the old per-competition chip row is gone; a competition picked elsewhere shows as one clearable chip.
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs), verticalAlignment = Alignment.CenterVertically) {
+            Chip("All", segIndex == 0, { onFilter(MatchFilter.All) })
+            Chip("Live", segIndex == 1, { onFilter(MatchFilter.Live) }, count = liveCount.takeIf { it > 0 })
+            Chip("Upcoming", segIndex == 2, { onFilter(MatchFilter.Upcoming) })
+            Chip("Finished", segIndex == 3, { onFilter(MatchFilter.Finished) })
+            Chip("My teams", myTeams, { onMyTeams(!myTeams) }, leading = Icons.Outlined.Star)
+            if (selectedComp != null) Chip("${comps.first { it.first == selectedComp }.second}  ✕", true, { app.setCompetition(null) })
         }
         StateContent(
             state, onRetry,
@@ -144,7 +138,6 @@ fun MatchesContent(
         ) { _ ->
             val shown = filterMatches(byComp, segmentFilters[segIndex], prefs.teams, prefs.leagues)
             Column(verticalArrangement = Arrangement.spacedBy(PcSpace.sm)) {
-                if (byComp.isNotEmpty()) DaySummary(byComp)
                 if (shown.isEmpty()) {
                     EmptyState(
                         when { myTeams -> "None of your teams or leagues play"; filter == MatchFilter.Live -> "Nothing live right now"; else -> "No matches here" },
@@ -202,52 +195,37 @@ private fun NoMatchesState(date: LocalDate, today: LocalDate, next: LocalDate?, 
 fun shortDay(d: LocalDate): String = d.format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
 fun noMatchesTitle(d: LocalDate): String = "No matches on ${shortDay(d)}"
 
-/** One line of the day in numbers: matches, competitions, goals so far and how many are live. */
-@Composable
-private fun DaySummary(ms: List<Match>) {
-    val goals = ms.filter { it.status != com.innovativeinside.pitchside.data.model.Status.Upcoming }.sumOf { (it.homeScore ?: 0) + (it.awayScore ?: 0) }
-    val comps = ms.map { it.leagueId }.distinct().size
-    val live = ms.count { it.status == com.innovativeinside.pitchside.data.model.Status.Live }
-    val items = listOfNotNull(
-        "${ms.size}" to if (ms.size == 1) "match" else "matches",
-        "$comps" to if (comps == 1) "competition" else "competitions",
-        ("$goals" to if (goals == 1) "goal" else "goals").takeIf { ms.any { it.hasScore } },
-        ("$live" to "live").takeIf { live > 0 },
-    )
-    Row(
-        Modifier.fillMaxWidth().clip(PcShape.Tile).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Tile).padding(horizontal = PcSpace.sm, vertical = PcSpace.sm)
-            .semantics(mergeDescendants = true) { contentDescription = items.joinToString(", ") { "${it.first} ${it.second}" } },
-        horizontalArrangement = Arrangement.SpaceEvenly,
-    ) {
-        items.forEach { (n, label) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(n, style = PcType.ScoreRow.copy(fontSize = 22.sp), color = if (label == "live") Pc.LiveText else Pc.Text)
-                Text(label.uppercase(), style = PcType.Overline.copy(fontSize = 11.sp))
-            }
-        }
-    }
-}
-
-/** Seven days around today; yesterday, today and tomorrow are named. Scrolls to keep the selection visible. */
+/**
+ * A calm week bar: seven equal cells that always fit the screen (no sideways scrolling, nothing to lose track of),
+ * centred on the picked day. Each cell is the short weekday over the date number; the picked day is a solid green
+ * pill and today carries a small dot. Picking a far date from the calendar simply re-centres the week on it.
+ */
 @Composable
 private fun DateStrip(date: LocalDate, today: LocalDate, onDate: (LocalDate) -> Unit) {
-    val days = (-3L..3L).map { today.plusDays(it) }
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = (days.indexOf(date).takeIf { it >= 0 } ?: 3).minus(1).coerceAtLeast(0))
-    val dayName = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
-    val dayNum = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
-    LazyRow(state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = PcSpace.screen), horizontalArrangement = Arrangement.spacedBy(PcSpace.xs)) {
-        items(days, key = { it.toString() }) { d ->
+    val days = (-3L..3L).map { date.plusDays(it) }
+    val weekday = DateTimeFormatter.ofPattern("EEE", Locale.getDefault())
+    val full = DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.getDefault())
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = PcSpace.screen).clip(PcShape.Tile).background(Pc.Surface).border(1.dp, Pc.Outline, PcShape.Tile).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        days.forEach { d ->
             val on = d == date
-            val name = when (d) { today -> "Today"; today.minusDays(1) -> "Yesterday"; today.plusDays(1) -> "Tomorrow"; else -> d.format(dayName) }
+            val isToday = d == today
             Column(
-                Modifier.widthIn(min = 76.dp).heightIn(min = 56.dp).pcClickable(PcShape.Tile, role = Role.Tab, pressScale = true) { onDate(d) }
-                    .background(if (on) Pc.Accent else Pc.Surface, PcShape.Tile).border(1.dp, if (on) Pc.Accent else Pc.Outline, PcShape.Tile)
-                    .semantics(mergeDescendants = true) { selected = on; contentDescription = "$name, ${d.format(dayNum)}" }
-                    .padding(horizontal = PcSpace.sm, vertical = 7.dp),
+                Modifier.weight(1f).heightIn(min = 58.dp).clip(PcShape.Control)
+                    .background(if (on) Pc.Accent else androidx.compose.ui.graphics.Color.Transparent)
+                    .pcClickable(PcShape.Control, role = Role.Tab) { onDate(d) }
+                    .semantics(mergeDescendants = true) { selected = on; contentDescription = (if (isToday) "Today, " else "") + d.format(full) }
+                    .padding(vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
             ) {
-                Text(name.uppercase(), style = PcType.Tag, color = if (on) Pc.OnAccent else Pc.Text, maxLines = 1)
-                Text(d.format(dayNum).uppercase(), style = PcType.Overline.copy(fontSize = 11.sp), color = if (on) Pc.OnAccent.copy(alpha = 0.75f) else Pc.Text2, maxLines = 1)
+                Text(
+                    (if (isToday) "Today" else d.format(weekday)).uppercase(Locale.getDefault()),
+                    style = PcType.Overline.copy(fontSize = 11.sp), color = if (on) Pc.OnAccent.copy(alpha = 0.9f) else Pc.Text2, maxLines = 1,
+                )
+                Text(d.dayOfMonth.toString(), style = PcType.ScoreRow, color = if (on) Pc.OnAccent else Pc.Text, maxLines = 1)
+                Box(Modifier.padding(top = 2.dp).size(4.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (isToday && !on) Pc.Accent else androidx.compose.ui.graphics.Color.Transparent))
             }
         }
     }
